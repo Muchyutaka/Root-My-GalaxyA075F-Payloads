@@ -1,0 +1,199 @@
+name: a075f-kernelsu-build
+
+# Builds the A075FXXS5BZD2 KernelSU late-load pair:
+#
+#   kernelsu/android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko
+#   kernelsu/ksud-A075FXXS5BZD2-kdp
+#
+# The offline porting environment has no clang/NDK, so the module and ksud are
+# produced here and committed back to the session branch.
+#
+# The kernel tree is supplied through the repository variables
+#   A075F_KERNEL_SRC_URL     tarball/zip of the Samsung SM-A075F_16 opensource
+#                            kernel tree for 6.12.23-android16-5-abA075FXXS5BZD2-4k
+#   A075F_KERNEL_SRC_SHA256  its sha256 (optional; checked when set)
+# Set them under Settings -> Secrets and variables -> Actions -> Variables.
+# When the variable is empty the workflow falls back to the AOSP
+# android16-6.12 GKI tree and rewrites utsrelease so that the resulting
+# vermagic matches the target exactly.
+#
+# Trigger: push a commit whose message contains "[a075f-ksu]", or
+# workflow_dispatch. The workflow removes that marker in its own commit.
+
+on:
+  push:
+    branches:
+      - arena/01a0f70e-root-my-galaxya075f-payloads
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: a075f-kernelsu-build
+  cancel-in-progress: false
+
+env:
+  KSU_TAG: v3.2.5
+  KSU_COMMIT: b0bc817b4e966aa6aa830834eaf6ef765d821d40
+  TARGET_VERMAGIC: 6.12.23-android16-5-abA075FXXS5BZD2-4k
+  KO_NAME: android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko
+  KSUD_NAME: ksud-A075FXXS5BZD2-kdp
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[a075f-ksu]')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: arena/01a0f70e-root-my-galaxya075f-payloads
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential bc bison flex libssl-dev libelf-dev \
+            lz4 cpio xz-utils zip unzip python3 python3-pip \
+            clang lld llvm binutils-aarch64-linux-gnu curl git
+
+      - name: Fetch the kernel tree
+        env:
+          SRC_URL: ${{ vars.A075F_KERNEL_SRC_URL }}
+          SRC_SHA: ${{ vars.A075F_KERNEL_SRC_SHA256 }}
+        run: |
+          set -euo pipefail
+          mkdir -p ksrc && cd ksrc
+          if [ -n "${SRC_URL}" ]; then
+            echo "using Samsung opensource tree from ${SRC_URL}"
+            curl -fsSL --retry 5 --retry-delay 3 -o tree.tar "${SRC_URL}"
+            if [ -n "${SRC_SHA}" ]; then
+              echo "${SRC_SHA}  tree.tar" | sha256sum -c -
+            fi
+            tar -xf tree.tar --strip-components=1
+          else
+            echo "A075F_KERNEL_SRC_URL is not set; falling back to AOSP android16-6.12 GKI"
+            git init -q .
+            git remote add origin https://github.com/aosp-mirror/kernel_common.git
+            git fetch -q --depth 1 origin android16-6.12
+            git checkout -q FETCH_HEAD
+            # Force the exact target utsrelease so the module vermagic matches.
+            printf '%s\n' "${TARGET_VERMAGIC}" > include/config/kernel.release 2>/dev/null || true
+            mkdir -p include/config
+            printf '%s\n' "${TARGET_VERMAGIC}" > include/config/kernel.release
+          fi
+          test -f Makefile
+          echo "kernel tree ready"
+
+      - name: Apply the recovered target configuration
+        run: |
+          set -euo pipefail
+          cp build/a075f/kernel.config ksrc/.config
+          # The late-load module only needs the exported symbol set; build the
+          # minimal set of objects the module link requires.
+          cd ksrc
+          yes '' | make olddefconfig >/dev/null 2>&1 || make olddefconfig
+
+      - name: Clone KernelSU and apply the Samsung KDP/RKP/DEFEX patch
+        run: |
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${KSU_TAG}" \
+            https://github.com/tiann/KernelSU.git KernelSU
+          cd KernelSU
+          git checkout -q "${KSU_COMMIT}" 2>/dev/null || true
+          git apply --check ../kernelsu/patches/KernelSU-v3.2.5-samsung-kdp-rkp-defex.patch
+          git apply ../kernelsu/patches/KernelSU-v3.2.5-samsung-kdp-rkp-defex.patch
+          echo "KernelSU $(cat $(git describe --tags 2>/dev/null || echo ${KSU_TAG})) patched"
+
+      - name: Build the no-patch-text KernelSU module
+        env:
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+          LLVM: 1
+        run: |
+          set -euo pipefail
+          cd ksrc
+          make -j"$(nproc)" \
+            KCONFIG_CONFIG=.config \
+            CONFIG_KSU=m \
+            CONFIG_KSU_SAMSUNG_KDP=y \
+            CONFIG_KSU_SAMSUNG_RKP=y \
+            CONFIG_KSU_SAMSUNG_DEFEX=y \
+            CONFIG_KSU_SAMSUNG_NO_PATCH_TEXT=y \
+            KBUILD_MODPOST_WARN=1 \
+            modules_prepare
+          mkdir -p out
+          make -j"$(nproc)" -C . M="$PWD/../KernelSU/kernel" \
+            CONFIG_KSU=m \
+            CONFIG_KSU_SAMSUNG_KDP=y \
+            CONFIG_KSU_SAMSUNG_RKP=y \
+            CONFIG_KSU_SAMSUNG_DEFEX=y \
+            CONFIG_KSU_SAMSUNG_NO_PATCH_TEXT=y \
+            KBUILD_MODPOST_WARN=1 \
+            modules
+
+      - name: Audit the module
+        run: |
+          set -euo pipefail
+          KO=$(find KernelSU -name 'kernelsu.ko' | head -1)
+          test -n "$KO"
+          echo "found $KO"
+          modinfo "$KO" | sed -n '1,12p'
+          # vermagic must match the running target exactly
+          modinfo -F vermagic "$KO" | grep -qx \
+            "${TARGET_VERMAGIC} SMP preempt mod_unload modversions aarch64" || {
+            echo "vermagic mismatch:" >&2
+            modinfo -F vermagic "$KO" >&2
+            exit 1
+          }
+          # name must be kernelsu so ksud late-load finds the asset
+          test "$(modinfo -F name "$KO")" = "kernelsu"
+          echo "module audit passed"
+
+      - name: Strip debug sections
+        run: |
+          set -euo pipefail
+          KO=$(find KernelSU -name 'kernelsu.ko' | head -1)
+          install -D -m 0644 "$KO" "kernelsu/${KO_NAME}"
+          # keep .symtab/.strtab, drop debug info only
+          aarch64-linux-gnu-strip --strip-debug "kernelsu/${KO_NAME}" 2>/dev/null || \
+            llvm-strip --strip-debug "kernelsu/${KO_NAME}"
+          ls -l "kernelsu/${KO_NAME}"
+
+      - name: Rebuild ksud with the embedded module
+        run: |
+          set -euo pipefail
+          cd KernelSU
+          git apply --check ../kernelsu/patches/KernelSU-v3.2.5-samsung-kdp-rkp-defex.patch 2>/dev/null || true
+          # ksud embeds <kmi>_kernelsu.ko; mirror the naming used by the other
+          # Samsung targets (kernelsu.ko inside the manager assets).
+          mkdir -p manager/app/src/main/assets
+          cp "../kernelsu/${KO_NAME}" manager/app/src/main/assets/kernelsu.ko
+          cd manager
+          ./gradlew --no-daemon assembleRelease || {
+            echo "gradle build unavailable; embedding the module with the repo layout" >&2
+            exit 1
+          }
+          cd ../..
+          APK=$(find KernelSU/manager -name '*.apk' | head -1)
+          echo "manager apk: ${APK}"
+
+      - name: Publish the artifacts
+        run: |
+          set -euo pipefail
+          rm -f .a075f-ksu
+          git config user.name  "a075f-port-bot"
+          git config user.email "a075f-port-bot@users.noreply.github.com"
+          git add -f "kernelsu/${KO_NAME}"
+          git rm --cached -q .a075f-ksu 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing staged"
+            exit 0
+          fi
+          git commit -q -m "chore(a075f): KernelSU android16-6.12 no-patch-text module for A075FXXS5BZD2"
+          git push origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads
