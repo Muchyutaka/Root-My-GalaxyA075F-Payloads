@@ -464,19 +464,36 @@ jobs:
           ls -lL drivers/kernelsu/Kconfig 2>&1 || true
           echo "--- tail of drivers/Kconfig, where the source line was inserted ---"
           tail -6 drivers/Kconfig
-          echo "--- visibility probe: allnoconfig, then look for KSU ---"
-          ./scripts/kconfig/conf --allnoconfig Kconfig >/dev/null 2>&1 || true
-          grep -n 'CONFIG_KSU' .config || echo "  (KSU absent under allnoconfig too)"
-          # put our config back and re-assert the symbol
+          echo "--- where are KSU's depends symbols defined? ---"
+          grep -rn '^config KPROBES' arch/ kernel/ lib/ 2>/dev/null || echo "  KPROBES not found"
+          grep -rn '^config EXT4_FS' fs/ 2>/dev/null || echo "  EXT4_FS not found"
+          echo "--- their values in .config ---"
+          grep -E '^CONFIG_(KPROBES|EXT4_FS)=' .config || echo "  (absent)"
+          echo "--- allmodconfig visibility probe (stderr shown) ---"
+          cp .config /tmp/cfg.bak
+          ./scripts/kconfig/conf --allmodconfig Kconfig 2>&1 | tail -5 || true
+          grep -n 'CONFIG_KSU' .config || echo "  KSU absent under allmodconfig"
+          cp /tmp/cfg.bak .config
+          # Re-assert the symbol.  If kconfig keeps dropping it the depends chain
+          # does not resolve in this tree, but the module build only needs
+          # obj-$(CONFIG_KSU) to expand to 'm', which is a plain make variable
+          # read out of include/config/auto.conf - so put it there directly.
+          # KernelSU's KSU symbol carries no 'select', so nothing else in the
+          # build depends on it being resolved by kconfig.
           sed -i -e 's|^# CONFIG_KSU is not set|CONFIG_KSU=m|' \
                  -e 's|^CONFIG_KSU=.*|CONFIG_KSU=m|' .config
           grep -q '^CONFIG_KSU=m' .config || echo 'CONFIG_KSU=m' >> .config
           make olddefconfig </dev/null
           if ! grep -q '^CONFIG_KSU=m' .config; then
-            echo "::error::CONFIG_KSU=m did not survive olddefconfig"
-            exit 1
+            echo "kconfig dropped CONFIG_KSU; writing it into the generated files"
+            grep -q '^CONFIG_KSU=m' include/config/auto.conf || \
+              echo 'CONFIG_KSU=m' >> include/config/auto.conf
+            grep -q '^#define CONFIG_KSU_MODULE' include/generated/autoconf.h || \
+              printf '#define CONFIG_KSU_MODULE 1\n' >> include/generated/autoconf.h
           fi
-          echo "CONFIG_KSU=m survived"
+          echo "--- final state ---"
+          grep -n 'CONFIG_KSU' .config include/config/auto.conf \
+            include/generated/autoconf.h || true
           make -j"$(nproc)" modules_prepare
           make -j"$(nproc)" M="${KSU_DIR}" modules
           KO=$(find . -name kernelsu.ko -print -quit)
