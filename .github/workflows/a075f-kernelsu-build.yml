@@ -365,7 +365,7 @@ jobs:
             rm -rf clang && mkdir -p clang
             tar -xf /tmp/clang.tar.gz -C clang
             echo "--- clang/bin contents ---"
-            ls -l clang/bin | head -40
+            ls -l clang/bin | head -40 || true
             for f in clang/bin/*; do
               [ -e "$f" ] || continue
               ln -sf "$PWD/$f" "${BINDIR}/$(basename "$f")"
@@ -381,12 +381,14 @@ jobs:
           fi
           echo "${BINDIR}" >> "$GITHUB_PATH"
           echo "PATH=${BINDIR}:$PATH" >> "$GITHUB_ENV"
-          ls -l "${BINDIR}" | head -30
           # Fail fast and loudly rather than three steps later inside kbuild.
+          # This runs BEFORE the listings so a broken toolchain cannot be
+          # masked by a diagnostic line failing first.
           printf 'int main(void){return 0;}\n' > /tmp/smoke.c
           "${BINDIR}/clang" --target=aarch64-linux-gnu -c /tmp/smoke.c -o /tmp/smoke.o
           echo "clang smoke test passed (aarch64 object produced)"
           ld.lld --version | head -1 || true
+          ls -l "${BINDIR}" | head -30 || true
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit "${PIPESTATUS[0]}"
 
