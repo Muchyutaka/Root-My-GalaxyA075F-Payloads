@@ -83,6 +83,9 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
@@ -93,7 +96,8 @@ jobs:
           rustup default stable
           rustup target add aarch64-linux-android
           cargo install --locked cargo-ndk
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       # ---------------------------------------------------------------------
       # Kernel tree.  Extraction is layout agnostic: Samsung's opensource
       # archives wrap the real tree in a version-dependent directory, so we
@@ -118,7 +122,7 @@ jobs:
           # download.  The whole body is also teed to a log that the
           # "Capture diagnostics on failure" step commits, because the CI log
           # endpoints are not reachable from the porting sandbox.
-          LOG="$GITHUB_WORKSPACE/fetch-diagnostics.log"
+          LOG="$GITHUB_WORKSPACE/job.log"
           set -e
           set -x
           {
@@ -260,7 +264,7 @@ jobs:
             grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' "$WS/tree/Makefile"
             echo "kernel tree ready at $WS/tree"
             echo "=== PHASE 4 done ==="
-          } 2>&1 | tee "$LOG"
+          } 2>&1 | tee -a "$LOG"
           exit "${PIPESTATUS[0]}"
 
       # The CI log endpoints (results-receiver.actions.githubusercontent.com and
@@ -273,17 +277,22 @@ jobs:
           set -uo pipefail
           git config user.name  "a075f-port-bot"
           git config user.email "a075f-port-bot@users.noreply.github.com"
-          git add -f fetch-diagnostics.log 2>/dev/null || true
+          git add -f job.log fetch-diagnostics.log 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "no diagnostics to commit"
             exit 0
           fi
           git commit -q -m "chore(a075f): CI diagnostics for the failed kernelsu build"
+          echo "--- captured $(wc -l < job.log 2>/dev/null || echo 0) log lines ---"
           git push -q origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads || true
           echo "diagnostics committed"
 
       - name: Apply the recovered target configuration
         run: |
+          set -uo pipefail
+          {
+          set -x
+          set -e
           set -euo pipefail
           cp "${KCONFIG}" tree/.config
           cd tree
@@ -301,9 +310,13 @@ jobs:
           echo "resolved utsrelease: $(cat include/config/kernel.release 2>/dev/null || true)"
           test "$(cat include/config/kernel.release)" = "${TARGET_VERMAGIC}" || {
             echo "::error::utsrelease mismatch"; exit 1; }
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       - name: Install the matching clang
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           # The target was built with Android clang r536225 (clang 19.0.1,
           # LLD 19.0.1).  Prefer it so CONFIG_CC_IS_CLANG / CONFIG_LD_IS_LLD
@@ -336,19 +349,24 @@ jobs:
           ls -l "${BINDIR}"
           clang --version | head -2
           ld.lld --version | head -1
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       - name: Prepare the kernel for module builds
         env:
           ARCH: arm64
           CROSS_COMPILE: aarch64-linux-gnu-
           LLVM: '1'
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           cd tree
           make -j"$(nproc)" olddefconfig
           make -j"$(nproc)" modules_prepare
           echo "modules_prepare done"
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       # ---------------------------------------------------------------------
       # KernelSU.  Integration follows KernelSU's own kernel/setup.sh: symlink
       # drivers/kernelsu, add the obj line to drivers/Makefile and the source
@@ -361,6 +379,9 @@ jobs:
           CROSS_COMPILE: aarch64-linux-gnu-
           LLVM: '1'
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           git clone -q --depth 1 --branch "${KSU_TAG}" \
             https://github.com/tiann/KernelSU.git KernelSU
@@ -394,9 +415,13 @@ jobs:
           test -n "${KO}"
           echo "built ${KO}"
           modinfo "${KO}" | sed -n '1,14p'
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       - name: Audit the module
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           KO=$(find tree -name kernelsu.ko | head -1)
           test -n "${KO}"
@@ -414,9 +439,13 @@ jobs:
           "${OBJDUMP}" -d "${KO}" | grep -q 'ksu_syscall_dispatcher' || {
             echo "::error::ksu_syscall_dispatcher missing from the module"; exit 1; }
           echo "module audit passed"
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       - name: Install the module
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           KO=$(find tree -name kernelsu.ko | head -1)
           install -D -m 0644 "${KO}" "kernelsu/${KO_NAME}"
@@ -426,7 +455,8 @@ jobs:
             llvm-strip --strip-debug "kernelsu/${KO_NAME}"
           ls -l "kernelsu/${KO_NAME}"
           modinfo -F vermagic "kernelsu/${KO_NAME}"
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       # ---------------------------------------------------------------------
       # ksud.  KernelSU's own recipe is `cross build --target
       # aarch64-linux-android --release`; cargo-ndk + the NDK linker does the
@@ -436,6 +466,9 @@ jobs:
         env:
           KSU_TAG: ${{ vars.A075F_KSUD_TAG || env.KSU_TAG }}
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           curl -fsSL --retry 3 -o /tmp/ndk.zip \
             "https://dl.google.com/android/repository/android-ndk-r27d-linux.zip"
@@ -457,9 +490,13 @@ jobs:
           install -D -m 0755 "${BIN}" "../kernelsu/${KSUD_NAME}"
           ls -l "../kernelsu/${KSUD_NAME}"
           file "../kernelsu/${KSUD_NAME}"
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       - name: Audit ksud
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           B="kernelsu/${KSUD_NAME}"
           file "${B}" | grep -q 'ELF 64-bit LSB.*ARM aarch64' || {
@@ -467,9 +504,13 @@ jobs:
           strings -n 6 "${B}" | grep -q 'late_load' || {
             echo "::error::ksud has no late_load support"; exit 1; }
           echo "ksud audit passed"
-
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
       - name: Publish the artifacts
         run: |
+          set -uo pipefail
+          {
+          set -e
           set -euo pipefail
           rm -f .a075f-ksu
           git config user.name  "a075f-port-bot"
@@ -482,3 +523,5 @@ jobs:
           git commit -q -m "chore(a075f): KernelSU ${KSU_TAG} module + ksud for A075FXXS5BZD2"
           git push origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads
           echo "published ${KO_NAME} and ${KSUD_NAME}"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
