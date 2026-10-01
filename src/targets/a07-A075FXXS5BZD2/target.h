@@ -30,6 +30,17 @@
 #endif
 
 #define KIMAGE_TEXT_BASE 0xffffffc080000000ULL
+/*
+ * P0_PHYS_OFFSET = 0x40000000 is CONFIRMED from on-device /proc/zoneinfo
+ * (DMA32 start_pfn 262144, Normal start_pfn 1048576; RAM 0x40000000-
+ * 0x140000000).  P0_KERNEL_PHYS_LOAD below is NOT confirmed: LK contains the
+ * literal 0x48400000 (always as the LK VA 0xffff48400000, i.e.
+ * KERNEL_ASPACE_BASE + 0x48400000) but also the string
+ * "kernel_addr (0x%p) is not taken from mb (0x%llx)", so LK normally takes
+ * kernel_addr from an MTK mblock reserve and 0x48400000 is only a static
+ * default.  Only the optional APP_PHYS_* diagnostic routes use it.
+ * See docs/A07-A075FXXS5BZD2.md section 4.1 for the on-device proof.
+ */
 #define P0_PAGE_OFFSET 0xffffff8000000000ULL
 #define P0_PHYS_OFFSET 0x40000000ULL
 #define P0_KERNEL_PHYS_LOAD 0x48400000ULL
@@ -41,7 +52,37 @@
 #define SLIDE_WAITER_WAKE_STATE 0
 #define SLIDE_LOCK_OWNER_VALUE 1ULL
 #define SLIDE_USE_FAKE_TASK 1
-#define SLIDE_TRACEFS_EVENT_ID 109
+/*
+ * tracefs event id for sched/sched_blocked_reason on this kernel.
+ *
+ * 6.12 dropped the old `next_event_type` counter from
+ * kernel/trace/trace_events.c: event ids are now handed out by an IDA in
+ * kernel/trace/trace_output.c
+ *
+ *     static int alloc_trace_event_type(void)
+ *     {
+ *             next = ida_alloc_range(&trace_event_ida, __TRACE_LAST_TYPE,
+ *                                    TRACE_EVENT_TYPE_MAX, GFP_KERNEL);
+ *
+ * i.e. every dynamically registered event gets id = __TRACE_LAST_TYPE + N,
+ * where N is the event's zero-based index in the __trace_events[] /
+ * __start_ftrace_events..__stop_ftrace_events table.
+ *
+ * __TRACE_LAST_TYPE = 20, not 19: enum trace_type in kernel/trace/trace.h
+ * spends the explicit value 0 on __TRACE_FIRST_TYPE, so the 18 named
+ * enumerators that follow (TRACE_FN..TRACE_FUNC_REPEATS) occupy 1..19 and
+ * __TRACE_LAST_TYPE lands on 20.
+ *
+ * Calibration on this Image (image offsets, vaddr = off + KIMAGE_TEXT_BASE):
+ *   __start_ftrace_events        0x246c5a8
+ *   __event_sched_waking         0x246c7f8  -> index 74
+ *   __event_sched_blocked_reason 0x246c878  -> index 90
+ * Device reports sched_waking/id = 94 and sched_blocked_reason/id = 110.
+ * Both indices give base 20 (94 - 74 == 110 - 90 == 16), so the indices are
+ * right and only the base was wrong.  Do not "re-derive" this by counting
+ * enum trace_type members.
+ */
+#define SLIDE_TRACEFS_EVENT_ID 110
 #define SLIDE_TRACEFS_WORKER_CALLER_OFF 0x00101ef8ULL
 #define SLIDE_PSELECT_WORD_SHIFT 0
 #define SLIDE_P0_OFFSET_CANDIDATES \

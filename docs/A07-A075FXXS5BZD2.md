@@ -121,24 +121,138 @@ Both physical values are offline derivations. They must be confirmed on-device
 before the physical-P0 oracle routes are trusted; the tracefs slide route does
 not depend on them.
 
+### 4.1 `P0_KERNEL_PHYS_LOAD` — status and the on-device proof
+
+`P0_PHYS_OFFSET = 0x40000000` is **confirmed** from on-device `/proc/zoneinfo`
+(DMA32 `start_pfn 262144`, Normal `start_pfn 1048576`; RAM spans
+`0x40000000`–`0x140000000`, 4 GiB total).
+
+`P0_KERNEL_PHYS_LOAD = 0x48400000` is **still unproven**. What the LK image
+actually contains, and what it does not:
+
+**Present.** `build/a075f-fw/lk-verified.img` holds nine
+`movz xN, #0x4840, lsl #16` sites (LK file offsets, LK is linked with
+VA == file offset — `adrp`/`add` string references resolve exactly):
+
+```text
+0x00a70dc  0x00a71f0  0x00ddf8c  0x023a564  0x023a678
+0x024a78c  0x0347238  0x034734c  0x0357edc
+```
+
+Every one of them is immediately followed by `movk xN, #0xffff, lsl #48`,
+i.e. the value used is the LK virtual address
+`0xffff48400000 == KERNEL_ASPACE_BASE(0xffff000000000000) + 0x48400000` — the
+standard LK "map this physical page into the kernel address space" idiom, not a
+bare integer. For example at `0x00a70dc`:
+
+```asm
+0x00a70dc:  mov   x19, #0x48400000
+0x00a70e8:  movk  x19, #0xffff, lsl #48      ; x19 = 0xffff48400000
+0x00a70f0:  stur  x19, [x29, #-8]
+...
+0x00a7110:  mov   w3, #0x48400000            ; physical argument
+0x00a7144:  mov   w5, #0x48400000            ; physical argument
+```
+
+That site is in the AVB kernel-cmdline path — the same function loads the
+`: Kernel cmdline descriptor is invalid.\n` literal from
+`external/lib/libavb/avb_kernel_cmdline_descriptor.c` (string at LK file offset
+`0x16c2a5`).
+
+**Absent.** Nothing in the LK image proves that `0x48400000` is *the kernel
+Image's* load address. On the contrary, LK contains the literal
+
+```text
+LK file offset 0x145de5:  "kernel_addr (0x%p) is not taken from mb (0x%llx)\n"
+```
+
+which is the `app/mt_boot/mt_boot.c` path that normally takes `kernel_addr`
+from an MTK **mblock** reservation — i.e. from the device-tree-derived reserved
+memory — and only falls back to a static value when the mblock entry is
+missing. So `0x48400000` is a *static default*, and the runtime value is
+whatever the DTB's mblock reserve says.
+
+The kernel Image itself cannot settle it either: `kimage_voffset` (Image offset
+`0x1864000`) and `memstart_addr` (`0x18637d8`) are `0` and `-1` in the Image,
+and `reserved_pg_dir` / `swapper_pg_dir` are all zero — the kernel is
+`CONFIG_RELOCATABLE`, so all of those are filled in at boot.
+
+**To settle it on-device**, dump:
+
+```sh
+cat /proc/iomem | head -40
+```
+
+The `Kernel code` / `Kernel data` / `Kernel bss` rows give the physical ranges of
+the running kernel image. `P0_KERNEL_PHYS_LOAD` is then
+`(<start of the "Kernel code" row>) - 0x10000`, because `_stext` sits at Image
+offset `0x10000` (`KIMAGE_TEXT_BASE + 0x10000 = 0xffffffc080010000`).
+
+Cross-check with `dmesg | head -40` (the `Memory:` / `Kernel command line:`
+lines) and, if LK's log is reachable, with LK's own
+`kernel_addr (0x...) is not taken from mb (0x...)` line, which prints the mblock
+value it actually used.
+
 ## 5. Slide data
 
 ### 5.1 Trace event ID
 
-`SLIDE_TRACEFS_EVENT_ID = 109`.
+`SLIDE_TRACEFS_EVENT_ID = 110`.
 
-`kernel/trace/trace.h` in `android16-6.12` defines `enum trace_type` ending in
-`__TRACE_LAST_TYPE`; counting the enumerators gives `__TRACE_LAST_TYPE = 19`
-(`TRACE_FN` = 0 … `TRACE_FUNC_REPEATS` = 18).
+6.12 no longer keeps the old `next_event_type` counter in
+`kernel/trace/trace_events.c`. Event ids are now allocated by an IDA in
+`kernel/trace/trace_output.c`:
 
-From the recovered symbols:
+```c
+static int alloc_trace_event_type(void)
+{
+        int next;
+
+        /* Skip static defined type numbers */
+        next = ida_alloc_range(&trace_event_ida, __TRACE_LAST_TYPE,
+                               TRACE_EVENT_TYPE_MAX, GFP_KERNEL);
+        if (next < 0)
+                return 0;
+        return next;
+}
+```
+
+so every dynamically registered event gets `id = __TRACE_LAST_TYPE + N`, where
+`N` is its zero-based index in `__start_ftrace_events..__stop_ftrace_events`.
+
+`__TRACE_LAST_TYPE = 20`, **not** 19. `enum trace_type` in
+`kernel/trace/trace.h` spends the explicit value `0` on `__TRACE_FIRST_TYPE`,
+so the 18 named enumerators after it (`TRACE_FN` … `TRACE_FUNC_REPEATS`)
+occupy 1…19 and `__TRACE_LAST_TYPE` lands on 20:
+
+```c
+enum trace_type {
+        __TRACE_FIRST_TYPE = 0,   /* takes 0 */
+        TRACE_FN,                 /* 1  */
+        ...
+        TRACE_FUNC_REPEATS,       /* 19 */
+        __TRACE_LAST_TYPE,        /* 20 */
+};
+```
+
+From the recovered symbols (image offsets, vaddr = offset + `KIMAGE_TEXT_BASE`):
 
 ```text
 __start_ftrace_events            = 0xffffffc08246c5a8  -> 0x246c5a8
-__event_sched_blocked_reason     = 0xffffffc08246c878  -> 0x246c878
-event_index = (0x246c878 - 0x246c5a8) / 8 = 90   (zero-based)
-event_id    = 19 + 90 = 109
+__event_sched_waking             = 0xffffffc08246c7f8  -> 0x246c7f8  index 74
+__event_sched_blocked_reason     = 0xffffffc08246c878  -> 0x246c878  index 90
+
+event_id = __TRACE_LAST_TYPE + event_index = 20 + 90 = 110
 ```
+
+The base is confirmed twice over, independently of the enum arithmetic: the
+device reports `sched_waking/id = 94` and `sched_blocked_reason/id = 110`, and
+`110 - 94 == 16 == 90 - 74`. Both events therefore imply the same base of 20,
+which means the zero-based indices recovered from `__start_ftrace_events` are
+correct and only the base constant was wrong. **Runtime values win**: the
+device-reported `110` is authoritative, and the earlier `109` was an
+off-by-one in the enum count (the enumerator values start at 1, not 0, because
+`__TRACE_FIRST_TYPE` explicitly claims 0).
 
 ### 5.2 Worker caller
 
@@ -422,8 +536,11 @@ artifacts are produced by CI. See `.github/workflows/a075f-kernelsu-build.yml`.
 ## 9. Remaining hardware validation
 
 1. Confirm `cat /sys/kernel/tracing/events/sched/sched_blocked_reason/id` on the
-   device equals `109`, and that every observed kworker caller minus
-   `0x00101ef8` is 64 KiB aligned and inside the P0 slide range.
-2. Confirm `P0_PHYS_OFFSET` / `P0_KERNEL_PHYS_LOAD` on-device.
+   device equals `110` (and `.../sched_waking/id` equals `94`), and that every
+   observed kworker caller minus `0x00101ef8` is 64 KiB aligned and inside the
+   P0 slide range.
+2. Confirm `P0_KERNEL_PHYS_LOAD` on-device — see §4.1. `P0_PHYS_OFFSET` is
+   already confirmed from `/proc/zoneinfo` (DMA32 `start_pfn 262144`, Normal
+   `start_pfn 1048576`, RAM `0x40000000`–`0x140000000`).
 3. Run the release payload and record the resulting artifacts in
    `support/targets-v3.json`.
