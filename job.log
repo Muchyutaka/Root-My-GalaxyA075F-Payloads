@@ -3556,3 +3556,1790 @@ CONFIG_LOCALVERSION_AUTO=n
 # configuration written to .config
 #
 yes: standard output: Broken pipe
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 202296 files and directories currently installed.)
+Preparing to unpack .../libssl-dev_3.0.13-0ubuntu3.16_amd64.deb ...
+Unpacking libssl-dev:amd64 (3.0.13-0ubuntu3.16) over (3.0.13-0ubuntu3.15) ...
+Preparing to unpack .../libssl3t64_3.0.13-0ubuntu3.16_amd64.deb ...
+Unpacking libssl3t64:amd64 (3.0.13-0ubuntu3.16) over (3.0.13-0ubuntu3.15) ...
+Setting up libssl3t64:amd64 (3.0.13-0ubuntu3.16) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 202296 files and directories currently installed.)
+Preparing to unpack .../0-openssl_3.0.13-0ubuntu3.16_amd64.deb ...
+Unpacking openssl (3.0.13-0ubuntu3.16) over (3.0.13-0ubuntu3.15) ...
+Selecting previously unselected package build-essential.
+Preparing to unpack .../1-build-essential_12.10ubuntu1_amd64.deb ...
+Unpacking build-essential (12.10ubuntu1) ...
+Selecting previously unselected package clang.
+Preparing to unpack .../2-clang_1%3a18.0-59~exp2_amd64.deb ...
+Unpacking clang (1:18.0-59~exp2) ...
+Selecting previously unselected package libelf-dev:amd64.
+Preparing to unpack .../3-libelf-dev_0.190-1.1ubuntu0.1_amd64.deb ...
+Unpacking libelf-dev:amd64 (0.190-1.1ubuntu0.1) ...
+Selecting previously unselected package lld:amd64.
+Preparing to unpack .../4-lld_1%3a18.0-59~exp2_amd64.deb ...
+Unpacking lld:amd64 (1:18.0-59~exp2) ...
+Selecting previously unselected package llvm-runtime:amd64.
+Preparing to unpack .../5-llvm-runtime_1%3a18.0-59~exp2_amd64.deb ...
+Unpacking llvm-runtime:amd64 (1:18.0-59~exp2) ...
+Selecting previously unselected package llvm.
+Preparing to unpack .../6-llvm_1%3a18.0-59~exp2_amd64.deb ...
+Unpacking llvm (1:18.0-59~exp2) ...
+Selecting previously unselected package binutils-aarch64-linux-gnu.
+Preparing to unpack .../7-binutils-aarch64-linux-gnu_2.42-4ubuntu2.10_amd64.deb ...
+Unpacking binutils-aarch64-linux-gnu (2.42-4ubuntu2.10) ...
+Setting up lld:amd64 (1:18.0-59~exp2) ...
+Setting up binutils-aarch64-linux-gnu (2.42-4ubuntu2.10) ...
+Setting up clang (1:18.0-59~exp2) ...
+Setting up llvm-runtime:amd64 (1:18.0-59~exp2) ...
+Setting up libssl-dev:amd64 (3.0.13-0ubuntu3.16) ...
+Setting up libelf-dev:amd64 (0.190-1.1ubuntu0.1) ...
+Setting up llvm (1:18.0-59~exp2) ...
+Setting up build-essential (12.10ubuntu1) ...
+Setting up openssl (3.0.13-0ubuntu3.16) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Not building database; man-db/auto-update is not 'true'.
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+ /etc/needrestart/restart.d/systemd-manager
+ systemctl restart packagekit.service php8.3-fpm.service systemd-journald.service systemd-networkd.service systemd-resolved.service systemd-udevd.service udisks2.service
+
+Service restarts being deferred:
+ systemctl restart hosted-compute-agent.service
+ systemctl restart systemd-logind.service
+ systemctl restart walinuxagent.service
+
+No containers need to be restarted.
+
+User sessions running outdated binaries:
+ runner @ user manager service: systemd[1328]
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+info: latest update on 2026-10-01 for version 1.99.0 (b940084d7 2026-09-28)
+info: removing previous version of component rustfmt
+info: removing previous version of component clippy
+info: removing previous version of component cargo
+info: removing previous version of component rust-std
+info: removing previous version of component rustc
+info: downloading 5 components
+
+  stable-x86_64-unknown-linux-gnu updated - rustc 1.99.0 (b940084d7 2026-09-28) (from rustc 1.98.1 (48a229cea 2026-09-01))
+
+info: using existing install for stable-x86_64-unknown-linux-gnu
+info: default toolchain set to stable-x86_64-unknown-linux-gnu
+
+  stable-x86_64-unknown-linux-gnu unchanged - rustc 1.99.0 (b940084d7 2026-09-28)
+
+info: downloading component rust-std
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded cargo-ndk v4.1.2
+  Installing cargo-ndk v4.1.2
+    Updating crates.io index
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded anstream v0.6.20
+  Downloaded autocfg v1.5.0
+  Downloaded serde-untagged v0.1.7
+  Downloaded anstyle v1.0.11
+  Downloaded anstyle-parse v0.2.7
+  Downloaded displaydoc v0.2.5
+  Downloaded erased-serde v0.4.6
+  Downloaded clap_derive v4.5.41
+  Downloaded hashbrown v0.15.4
+  Downloaded pct-str v1.2.0
+  Downloaded url v2.5.4
+  Downloaded anstyle-query v1.1.4
+  Downloaded colorchoice v1.0.4
+  Downloaded cargo_metadata v0.21.0
+  Downloaded dunce v1.0.5
+  Downloaded clap_builder v4.5.42
+  Downloaded clap_lex v0.7.5
+  Downloaded camino v1.1.10
+  Downloaded clap v4.5.42
+  Downloaded anyhow v1.0.98
+  Downloaded eieio v1.0.0
+  Downloaded is_terminal_polyfill v1.70.1
+  Downloaded iref v1.4.3
+  Downloaded is-terminal v0.4.16
+  Downloaded smallvec v1.15.1
+  Downloaded zerotrie v0.2.2
+  Downloaded filetime v0.2.25
+  Downloaded serde_json v1.0.142
+  Downloaded typeid v1.0.3
+  Downloaded serde-value v0.7.0
+  Downloaded utf8parse v0.2.2
+  Downloaded toml_write v0.1.2
+  Downloaded memchr v2.7.5
+  Downloaded thiserror-impl v2.0.12
+  Downloaded utf8-decode v1.0.1
+  Downloaded thiserror-impl v1.0.69
+  Downloaded tinystr v0.8.1
+  Downloaded yoke v0.8.0
+  Downloaded heck v0.5.0
+  Downloaded toml_edit v0.22.27
+  Downloaded icu_normalizer v2.0.0
+  Downloaded idna v1.0.3
+  Downloaded percent-encoding v2.3.1
+  Downloaded serde_derive v1.0.219
+  Downloaded log v0.4.27
+  Downloaded termcolor v1.4.1
+  Downloaded zerovec-derive v0.11.1
+  Downloaded litemap v0.8.0
+  Downloaded ordered-float v2.10.1
+  Downloaded toml_writer v1.0.2
+  Downloaded unicode-xid v0.2.6
+  Downloaded quote v1.0.40
+  Downloaded semver v1.0.26
+  Downloaded itoa v1.0.15
+  Downloaded strsim v0.11.1
+  Downloaded zerofrom-derive v0.1.6
+  Downloaded cfg-if v1.0.1
+  Downloaded serde_spanned v1.0.0
+  Downloaded zerofrom v0.1.6
+  Downloaded idna_adapter v1.2.1
+  Downloaded stable_deref_trait v1.2.0
+  Downloaded thiserror v1.0.69
+  Downloaded cargo-platform v0.2.0
+  Downloaded thiserror v2.0.12
+  Downloaded yoke-derive v0.8.0
+  Downloaded os_str_bytes v2.4.0
+  Downloaded pathos v0.3.0
+  Downloaded potential_utf v0.1.2
+  Downloaded version_check v0.9.5
+  Downloaded serde_spanned v0.6.9
+  Downloaded toml_datetime v0.6.11
+  Downloaded form_urlencoded v1.2.1
+  Downloaded cargo-util-schemas v0.8.2
+  Downloaded synstructure v0.13.2
+  Downloaded utf8_iter v1.0.4
+  Downloaded writeable v0.6.1
+  Downloaded toml v0.8.23
+  Downloaded equivalent v1.0.2
+  Downloaded once_cell v1.21.3
+  Downloaded ryu v1.0.20
+  Downloaded toml_parser v1.0.2
+  Downloaded num-traits v0.2.19
+  Downloaded proc-macro2 v1.0.95
+  Downloaded toml_datetime v0.7.0
+  Downloaded indexmap v2.10.0
+  Downloaded icu_properties v2.0.1
+  Downloaded icu_normalizer_data v2.0.0
+  Downloaded icu_provider v2.0.0
+  Downloaded serde v1.0.219
+  Downloaded unicode-ident v1.0.18
+  Downloaded toml v0.9.5
+  Downloaded zerovec v0.11.4
+  Downloaded icu_collections v2.0.0
+  Downloaded icu_locale_core v2.0.0
+  Downloaded winnow v0.7.12
+  Downloaded icu_properties_data v2.0.1
+  Downloaded syn v2.0.104
+  Downloaded libc v0.2.174
+   Compiling proc-macro2 v1.0.95
+   Compiling unicode-ident v1.0.18
+   Compiling serde v1.0.219
+   Compiling stable_deref_trait v1.2.0
+   Compiling writeable v0.6.1
+   Compiling litemap v0.8.0
+   Compiling smallvec v1.15.1
+   Compiling icu_normalizer_data v2.0.0
+   Compiling icu_properties_data v2.0.1
+   Compiling autocfg v1.5.0
+   Compiling winnow v0.7.12
+   Compiling typeid v1.0.3
+   Compiling quote v1.0.40
+   Compiling num-traits v0.2.19
+   Compiling syn v2.0.104
+   Compiling percent-encoding v2.3.1
+   Compiling libc v0.2.174
+   Compiling hashbrown v0.15.4
+   Compiling equivalent v1.0.2
+   Compiling indexmap v2.10.0
+   Compiling toml_write v0.1.2
+   Compiling utf8_iter v1.0.4
+   Compiling thiserror v2.0.12
+   Compiling utf8parse v0.2.2
+   Compiling semver v1.0.26
+   Compiling anstyle-parse v0.2.7
+   Compiling ordered-float v2.10.1
+   Compiling form_urlencoded v1.2.1
+   Compiling is_terminal_polyfill v1.70.1
+   Compiling colorchoice v1.0.4
+   Compiling anstyle-query v1.1.4
+   Compiling anstyle v1.0.11
+   Compiling utf8-decode v1.0.1
+   Compiling camino v1.1.10
+   Compiling thiserror v1.0.69
+   Compiling serde_json v1.0.142
+   Compiling anstream v0.6.20
+   Compiling pct-str v1.2.0
+   Compiling ryu v1.0.20
+   Compiling memchr v2.7.5
+   Compiling unicode-xid v0.2.6
+   Compiling anyhow v1.0.98
+   Compiling itoa v1.0.15
+   Compiling strsim v0.11.1
+   Compiling clap_lex v0.7.5
+   Compiling heck v0.5.0
+   Compiling clap_builder v4.5.42
+   Compiling synstructure v0.13.2
+   Compiling iref v1.4.3
+   Compiling toml_parser v1.0.2
+   Compiling os_str_bytes v2.4.0
+   Compiling once_cell v1.21.3
+   Compiling log v0.4.27
+   Compiling toml_writer v1.0.2
+   Compiling serde_derive v1.0.219
+   Compiling zerofrom-derive v0.1.6
+   Compiling yoke-derive v0.8.0
+   Compiling zerofrom v0.1.6
+   Compiling zerovec-derive v0.11.1
+   Compiling yoke v0.8.0
+   Compiling displaydoc v0.2.5
+   Compiling zerotrie v0.2.2
+   Compiling zerovec v0.11.4
+   Compiling thiserror-impl v2.0.12
+   Compiling tinystr v0.8.1
+   Compiling icu_locale_core v2.0.0
+   Compiling potential_utf v0.1.2
+   Compiling icu_collections v2.0.0
+   Compiling icu_provider v2.0.0
+   Compiling icu_normalizer v2.0.0
+   Compiling icu_properties v2.0.1
+   Compiling toml_datetime v0.6.11
+   Compiling serde_spanned v0.6.9
+   Compiling erased-serde v0.4.6
+   Compiling toml_edit v0.22.27
+   Compiling serde-untagged v0.1.7
+   Compiling idna_adapter v1.2.1
+   Compiling idna v1.0.3
+   Compiling url v2.5.4
+   Compiling toml v0.8.23
+   Compiling serde-value v0.7.0
+   Compiling thiserror-impl v1.0.69
+   Compiling cargo-util-schemas v0.8.2
+   Compiling serde_spanned v1.0.0
+   Compiling cargo-platform v0.2.0
+   Compiling toml_datetime v0.7.0
+   Compiling clap_derive v4.5.41
+   Compiling eieio v1.0.0
+   Compiling cfg-if v1.0.1
+   Compiling cargo-ndk v4.1.2
+   Compiling filetime v0.2.25
+   Compiling pathos v0.3.0
+   Compiling clap v4.5.42
+   Compiling cargo_metadata v0.21.0
+   Compiling toml v0.9.5
+   Compiling is-terminal v0.4.16
+   Compiling dunce v1.0.5
+   Compiling termcolor v1.4.1
+   Compiling version_check v0.9.5
+    Finished `release` profile [optimized] target(s) in 28.63s
+  Installing /home/runner/.cargo/bin/cargo-ndk
+  Installing /home/runner/.cargo/bin/cargo-ndk-env
+  Installing /home/runner/.cargo/bin/cargo-ndk-runner
+  Installing /home/runner/.cargo/bin/cargo-ndk-test
+   Installed package `cargo-ndk v4.1.2` (executables `cargo-ndk`, `cargo-ndk-env`, `cargo-ndk-runner`, `cargo-ndk-test`)
++ WS=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads
++ KSRC=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc
++ BASE=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
++ DELTA=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ rm -rf /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ echo 'source configuration:'
+source configuration:
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${SRC_URL:-}'
+++ val=https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
++ '[' -n https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip ']'
++ echo '  SRC_URL = set (105 chars)'
+  SRC_URL = set (105 chars)
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${SRC_SHA:-}'
+++ val=
++ '[' -n '' ']'
++ echo '  SRC_SHA = EMPTY'
+  SRC_SHA = EMPTY
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${DELTA_URL:-}'
+++ val=https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip
++ '[' -n https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip ']'
++ echo '  DELTA_URL = set (147 chars)'
+  DELTA_URL = set (147 chars)
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${DELTA_SHA:-}'
+++ val=
++ '[' -n '' ']'
++ echo '  DELTA_SHA = EMPTY'
+  DELTA_SHA = EMPTY
++ echo '=== PHASE 1: download + extract the base archive ==='
+=== PHASE 1: download + extract the base archive ===
++ fetch https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip '' /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
++ echo 'downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip'
+downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
++ curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
+++ stat -c %s /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl
++ sz=375158122
++ echo '  downloaded 375158122 bytes'
+  downloaded 375158122 bytes
++ '[' -n '' ']'
++ case "${1}" in
++ unzip -q -o /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl -d /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
++ extract_nested /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base kernel_root
++ local d=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base stop=kernel_root t
++ shopt -s nullglob
++ for t in "$d"/*.tar.gz "$d"/*.tgz "$d"/*.tar.bz2 "$d"/*.tar.xz "$d"/*.tar
+++ basename /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/Kernel.tar.gz
+++ stat -c %s /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/Kernel.tar.gz
++ echo '  extracting nested archive Kernel.tar.gz (346485295 bytes)'
+  extracting nested archive Kernel.tar.gz (346485295 bytes)
++ tar -xf /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/Kernel.tar.gz -C /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
++ rm -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/Kernel.tar.gz
++ '[' -n kernel_root ']'
+++ kernel_root
+++ true
++ '[' -n ./kernel-6.12 ']'
++ echo '  kernel Makefile located, no further nested archives needed'
+  kernel Makefile located, no further nested archives needed
++ break
++ shopt -u nullglob
++ echo '=== PHASE 1 done ==='
+=== PHASE 1 done ===
+++ kernel_root
+++ true
++ ROOT=./kernel-6.12
++ '[' -z ./kernel-6.12 ']'
++ echo 'kernel tree root: base/kernel-6.12'
+kernel tree root: base/kernel-6.12
++ BASE_REL=kernel-6.12
++ echo '=== PHASE 2 done: tree root located ==='
+=== PHASE 2 done: tree root located ===
++ '[' -n https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip ']'
++ echo 'applying build-specific delta over the base tree'
+applying build-specific delta over the base tree
++ fetch https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip '' /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ echo 'downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip'
+downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip
++ curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip
+++ stat -c %s /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl
++ sz=596760
++ echo '  downloaded 596760 bytes'
+  downloaded 596760 bytes
++ '[' -n '' ']'
++ case "${1}" in
++ unzip -q -o /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl -d /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ extract_nested /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ local d=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta stop= t
++ shopt -s nullglob
++ for t in "$d"/*.tar.gz "$d"/*.tgz "$d"/*.tar.bz2 "$d"/*.tar.xz "$d"/*.tar
+++ basename /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/A075FXXS5BZD2_kernel.tar.gz
+++ stat -c %s /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/A075FXXS5BZD2_kernel.tar.gz
++ echo '  extracting nested archive A075FXXS5BZD2_kernel.tar.gz (595614 bytes)'
+  extracting nested archive A075FXXS5BZD2_kernel.tar.gz (595614 bytes)
++ tar -xf /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/A075FXXS5BZD2_kernel.tar.gz -C /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ rm -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/A075FXXS5BZD2_kernel.tar.gz
++ '[' -n '' ']'
++ shopt -u nullglob
++ overlaid=0
++ IFS=
+++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ read -r -d '' f
+++ find . -type f -print0
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=midgard/mmu/mali_kbase_mmu.c
++ '[' -n midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mmu/mali_kbase_mmu.c
++ '[' -n mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mali_kbase_mmu.c
++ '[' -n mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem.h
++ '[' -n arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem.h
++ '[' -n midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=mali_kbase_mem.h
++ '[' -n mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem_linux.c
++ '[' -n arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem_linux.c
++ '[' -n midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=mali_kbase_mem_linux.c
++ '[' -n mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem_pool.c
++ '[' -n arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem_pool.c
++ '[' -n midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=mali_kbase_mem_pool.c
++ '[' -n mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem_migrate.c
++ '[' -n midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=mali_kbase_mem_migrate.c
++ '[' -n mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=arm/midgard/mmu/mali_kbase_mmu.c
++ '[' -n arm/midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=midgard/mmu/mali_kbase_mmu.c
++ '[' -n midgard/mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mmu/mali_kbase_mmu.c
++ '[' -n mmu/mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mmu/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=mali_kbase_mmu.c
++ '[' -n mali_kbase_mmu.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mmu.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=midgard/csf/mali_kbase_csf_cpu_queue.c
++ '[' -n midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=csf/mali_kbase_csf_cpu_queue.c
++ '[' -n csf/mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/csf/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=mali_kbase_csf_cpu_queue.c
++ '[' -n mali_kbase_csf_cpu_queue.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_csf_cpu_queue.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/csf/mali_kbase_csf_cpu_queue.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem.h
++ '[' -n gpu/arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem.h
++ '[' -n arm/midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem.h
++ '[' -n midgard/mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=mali_kbase_mem.h
++ '[' -n mali_kbase_mem.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem.h ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem.h
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem_linux.c
++ '[' -n gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem_linux.c
++ '[' -n arm/midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem_linux.c
++ '[' -n midgard/mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=mali_kbase_mem_linux.c
++ '[' -n mali_kbase_mem_linux.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem_linux.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem_pool.c
++ '[' -n gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem_pool.c
++ '[' -n arm/midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem_pool.c
++ '[' -n midgard/mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=mali_kbase_mem_pool.c
++ '[' -n mali_kbase_mem_pool.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem_pool.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_pool.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=gpu/arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=arm/midgard/mali_kbase_mem_migrate.c
++ '[' -n arm/midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=midgard/mali_kbase_mem_migrate.c
++ '[' -n midgard/mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/midgard/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=mali_kbase_mem_migrate.c
++ '[' -n mali_kbase_mem_migrate.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mali_kbase_mem_migrate.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c'
+  !! delta file has no counterpart in the base tree: Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w/drivers/gpu/arm/midgard/mali_kbase_mem_migrate.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts
++ '[' -n kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts
++ '[' -n kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=arch/arm64/boot/dts/mediatek/mt6789.dts
++ '[' -n arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=arm64/boot/dts/mediatek/mt6789.dts
++ '[' -n arm64/boot/dts/mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm64/boot/dts/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=boot/dts/mediatek/mt6789.dts
++ '[' -n boot/dts/mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/boot/dts/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=dts/mediatek/mt6789.dts
++ '[' -n dts/mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/dts/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=mediatek/mt6789.dts
++ '[' -n mediatek/mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/mt6789.dts ']'
++ case "$cand" in
++ cand=mt6789.dts
++ '[' -n mt6789.dts ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mt6789.dts ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/arch/arm64/boot/dts/mediatek/mt6789.dts
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig
++ '[' -n kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig
++ '[' -n kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig ']'
++ case "$cand" in
++ cand=arch/arm64/configs/a07_defconfig
++ '[' -n arch/arm64/configs/a07_defconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arch/arm64/configs/a07_defconfig ']'
++ case "$cand" in
++ cand=arm64/configs/a07_defconfig
++ '[' -n arm64/configs/a07_defconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/arm64/configs/a07_defconfig ']'
++ case "$cand" in
++ cand=configs/a07_defconfig
++ '[' -n configs/a07_defconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/configs/a07_defconfig ']'
++ case "$cand" in
++ cand=a07_defconfig
++ '[' -n a07_defconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/a07_defconfig ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/arch/arm64/configs/a07_defconfig
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c
++ '[' -n kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c
++ '[' -n kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c ']'
++ case "$cand" in
++ cand=drivers/usb/notify/usb_notify.c
++ '[' -n drivers/usb/notify/usb_notify.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/usb/notify/usb_notify.c ']'
++ case "$cand" in
++ cand=usb/notify/usb_notify.c
++ '[' -n usb/notify/usb_notify.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/usb/notify/usb_notify.c ']'
++ case "$cand" in
++ cand=notify/usb_notify.c
++ '[' -n notify/usb_notify.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/notify/usb_notify.c ']'
++ case "$cand" in
++ cand=usb_notify.c
++ '[' -n usb_notify.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/usb_notify.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c
++ '[' -n kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c
++ '[' -n kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c ']'
++ case "$cand" in
++ cand=drivers/usb/notify/usb_notify_sysfs.c
++ '[' -n drivers/usb/notify/usb_notify_sysfs.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/usb/notify/usb_notify_sysfs.c ']'
++ case "$cand" in
++ cand=usb/notify/usb_notify_sysfs.c
++ '[' -n usb/notify/usb_notify_sysfs.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/usb/notify/usb_notify_sysfs.c ']'
++ case "$cand" in
++ cand=notify/usb_notify_sysfs.c
++ '[' -n notify/usb_notify_sysfs.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/notify/usb_notify_sysfs.c ']'
++ case "$cand" in
++ cand=usb_notify_sysfs.c
++ '[' -n usb_notify_sysfs.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/usb_notify_sysfs.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/usb/notify/usb_notify_sysfs.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h
++ '[' -n kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h
++ '[' -n kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h
++ '[' -n drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=gpu/drm/mediatek/mml/mtk-mml-driver.h
++ '[' -n gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/drm/mediatek/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=drm/mediatek/mml/mtk-mml-driver.h
++ '[' -n drm/mediatek/mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drm/mediatek/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=mediatek/mml/mtk-mml-driver.h
++ '[' -n mediatek/mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=mml/mtk-mml-driver.h
++ '[' -n mml/mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mml/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=mtk-mml-driver.h
++ '[' -n mtk-mml-driver.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mtk-mml-driver.h ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.h
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c
++ '[' -n kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c
++ '[' -n kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c
++ '[' -n drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=gpu/drm/mediatek/mml/mtk-mml-driver.c
++ '[' -n gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/drm/mediatek/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=drm/mediatek/mml/mtk-mml-driver.c
++ '[' -n drm/mediatek/mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drm/mediatek/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=mediatek/mml/mtk-mml-driver.c
++ '[' -n mediatek/mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=mml/mtk-mml-driver.c
++ '[' -n mml/mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mml/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=mtk-mml-driver.c
++ '[' -n mtk-mml-driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mtk-mml-driver.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-driver.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c
++ '[' -n kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c
++ '[' -n kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c
++ '[' -n drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c
++ '[' -n gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=drm/mediatek/mml/mtk-mml-drm-adaptor.c
++ '[' -n drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drm/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=mediatek/mml/mtk-mml-drm-adaptor.c
++ '[' -n mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=mml/mtk-mml-drm-adaptor.c
++ '[' -n mml/mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mml/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=mtk-mml-drm-adaptor.c
++ '[' -n mtk-mml-drm-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mtk-mml-drm-adaptor.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-drm-adaptor.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c
++ '[' -n kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c
++ '[' -n kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c
++ '[' -n drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c
++ '[' -n gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=drm/mediatek/mml/mtk-mml-m2m-adaptor.c
++ '[' -n drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drm/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=mediatek/mml/mtk-mml-m2m-adaptor.c
++ '[' -n mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=mml/mtk-mml-m2m-adaptor.c
++ '[' -n mml/mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mml/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=mtk-mml-m2m-adaptor.c
++ '[' -n mtk-mml-m2m-adaptor.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mtk-mml-m2m-adaptor.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-m2m-adaptor.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c
++ '[' -n kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c
++ '[' -n kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=drivers/gpu/drm/mediatek/mml/mtk-mml-core.c
++ '[' -n drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=gpu/drm/mediatek/mml/mtk-mml-core.c
++ '[' -n gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/gpu/drm/mediatek/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=drm/mediatek/mml/mtk-mml-core.c
++ '[' -n drm/mediatek/mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drm/mediatek/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=mediatek/mml/mtk-mml-core.c
++ '[' -n mediatek/mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mediatek/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=mml/mtk-mml-core.c
++ '[' -n mml/mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mml/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=mtk-mml-core.c
++ '[' -n mtk-mml-core.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mtk-mml-core.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/drivers/gpu/drm/mediatek/mml/mtk-mml-core.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig
++ '[' -n kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/mm/sec_mm/Kconfig
++ '[' -n kernel_device_modules-6.12/mm/sec_mm/Kconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/mm/sec_mm/Kconfig ']'
++ case "$cand" in
++ cand=mm/sec_mm/Kconfig
++ '[' -n mm/sec_mm/Kconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mm/sec_mm/Kconfig ']'
++ case "$cand" in
++ cand=sec_mm/Kconfig
++ '[' -n sec_mm/Kconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/sec_mm/Kconfig ']'
++ case "$cand" in
++ cand=Kconfig
++ '[' -n Kconfig ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kconfig ']'
++ '[' -n Kconfig ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kconfig ']'
+++ dirname Kconfig
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/.
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kconfig
++ overlaid=1
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c
++ '[' -n Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c ']'
++ case "$cand" in
++ cand=kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c
++ '[' -n kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c ']'
++ case "$cand" in
++ cand=kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c
++ '[' -n kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c ']'
++ case "$cand" in
++ cand=mm/sec_mm/sec_mm_tune.c
++ '[' -n mm/sec_mm/sec_mm_tune.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mm/sec_mm/sec_mm_tune.c ']'
++ case "$cand" in
++ cand=sec_mm/sec_mm_tune.c
++ '[' -n sec_mm/sec_mm_tune.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/sec_mm/sec_mm_tune.c ']'
++ case "$cand" in
++ cand=sec_mm_tune.c
++ '[' -n sec_mm_tune.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/sec_mm_tune.c ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c'
+  !! delta file has no counterpart in the base tree: Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/sec_mm_tune.c
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/include/trace/hooks/mm.h
++ '[' -n Kernel/kernel-6.12/include/trace/hooks/mm.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/include/trace/hooks/mm.h ']'
++ case "$cand" in
++ cand=kernel-6.12/include/trace/hooks/mm.h
++ '[' -n kernel-6.12/include/trace/hooks/mm.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/include/trace/hooks/mm.h ']'
++ case "$cand" in
++ cand=include/trace/hooks/mm.h
++ '[' -n include/trace/hooks/mm.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/include/trace/hooks/mm.h ']'
++ '[' -n include/trace/hooks/mm.h ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/include/trace/hooks/mm.h ']'
+++ dirname include/trace/hooks/mm.h
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/include/trace/hooks
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/include/trace/hooks/mm.h /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/include/trace/hooks/mm.h
++ overlaid=2
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/security/samsung/defex_lsm/defex_rules.c
++ '[' -n Kernel/kernel-6.12/security/samsung/defex_lsm/defex_rules.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/security/samsung/defex_lsm/defex_rules.c ']'
++ case "$cand" in
++ cand=kernel-6.12/security/samsung/defex_lsm/defex_rules.c
++ '[' -n kernel-6.12/security/samsung/defex_lsm/defex_rules.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/security/samsung/defex_lsm/defex_rules.c ']'
++ case "$cand" in
++ cand=security/samsung/defex_lsm/defex_rules.c
++ '[' -n security/samsung/defex_lsm/defex_rules.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/security/samsung/defex_lsm/defex_rules.c ']'
++ '[' -n security/samsung/defex_lsm/defex_rules.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/security/samsung/defex_lsm/defex_rules.c ']'
+++ dirname security/samsung/defex_lsm/defex_rules.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/security/samsung/defex_lsm
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/security/samsung/defex_lsm/defex_rules.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/security/samsung/defex_lsm/defex_rules.c
++ overlaid=3
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/drivers/hid/hid-multitouch.c
++ '[' -n Kernel/kernel-6.12/drivers/hid/hid-multitouch.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/drivers/hid/hid-multitouch.c ']'
++ case "$cand" in
++ cand=kernel-6.12/drivers/hid/hid-multitouch.c
++ '[' -n kernel-6.12/drivers/hid/hid-multitouch.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/drivers/hid/hid-multitouch.c ']'
++ case "$cand" in
++ cand=drivers/hid/hid-multitouch.c
++ '[' -n drivers/hid/hid-multitouch.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/hid/hid-multitouch.c ']'
++ '[' -n drivers/hid/hid-multitouch.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/hid/hid-multitouch.c ']'
+++ dirname drivers/hid/hid-multitouch.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/hid
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/drivers/hid/hid-multitouch.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/hid/hid-multitouch.c
++ overlaid=4
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c
++ '[' -n Kernel/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c ']'
++ case "$cand" in
++ cand=kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c
++ '[' -n kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c ']'
++ case "$cand" in
++ cand=drivers/usb/gadget/function/android_f_accessory.c
++ '[' -n drivers/usb/gadget/function/android_f_accessory.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c ']'
++ '[' -n drivers/usb/gadget/function/android_f_accessory.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c ']'
+++ dirname drivers/usb/gadget/function/android_f_accessory.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/usb/gadget/function
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/usb/gadget/function/android_f_accessory.c
++ overlaid=5
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/drivers/android/vendor_hooks.c
++ '[' -n Kernel/kernel-6.12/drivers/android/vendor_hooks.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/drivers/android/vendor_hooks.c ']'
++ case "$cand" in
++ cand=kernel-6.12/drivers/android/vendor_hooks.c
++ '[' -n kernel-6.12/drivers/android/vendor_hooks.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/drivers/android/vendor_hooks.c ']'
++ case "$cand" in
++ cand=drivers/android/vendor_hooks.c
++ '[' -n drivers/android/vendor_hooks.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/android/vendor_hooks.c ']'
++ '[' -n drivers/android/vendor_hooks.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/android/vendor_hooks.c ']'
+++ dirname drivers/android/vendor_hooks.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/android
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/drivers/android/vendor_hooks.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/android/vendor_hooks.c
++ overlaid=6
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c
++ '[' -n Kernel/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c ']'
++ case "$cand" in
++ cand=kernel-6.12/drivers/media/usb/uvc/uvc_driver.c
++ '[' -n kernel-6.12/drivers/media/usb/uvc/uvc_driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c ']'
++ case "$cand" in
++ cand=drivers/media/usb/uvc/uvc_driver.c
++ '[' -n drivers/media/usb/uvc/uvc_driver.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c ']'
++ '[' -n drivers/media/usb/uvc/uvc_driver.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c ']'
+++ dirname drivers/media/usb/uvc/uvc_driver.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/media/usb/uvc
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/drivers/media/usb/uvc/uvc_driver.c
++ overlaid=7
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/mm/page_alloc.c
++ '[' -n Kernel/kernel-6.12/mm/page_alloc.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/mm/page_alloc.c ']'
++ case "$cand" in
++ cand=kernel-6.12/mm/page_alloc.c
++ '[' -n kernel-6.12/mm/page_alloc.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/mm/page_alloc.c ']'
++ case "$cand" in
++ cand=mm/page_alloc.c
++ '[' -n mm/page_alloc.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mm/page_alloc.c ']'
++ '[' -n mm/page_alloc.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mm/page_alloc.c ']'
+++ dirname mm/page_alloc.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mm
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/mm/page_alloc.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/mm/page_alloc.c
++ overlaid=8
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/net/tls/tls_strp.c
++ '[' -n Kernel/kernel-6.12/net/tls/tls_strp.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/net/tls/tls_strp.c ']'
++ case "$cand" in
++ cand=kernel-6.12/net/tls/tls_strp.c
++ '[' -n kernel-6.12/net/tls/tls_strp.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/net/tls/tls_strp.c ']'
++ case "$cand" in
++ cand=net/tls/tls_strp.c
++ '[' -n net/tls/tls_strp.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls_strp.c ']'
++ '[' -n net/tls/tls_strp.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls_strp.c ']'
+++ dirname net/tls/tls_strp.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/net/tls/tls_strp.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls_strp.c
++ overlaid=9
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/net/tls/tls.h
++ '[' -n Kernel/kernel-6.12/net/tls/tls.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/net/tls/tls.h ']'
++ case "$cand" in
++ cand=kernel-6.12/net/tls/tls.h
++ '[' -n kernel-6.12/net/tls/tls.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/net/tls/tls.h ']'
++ case "$cand" in
++ cand=net/tls/tls.h
++ '[' -n net/tls/tls.h ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls.h ']'
++ '[' -n net/tls/tls.h ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls.h ']'
+++ dirname net/tls/tls.h
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/net/tls/tls.h /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls.h
++ overlaid=10
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/net/tls/tls_sw.c
++ '[' -n Kernel/kernel-6.12/net/tls/tls_sw.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/net/tls/tls_sw.c ']'
++ case "$cand" in
++ cand=kernel-6.12/net/tls/tls_sw.c
++ '[' -n kernel-6.12/net/tls/tls_sw.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/net/tls/tls_sw.c ']'
++ case "$cand" in
++ cand=net/tls/tls_sw.c
++ '[' -n net/tls/tls_sw.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls_sw.c ']'
++ '[' -n net/tls/tls_sw.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls_sw.c ']'
+++ dirname net/tls/tls_sw.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/net/tls/tls_sw.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/tls/tls_sw.c
++ overlaid=11
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/net/vmw_vsock/af_vsock.c
++ '[' -n Kernel/kernel-6.12/net/vmw_vsock/af_vsock.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/net/vmw_vsock/af_vsock.c ']'
++ case "$cand" in
++ cand=kernel-6.12/net/vmw_vsock/af_vsock.c
++ '[' -n kernel-6.12/net/vmw_vsock/af_vsock.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/net/vmw_vsock/af_vsock.c ']'
++ case "$cand" in
++ cand=net/vmw_vsock/af_vsock.c
++ '[' -n net/vmw_vsock/af_vsock.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/vmw_vsock/af_vsock.c ']'
++ '[' -n net/vmw_vsock/af_vsock.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/vmw_vsock/af_vsock.c ']'
+++ dirname net/vmw_vsock/af_vsock.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/vmw_vsock
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/net/vmw_vsock/af_vsock.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/vmw_vsock/af_vsock.c
++ overlaid=12
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/net/unix/af_unix.c
++ '[' -n Kernel/kernel-6.12/net/unix/af_unix.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/net/unix/af_unix.c ']'
++ case "$cand" in
++ cand=kernel-6.12/net/unix/af_unix.c
++ '[' -n kernel-6.12/net/unix/af_unix.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/net/unix/af_unix.c ']'
++ case "$cand" in
++ cand=net/unix/af_unix.c
++ '[' -n net/unix/af_unix.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/unix/af_unix.c ']'
++ '[' -n net/unix/af_unix.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/unix/af_unix.c ']'
+++ dirname net/unix/af_unix.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/unix
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/net/unix/af_unix.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/net/unix/af_unix.c
++ overlaid=13
++ IFS=
++ read -r -d '' f
++ cand=Kernel/kernel-6.12/sound/usb/stream.c
++ '[' -n Kernel/kernel-6.12/sound/usb/stream.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/kernel-6.12/sound/usb/stream.c ']'
++ case "$cand" in
++ cand=kernel-6.12/sound/usb/stream.c
++ '[' -n kernel-6.12/sound/usb/stream.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/kernel-6.12/sound/usb/stream.c ']'
++ case "$cand" in
++ cand=sound/usb/stream.c
++ '[' -n sound/usb/stream.c ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/sound/usb/stream.c ']'
++ '[' -n sound/usb/stream.c ']'
++ '[' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/sound/usb/stream.c ']'
+++ dirname sound/usb/stream.c
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/sound/usb
++ cp -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta/./Kernel/kernel-6.12/sound/usb/stream.c /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/sound/usb/stream.c
++ overlaid=14
++ IFS=
++ read -r -d '' f
++ cand=A075FXXS5BZD2_kernel.txt
++ '[' -n A075FXXS5BZD2_kernel.txt ']'
++ '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/A075FXXS5BZD2_kernel.txt ']'
++ case "$cand" in
++ cand=
++ '[' -n '' ']'
++ '[' -n '' ']'
++ echo '  !! delta file has no counterpart in the base tree: A075FXXS5BZD2_kernel.txt'
+  !! delta file has no counterpart in the base tree: A075FXXS5BZD2_kernel.txt
++ IFS=
++ read -r -d '' f
++ echo 'overlaid 14 delta file(s)'
+overlaid 14 delta file(s)
++ echo '=== PHASE 3 done: delta applied ==='
+=== PHASE 3 done: delta applied ===
++ test -f /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Makefile
++ '[' kernel-6.12 = . ']'
++ mv /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12 /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree
++ grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree/Makefile
+VERSION = 6
+PATCHLEVEL = 12
+SUBLEVEL = 23
+EXTRAVERSION =
++ echo 'kernel tree ready at /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree'
+kernel tree ready at /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree
++ echo '=== PHASE 4 done ==='
+=== PHASE 4 done ===
++ set -e
++ set -euo pipefail
++ cp src/targets/a07-A075FXXS5BZD2/kernel.config tree/.config
++ cd tree
++ sed -i -e 's|^CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION="-android16-5-abA075FXXS5BZD2-4k"|' -e 's|^CONFIG_LOCALVERSION_AUTO=.*|CONFIG_LOCALVERSION_AUTO=n|' -e 's|^# CONFIG_LOCALVERSION_AUTO is not set|CONFIG_LOCALVERSION_AUTO=n|' .config
++ grep -E '^CONFIG_LOCALVERSION' .config
+CONFIG_LOCALVERSION="-android16-5-abA075FXXS5BZD2-4k"
+CONFIG_LOCALVERSION_AUTO=n
++ make olddefconfig
+  HOSTCC  scripts/basic/fixdep
+  HOSTCC  scripts/kconfig/conf.o
+  HOSTCC  scripts/kconfig/confdata.o
+  HOSTCC  scripts/kconfig/expr.o
+  LEX     scripts/kconfig/lexer.lex.c
+  YACC    scripts/kconfig/parser.tab.[ch]
+  HOSTCC  scripts/kconfig/lexer.lex.o
+  HOSTCC  scripts/kconfig/menu.o
+  HOSTCC  scripts/kconfig/parser.tab.o
+  HOSTCC  scripts/kconfig/preprocess.o
+  HOSTCC  scripts/kconfig/symbol.o
+  HOSTCC  scripts/kconfig/util.o
+  HOSTLD  scripts/kconfig/conf
+#
+# configuration written to .config
+#
+++ cat include/config/kernel.release
+++ true
++ echo 'resolved utsrelease: '
+resolved utsrelease: 
+++ cat include/config/kernel.release
+cat: include/config/kernel.release: No such file or directory
++ test '' = 6.12.23-android16-5-abA075FXXS5BZD2-4k
++ echo '::error::utsrelease mismatch'
+::error::utsrelease mismatch
++ exit 1
