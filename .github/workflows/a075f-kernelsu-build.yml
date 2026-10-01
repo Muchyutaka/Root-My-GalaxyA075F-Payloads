@@ -101,11 +101,14 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Fetch the kernel tree
         env:
-          # Accept either an Actions *variable* or an Actions *secret*, so it
-          # does not matter which of the two tabs the value was put on.
-          SRC_URL: ${{ vars.A075F_KERNEL_SRC_URL || secrets.A075F_KERNEL_SRC_URL }}
+          # The Samsung opensource archives are PUBLIC release assets of this
+          # very repository (tag 1), so their URLs are the default and no
+          # configuration is needed at all.  The variables, if they happen to
+          # be set (on either the Variables or the Secrets tab), only override
+          # the defaults - e.g. to point at a newer upload.
+          SRC_URL: ${{ vars.A075F_KERNEL_SRC_URL || secrets.A075F_KERNEL_SRC_URL || 'https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip' }}
           SRC_SHA: ${{ vars.A075F_KERNEL_SRC_SHA256 || secrets.A075F_KERNEL_SRC_SHA256 }}
-          DELTA_URL: ${{ vars.A075F_KERNEL_SRC_DELTA_URL || secrets.A075F_KERNEL_SRC_DELTA_URL }}
+          DELTA_URL: ${{ vars.A075F_KERNEL_SRC_DELTA_URL || secrets.A075F_KERNEL_SRC_DELTA_URL || 'https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip' }}
           DELTA_SHA: ${{ vars.A075F_KERNEL_SRC_DELTA_SHA256 || secrets.A075F_KERNEL_SRC_DELTA_SHA256 }}
         run: |
           set -euo pipefail
@@ -119,13 +122,8 @@ jobs:
             fi
           done
           if [ -z "${SRC_URL}" ]; then
-            echo "::error::A075F_KERNEL_SRC_URL is not set."
-            echo "Repo -> Settings -> Secrets and variables -> Actions -> the VARIABLES tab"
-            echo "(not the Secrets tab, though this workflow accepts either), and create:"
-            echo "  name : A075F_KERNEL_SRC_URL"
-            echo "  value: https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip"
-            echo "Optionally also A075F_KERNEL_SRC_DELTA_URL pointing at the"
-            echo "SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip asset."
+            echo "::error::no kernel source URL resolved - this should be unreachable"
+            echo "because the default is a literal in the workflow file."
             exit 1
           fi
           mkdir -p ksrc && cd ksrc
