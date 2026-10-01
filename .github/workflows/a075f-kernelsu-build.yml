@@ -193,24 +193,37 @@ jobs:
       - name: Install the matching clang
         run: |
           set -euo pipefail
-          # Target was built with Android clang r536225 (clang 19.0.1, LLD 19.0.1).
-          # Prefer it so CONFIG_CC_IS_CLANG / LLD detection matches; fall back to
-          # distro clang, which produces identical modversions CRCs (they are
-          # derived from the symbol prototypes, not the compiler).
-          CLANG_DIR="$PWD/clang"
-          mkdir -p "${CLANG_DIR}"
+          # The target was built with Android clang r536225 (clang 19.0.1,
+          # LLD 19.0.1).  Prefer it so CONFIG_CC_IS_CLANG / CONFIG_LD_IS_LLD
+          # detection matches.  kbuild with LLVM=1 invokes bare `clang`, `ld.lld`,
+          # `llvm-ar` ... from PATH, so symlink them into one directory and put
+          # that directory at the FRONT of PATH.  If the Android toolchain is
+          # unreachable we fall back to distro clang, which still produces
+          # identical modversions CRCs (those are derived from the symbol
+          # prototypes in the source, not from the compiler).
+          BINDIR="$PWD/toolchain-bin"
+          mkdir -p "${BINDIR}"
           if curl -fsSL --retry 3 --retry-delay 2 -o /tmp/clang.tar.gz \
               "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz"; then
-            tar -xf /tmp/clang.tar.gz -C "${CLANG_DIR}"
-            echo "${CLANG_DIR}/bin" >> "$GITHUB_PATH"
-            echo "CLANG=${CLANG_DIR}/bin/clang" >> "$GITHUB_ENV"
-            echo "LLVM=${CLANG_DIR}/bin/llvm-*" >> "$GITHUB_ENV"
+            mkdir -p clang && tar -xf /tmp/clang.tar.gz -C clang
+            for t in clang clang++ ld.lld ld ld.gold llvm-ar llvm-nm llvm-objcopy \
+                     llvm-objdump llvm-strip llvm-readelf llvm-install-name-tool; do
+              [ -x "clang/bin/$t" ] && ln -sf "$PWD/clang/bin/$t" "${BINDIR}/$t"
+            done
             echo "using Android clang r536225"
           else
-            echo "Android clang unavailable, using distro clang"
-            echo "CLANG=clang" >> "$GITHUB_ENV"
+            echo "Android clang unreachable, falling back to distro clang"
+            for t in clang clang++ ld.lld ld.gold llvm-ar llvm-nm llvm-objcopy \
+                     llvm-objdump llvm-strip llvm-readelf; do
+              p=$(command -v "$t" || true)
+              [ -n "$p" ] && ln -sf "$p" "${BINDIR}/$t"
+            done
           fi
-          ${CLANG} --version | head -2 || clang --version | head -2
+          echo "${BINDIR}" >> "$GITHUB_PATH"
+          echo "PATH=${BINDIR}:$PATH" >> "$GITHUB_ENV"
+          ls -l "${BINDIR}"
+          clang --version | head -2
+          ld.lld --version | head -1
 
       - name: Prepare the kernel for module builds
         env:
@@ -254,7 +267,12 @@ jobs:
           cd tree
           # CONFIG_KSU=m; KPROBES=y and EXT4_FS=y are already =y in the
           # recovered config, which is exactly what KernelSU's Kconfig needs.
-          ./scripts/config -m KSU
+          # scripts/config is a host binary that may not be built yet, so set
+          # CONFIG_KSU=m directly in .config; olddefconfig then resolves the
+          # KernelSU Kconfig we just sourced.
+          sed -i -e 's|^# CONFIG_KSU is not set|CONFIG_KSU=m|' \
+                 -e 's|^CONFIG_KSU=.*|CONFIG_KSU=m|' .config
+          grep -q '^CONFIG_KSU=m' .config || echo 'CONFIG_KSU=m' >> .config
           yes '' | make olddefconfig
           grep -E '^CONFIG_KSU' .config
           test "$(grep -c '^CONFIG_KSU=m' .config)" = "1"
@@ -280,7 +298,8 @@ jobs:
           [ "$(modinfo -F name "${KO}")" = "kernelsu" ] || {
             echo "::error::module name is not kernelsu"; exit 1; }
           # the arm64 syscall hook must have been compiled in
-          aarch64-linux-gnu-objdump -d "${KO}" | grep -q 'ksu_syscall_dispatcher' || {
+          OBJDUMP=$(command -v aarch64-linux-gnu-objdump || command -v llvm-objdump)
+          "${OBJDUMP}" -d "${KO}" | grep -q 'ksu_syscall_dispatcher' || {
             echo "::error::ksu_syscall_dispatcher missing from the module"; exit 1; }
           echo "module audit passed"
 
@@ -309,14 +328,20 @@ jobs:
           curl -fsSL --retry 3 -o /tmp/ndk.zip \
             "https://dl.google.com/android/repository/android-ndk-r27d-linux.zip"
           unzip -q /tmp/ndk.zip -d "$PWD"
-          echo "ANDROID_NDK_HOME=$PWD/android-ndk-r27d" >> "$GITHUB_ENV"
-          echo "$PWD/android-ndk-r27d" >> "$GITHUB_PATH"
+          NDK="$PWD/android-ndk-r27d"
+          echo "ANDROID_NDK_HOME=${NDK}" >> "$GITHUB_ENV"
+          echo "NDK_HOME=${NDK}" >> "$GITHUB_ENV"
+          export ANDROID_NDK_HOME="${NDK}" NDK_HOME="${NDK}"
+          test -x "${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           cd KernelSU
           git fetch -q --depth 1 origin "${KSU_COMMIT}" 2>/dev/null || true
           git checkout -q "${KSU_COMMIT}" 2>/dev/null || true
-          cargo ndk -t arm64-v8a -o "$PWD/target/ndk" build --release
-          BIN="$PWD/target/ndk/arm64-v8a/ksud"
-          test -x "${BIN}"
+          cargo ndk -t arm64-v8a build --release
+          # cargo-ndk lays binaries out under target/<triple>/release/; accept
+          # any location so a layout change upstream does not break the build.
+          BIN=$(find "$PWD/target" -type f -name ksud -perm -u+x | head -1)
+          test -n "${BIN}"
+          echo "ksud binary: ${BIN}"
           install -D -m 0755 "${BIN}" "../kernelsu/${KSUD_NAME}"
           ls -l "../kernelsu/${KSUD_NAME}"
           file "../kernelsu/${KSUD_NAME}"
