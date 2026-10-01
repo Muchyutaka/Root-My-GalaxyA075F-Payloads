@@ -1,0 +1,7 @@
+source configuration:
+  SRC_URL = set (105 chars)
+  SRC_SHA = EMPTY
+  DELTA_URL = set (147 chars)
+  DELTA_SHA = EMPTY
+downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
+  downloaded 375158122 bytes
