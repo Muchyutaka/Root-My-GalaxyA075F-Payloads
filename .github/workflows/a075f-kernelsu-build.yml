@@ -275,6 +275,11 @@ jobs:
               mv "$BASE/$BASE_REL" "$WS/tree"
             fi
             grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' "$WS/tree/Makefile"
+            # Samsung's archives extract every file read-only (mode 444/555).
+            # make never touches the sources so modules_prepare survives, but
+            # appending to drivers/Makefile and dropping the kernelsu symlink
+            # into drivers/ do not.  Make the whole tree writable once, here.
+            chmod -R u+w "$WS/tree"
             echo "kernel tree ready at $WS/tree"
             echo "=== PHASE 4 done ==="
           } 2>&1 | tee -a "$LOG"
