@@ -1490,7 +1490,7 @@ CONFIG_LOCALVERSION_AUTO=n
 + echo '--- include/config/auto.conf ---'
 --- include/config/auto.conf ---
 + ls -l include/config/auto.conf
--rw-r--r-- 1 runner runner 132 Oct  1 15:41 include/config/auto.conf
+-rw-r--r-- 1 runner runner 132 Oct  1 15:48 include/config/auto.conf
 ++ wc -l
 + echo '  lines: 6'
   lines: 6
@@ -1526,79 +1526,78 @@ resolved utsrelease: 6.12.23-android16-5-abA075FXXS5BZD2-4k
 + test 6.12.23-android16-5-abA075FXXS5BZD2-4k = 6.12.23-android16-5-abA075FXXS5BZD2-4k
 --- clang/bin contents ---
 total 783648
--rw-r--r-- 1 runner runner     10450 Oct  1 15:41 bisect_driver.py
--rwxr-xr-x 1 runner runner   3677523 Oct  1 15:41 clang
--rwxr-xr-x 1 runner runner   3677523 Oct  1 15:41 clang++
-lrwxrwxrwx 1 runner runner        10 Oct  1 15:41 clang++.real -> clang.real
--rwxr-xr-x 1 runner runner 137751672 Oct  1 15:41 clang-19
--rwxr-xr-x 1 runner runner  76520752 Oct  1 15:42 clang-check
-lrwxrwxrwx 1 runner runner        10 Oct  1 15:42 clang-cl -> clang.real
--rwxr-xr-x 1 runner runner   3849448 Oct  1 15:42 clang-format
--rwxr-xr-x 1 runner runner  76196432 Oct  1 15:42 clang-scan-deps
--rwxr-xr-x 1 runner runner   3677523 Oct  1 15:42 clang-tidy
--rwxr-xr-x 1 runner runner  53810984 Oct  1 15:42 clang-tidy.real
--rwxr-xr-x 1 runner runner      3579 Oct  1 15:42 clang-tidy.sh
-lrwxrwxrwx 1 runner runner         8 Oct  1 15:42 clang.real -> clang-19
--rwxr-xr-x 1 runner runner  45402024 Oct  1 15:42 clangd
--rwxr-xr-x 1 runner runner  42357016 Oct  1 15:42 dsymutil
--rwxr-xr-x 1 runner runner     25338 Oct  1 15:42 git-clang-format
-lrwxrwxrwx 1 runner runner         3 Oct  1 15:42 ld.lld -> lld
-lrwxrwxrwx 1 runner runner         3 Oct  1 15:42 ld64.lld -> lld
--rwxr-xr-x 1 runner runner  61369096 Oct  1 15:42 lld
-lrwxrwxrwx 1 runner runner         3 Oct  1 15:42 lld-link -> lld
--rwxr-xr-x 1 runner runner    640640 Oct  1 15:42 lldb
--rwxr-xr-x 1 runner runner    393864 Oct  1 15:42 lldb-argdumper
--rwxr-xr-x 1 runner runner       170 Oct  1 15:42 lldb.sh
-lrwxrwxrwx 1 runner runner        15 Oct  1 15:42 llvm-addr2line -> llvm-symbolizer
--rwxr-xr-x 1 runner runner  15360928 Oct  1 15:42 llvm-ar
--rwxr-xr-x 1 runner runner   4552288 Oct  1 15:42 llvm-as
--rwxr-xr-x 1 runner runner  51344768 Oct  1 15:42 llvm-bolt
--rwxr-xr-x 1 runner runner  19999536 Oct  1 15:42 llvm-cfi-verify
--rwxr-xr-x 1 runner runner    652328 Oct  1 15:42 llvm-config
--rwxr-xr-x 1 runner runner   5399752 Oct  1 15:42 llvm-cov
--rwxr-xr-x 1 runner runner   1035384 Oct  1 15:42 llvm-cxxfilt
--rwxr-xr-x 1 runner runner   3360832 Oct  1 15:42 llvm-dis
-lrwxrwxrwx 1 runner runner         7 Oct  1 15:42 llvm-dlltool -> llvm-ar
--rwxr-xr-x 1 runner runner  13258480 Oct  1 15:42 llvm-dwarfdump
--rwxr-xr-x 1 runner runner  41072704 Oct  1 15:42 llvm-dwp
--rwxr-xr-x 1 runner runner   4796576 Oct  1 15:42 llvm-ifs
-lrwxrwxrwx 1 runner runner         7 Oct  1 15:42 llvm-lib -> llvm-ar
--rwxr-xr-x 1 runner runner   5101904 Oct  1 15:42 llvm-link
--rwxr-xr-x 1 runner runner  15261536 Oct  1 15:42 llvm-lipo
+-rw-r--r-- 1 runner runner     10450 Oct  1 15:48 bisect_driver.py
+-rwxr-xr-x 1 runner runner   3677523 Oct  1 15:48 clang
+-rwxr-xr-x 1 runner runner   3677523 Oct  1 15:48 clang++
+lrwxrwxrwx 1 runner runner        10 Oct  1 15:48 clang++.real -> clang.real
+-rwxr-xr-x 1 runner runner 137751672 Oct  1 15:48 clang-19
+-rwxr-xr-x 1 runner runner  76520752 Oct  1 15:49 clang-check
+lrwxrwxrwx 1 runner runner        10 Oct  1 15:49 clang-cl -> clang.real
+-rwxr-xr-x 1 runner runner   3849448 Oct  1 15:49 clang-format
+-rwxr-xr-x 1 runner runner  76196432 Oct  1 15:49 clang-scan-deps
+-rwxr-xr-x 1 runner runner   3677523 Oct  1 15:49 clang-tidy
+-rwxr-xr-x 1 runner runner  53810984 Oct  1 15:49 clang-tidy.real
+-rwxr-xr-x 1 runner runner      3579 Oct  1 15:49 clang-tidy.sh
+lrwxrwxrwx 1 runner runner         8 Oct  1 15:49 clang.real -> clang-19
+-rwxr-xr-x 1 runner runner  45402024 Oct  1 15:49 clangd
+-rwxr-xr-x 1 runner runner  42357016 Oct  1 15:49 dsymutil
+-rwxr-xr-x 1 runner runner     25338 Oct  1 15:49 git-clang-format
+lrwxrwxrwx 1 runner runner         3 Oct  1 15:49 ld.lld -> lld
+lrwxrwxrwx 1 runner runner         3 Oct  1 15:49 ld64.lld -> lld
+-rwxr-xr-x 1 runner runner  61369096 Oct  1 15:49 lld
+lrwxrwxrwx 1 runner runner         3 Oct  1 15:49 lld-link -> lld
+-rwxr-xr-x 1 runner runner    640640 Oct  1 15:49 lldb
+-rwxr-xr-x 1 runner runner    393864 Oct  1 15:49 lldb-argdumper
+-rwxr-xr-x 1 runner runner       170 Oct  1 15:49 lldb.sh
+lrwxrwxrwx 1 runner runner        15 Oct  1 15:49 llvm-addr2line -> llvm-symbolizer
+-rwxr-xr-x 1 runner runner  15360928 Oct  1 15:49 llvm-ar
+-rwxr-xr-x 1 runner runner   4552288 Oct  1 15:49 llvm-as
+-rwxr-xr-x 1 runner runner  51344768 Oct  1 15:49 llvm-bolt
+-rwxr-xr-x 1 runner runner  19999536 Oct  1 15:49 llvm-cfi-verify
+-rwxr-xr-x 1 runner runner    652328 Oct  1 15:49 llvm-config
+-rwxr-xr-x 1 runner runner   5399752 Oct  1 15:49 llvm-cov
+-rwxr-xr-x 1 runner runner   1035384 Oct  1 15:49 llvm-cxxfilt
+-rwxr-xr-x 1 runner runner   3360832 Oct  1 15:49 llvm-dis
+lrwxrwxrwx 1 runner runner         7 Oct  1 15:49 llvm-dlltool -> llvm-ar
+-rwxr-xr-x 1 runner runner  13258480 Oct  1 15:49 llvm-dwarfdump
+-rwxr-xr-x 1 runner runner  41072704 Oct  1 15:49 llvm-dwp
+-rwxr-xr-x 1 runner runner   4796576 Oct  1 15:49 llvm-ifs
+lrwxrwxrwx 1 runner runner         7 Oct  1 15:49 llvm-lib -> llvm-ar
+-rwxr-xr-x 1 runner runner   5101904 Oct  1 15:49 llvm-link
+-rwxr-xr-x 1 runner runner  15261536 Oct  1 15:49 llvm-lipo
 using Android clang r536225
 clang smoke test passed (aarch64 object produced)
 Ubuntu LLD 18.1.3 (compatible with GNU linkers)
 total 248
-lrwxrwxrwx 1 runner runner 102 Oct  1 15:46 bisect_driver.py -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/bisect_driver.py
-lrwxrwxrwx 1 runner runner  91 Oct  1 15:46 clang -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang
-lrwxrwxrwx 1 runner runner  93 Oct  1 15:46 clang++ -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++
-lrwxrwxrwx 1 runner runner  98 Oct  1 15:46 clang++.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++.real
-lrwxrwxrwx 1 runner runner  94 Oct  1 15:46 clang-19 -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-19
-lrwxrwxrwx 1 runner runner  97 Oct  1 15:46 clang-check -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-check
-lrwxrwxrwx 1 runner runner  94 Oct  1 15:46 clang-cl -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-cl
-lrwxrwxrwx 1 runner runner  98 Oct  1 15:46 clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-format
-lrwxrwxrwx 1 runner runner 101 Oct  1 15:46 clang-scan-deps -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-scan-deps
-lrwxrwxrwx 1 runner runner  96 Oct  1 15:46 clang-tidy -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy
-lrwxrwxrwx 1 runner runner 101 Oct  1 15:46 clang-tidy.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.real
-lrwxrwxrwx 1 runner runner  99 Oct  1 15:46 clang-tidy.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.sh
-lrwxrwxrwx 1 runner runner  96 Oct  1 15:46 clang.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang.real
-lrwxrwxrwx 1 runner runner  92 Oct  1 15:46 clangd -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clangd
-lrwxrwxrwx 1 runner runner  94 Oct  1 15:46 dsymutil -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/dsymutil
-lrwxrwxrwx 1 runner runner 102 Oct  1 15:46 git-clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/git-clang-format
-lrwxrwxrwx 1 runner runner  92 Oct  1 15:46 ld.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld.lld
-lrwxrwxrwx 1 runner runner  94 Oct  1 15:46 ld64.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld64.lld
-lrwxrwxrwx 1 runner runner  89 Oct  1 15:46 lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld
-lrwxrwxrwx 1 runner runner  94 Oct  1 15:46 lld-link -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld-link
-lrwxrwxrwx 1 runner runner  90 Oct  1 15:46 lldb -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb
-lrwxrwxrwx 1 runner runner 100 Oct  1 15:46 lldb-argdumper -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb-argdumper
-lrwxrwxrwx 1 runner runner  93 Oct  1 15:46 lldb.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb.sh
-lrwxrwxrwx 1 runner runner 100 Oct  1 15:46 llvm-addr2line -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-addr2line
-lrwxrwxrwx 1 runner runner  93 Oct  1 15:46 llvm-ar -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-ar
-lrwxrwxrwx 1 runner runner  93 Oct  1 15:46 llvm-as -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-as
-lrwxrwxrwx 1 runner runner  95 Oct  1 15:46 llvm-bolt -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-bolt
-lrwxrwxrwx 1 runner runner 101 Oct  1 15:46 llvm-cfi-verify -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-cfi-verify
-lrwxrwxrwx 1 runner runner  97 Oct  1 15:46 llvm-config -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-config
-ls: write error: Broken pipe
+lrwxrwxrwx 1 runner runner 102 Oct  1 15:53 bisect_driver.py -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/bisect_driver.py
+lrwxrwxrwx 1 runner runner  91 Oct  1 15:53 clang -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang
+lrwxrwxrwx 1 runner runner  93 Oct  1 15:53 clang++ -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++
+lrwxrwxrwx 1 runner runner  98 Oct  1 15:53 clang++.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++.real
+lrwxrwxrwx 1 runner runner  94 Oct  1 15:53 clang-19 -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-19
+lrwxrwxrwx 1 runner runner  97 Oct  1 15:53 clang-check -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-check
+lrwxrwxrwx 1 runner runner  94 Oct  1 15:53 clang-cl -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-cl
+lrwxrwxrwx 1 runner runner  98 Oct  1 15:53 clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-format
+lrwxrwxrwx 1 runner runner 101 Oct  1 15:53 clang-scan-deps -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-scan-deps
+lrwxrwxrwx 1 runner runner  96 Oct  1 15:53 clang-tidy -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy
+lrwxrwxrwx 1 runner runner 101 Oct  1 15:53 clang-tidy.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.real
+lrwxrwxrwx 1 runner runner  99 Oct  1 15:53 clang-tidy.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.sh
+lrwxrwxrwx 1 runner runner  96 Oct  1 15:53 clang.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang.real
+lrwxrwxrwx 1 runner runner  92 Oct  1 15:53 clangd -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clangd
+lrwxrwxrwx 1 runner runner  94 Oct  1 15:53 dsymutil -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/dsymutil
+lrwxrwxrwx 1 runner runner 102 Oct  1 15:53 git-clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/git-clang-format
+lrwxrwxrwx 1 runner runner  92 Oct  1 15:53 ld.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld.lld
+lrwxrwxrwx 1 runner runner  94 Oct  1 15:53 ld64.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld64.lld
+lrwxrwxrwx 1 runner runner  89 Oct  1 15:53 lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld
+lrwxrwxrwx 1 runner runner  94 Oct  1 15:53 lld-link -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld-link
+lrwxrwxrwx 1 runner runner  90 Oct  1 15:53 lldb -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb
+lrwxrwxrwx 1 runner runner 100 Oct  1 15:53 lldb-argdumper -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb-argdumper
+lrwxrwxrwx 1 runner runner  93 Oct  1 15:53 lldb.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb.sh
+lrwxrwxrwx 1 runner runner 100 Oct  1 15:53 llvm-addr2line -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-addr2line
+lrwxrwxrwx 1 runner runner  93 Oct  1 15:53 llvm-ar -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-ar
+lrwxrwxrwx 1 runner runner  93 Oct  1 15:53 llvm-as -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-as
+lrwxrwxrwx 1 runner runner  95 Oct  1 15:53 llvm-bolt -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-bolt
+lrwxrwxrwx 1 runner runner 101 Oct  1 15:53 llvm-cfi-verify -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-cfi-verify
+lrwxrwxrwx 1 runner runner  97 Oct  1 15:53 llvm-config -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-config
   HOSTCC  scripts/basic/fixdep
   HOSTCC  scripts/kconfig/conf.o
   HOSTCC  scripts/kconfig/confdata.o
@@ -1633,4 +1632,4 @@ Or undo this operation with:
 Turn off this advice by setting config variable advice.detachedHead to false
 
 KernelSU v3.2.5
-/home/runner/work/_temp/9f65353a-6dc6-4d30-87d2-2b021863de6d.sh: line 15: tree/drivers/Makefile: Permission denied
+/home/runner/work/_temp/819b309a-a1a1-49b6-af53-3f50a3f4022b.sh: line 15: tree/drivers/Makefile: Permission denied
