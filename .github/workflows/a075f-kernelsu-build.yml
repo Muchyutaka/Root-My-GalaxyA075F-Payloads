@@ -154,8 +154,39 @@ jobs:
               esac
             }
 
+            # Samsung's opensource zip does NOT hold the kernel tree directly -
+            # it holds it inside nested tar archives (Kernel.tar.gz,
+            # Platform.tar.gz, ...), which is why a plain `find` for a Makefile
+            # came back empty.  Unpack them one at a time and stop as soon as
+            # the kernel Makefile shows up, so a multi-gigabyte Platform archive
+            # is not unpacked needlessly.
+            kernel_root() {
+              ( cd "$BASE" && find . -name Makefile -print0 2>/dev/null | \
+                xargs -0 grep -l '^VERSION = 6' 2>/dev/null | \
+                xargs -r -d '\n' grep -l '^PATCHLEVEL = 12' 2>/dev/null | \
+                awk '{ n = gsub(/\//, "/"); if (!seen || n < best) { seen = 1; best = n; path = $0 } }
+                     END { if (seen) print path }' | \
+                xargs -r -d '\n' dirname ) 2>/dev/null || true
+            }
+
+            extract_nested() { # dir [stop_fn]
+              local d="$1" stop="${2:-}" t
+              shopt -s nullglob
+              for t in "$d"/*.tar.gz "$d"/*.tgz "$d"/*.tar.bz2 "$d"/*.tar.xz "$d"/*.tar; do
+                echo "  extracting nested archive $(basename "$t") ($(stat -c %s "$t") bytes)"
+                tar -xf "$t" -C "$d"
+                rm -f "$t"
+                if [ -n "$stop" ] && [ -n "$("$stop")" ]; then
+                  echo "  kernel Makefile located, no further nested archives needed"
+                  break
+                fi
+              done
+              shopt -u nullglob
+            }
+
             echo "=== PHASE 1: download + extract the base archive ==="
             fetch "${SRC_URL}" "${SRC_SHA:-}" "$BASE"
+            extract_nested "$BASE" kernel_root
             echo "=== PHASE 1 done ==="
 
             # Samsung's opensource archives nest the tree to an unknown depth, so
@@ -169,21 +200,17 @@ jobs:
             #     `set -e` kills the script.  The shallowest selection is now
             #     done in awk's END block, so no reader ever exits early.
             #   * grep exits 1 when nothing matches, which `pipefail` also
-            #     propagates.  `|| ROOT=""` swallows it so the real check below
-            #     is what reports the problem.
-            ROOT=$(cd "$BASE" && \
-                   find . -name Makefile -print0 2>/dev/null | \
-                   xargs -0 grep -l '^VERSION = 6' 2>/dev/null | \
-                   xargs -r -d '\n' grep -l '^PATCHLEVEL = 12' 2>/dev/null | \
-                   awk '{ n = gsub(/\//, "/"); if (!seen || n < best) { seen = 1; best = n; path = $0 } }
-                        END { if (seen) print path }' | \
-                   xargs -r -d '\n' dirname) || ROOT=""
+            #     propagates.  The `|| true` inside kernel_root swallows it so
+            #     the real check below is what reports the problem.
+            ROOT="$(kernel_root)"
             if [ -z "${ROOT}" ]; then
               echo "::error::could not locate the kernel Makefile (VERSION = 6, PATCHLEVEL = 12)"
               echo "--- top three levels of the extracted archive ---"
               (cd "$BASE" && find . -maxdepth 3 | head -60)
               echo "--- every Makefile found ---"
               (cd "$BASE" && find . -name Makefile | head -20)
+              echo "--- every nested archive found ---"
+              (cd "$BASE" && find . \( -name '*.tar.gz' -o -name '*.tgz' -o -name '*.tar' \) | head -20)
               exit 1
             fi
             echo "kernel tree root: base/${ROOT#./}"
@@ -193,6 +220,7 @@ jobs:
             if [ -n "${DELTA_URL}" ]; then
               echo "applying build-specific delta over the base tree"
               fetch "${DELTA_URL}" "${DELTA_SHA:-}" "$DELTA"
+              extract_nested "$DELTA"
               # Samsung's build-specific archives do not necessarily use the same
               # directory nesting as the base archive, so resolve every delta file
               # against the base tree by stripping leading path components until
