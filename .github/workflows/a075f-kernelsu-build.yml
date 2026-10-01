@@ -120,6 +120,7 @@ jobs:
           # endpoints are not reachable from the porting sandbox.
           LOG="$GITHUB_WORKSPACE/fetch-diagnostics.log"
           set -e
+          set -x
           {
             WS="$GITHUB_WORKSPACE"
             KSRC="$WS/ksrc"
@@ -153,7 +154,9 @@ jobs:
               esac
             }
 
+            echo "=== PHASE 1: download + extract the base archive ==="
             fetch "${SRC_URL}" "${SRC_SHA:-}" "$BASE"
+            echo "=== PHASE 1 done ==="
 
             # Samsung's opensource archives nest the tree to an unknown depth, so
             # search the whole archive and keep the SHALLOWEST Makefile that
@@ -172,6 +175,7 @@ jobs:
             fi
             echo "kernel tree root: base/${ROOT#./}"
             BASE_REL="${ROOT#./}"
+            echo "=== PHASE 2 done: tree root located ==="
 
             if [ -n "${DELTA_URL}" ]; then
               echo "applying build-specific delta over the base tree"
@@ -202,12 +206,14 @@ jobs:
                 fi
               done < <(cd "$DELTA" && find . -type f -print0)
               echo "overlaid ${overlaid} delta file(s)"
+            echo "=== PHASE 3 done: delta applied ==="
             fi
 
             test -f "$BASE/$BASE_REL/Makefile"
             mv "$BASE/$BASE_REL" "$WS/tree"
             grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' "$WS/tree/Makefile"
             echo "kernel tree ready at $WS/tree"
+            echo "=== PHASE 4 done ==="
           } 2>&1 | tee "$LOG"
           exit "${PIPESTATUS[0]}"
 
