@@ -267,26 +267,6 @@ jobs:
           } 2>&1 | tee -a "$LOG"
           exit "${PIPESTATUS[0]}"
 
-      # The CI log endpoints (results-receiver.actions.githubusercontent.com and
-      # the Azure blob behind them) are unreachable from the porting sandbox, so
-      # a failed run would otherwise be undiagnosable from here.  Commit the
-      # captured log to the branch instead, where `git show` can read it.
-      - name: Capture diagnostics on failure
-        if: failure()
-        run: |
-          set -uo pipefail
-          git config user.name  "a075f-port-bot"
-          git config user.email "a075f-port-bot@users.noreply.github.com"
-          git add -f job.log fetch-diagnostics.log 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "no diagnostics to commit"
-            exit 0
-          fi
-          git commit -q -m "chore(a075f): CI diagnostics for the failed kernelsu build"
-          echo "--- captured $(wc -l < job.log 2>/dev/null || echo 0) log lines ---"
-          git push -q origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads || true
-          echo "diagnostics committed"
-
       - name: Apply the recovered target configuration
         run: |
           set -uo pipefail
@@ -525,3 +505,23 @@ jobs:
           echo "published ${KO_NAME} and ${KSUD_NAME}"
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit "${PIPESTATUS[0]}"
+
+      # The CI log endpoints (results-receiver.actions.githubusercontent.com and
+      # the Azure blob behind them) are unreachable from the porting sandbox, so
+      # a failed run would otherwise be undiagnosable from here.  Commit the
+      # captured log to the branch instead, where `git show` can read it.
+      - name: Capture diagnostics on failure
+        if: failure()
+        run: |
+          set -uo pipefail
+          git config user.name  "a075f-port-bot"
+          git config user.email "a075f-port-bot@users.noreply.github.com"
+          git add -f job.log 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no diagnostics to commit"
+            exit 0
+          fi
+          git commit -q -m "chore(a075f): CI diagnostics for the failed kernelsu build"
+          echo "--- captured $(wc -l < job.log 2>/dev/null || echo 0) log lines ---"
+          git push -q origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads || true
+          echo "diagnostics committed"
