@@ -1,7 +1,56 @@
++ WS=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads
++ KSRC=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc
++ BASE=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
++ DELTA=/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ rm -rf /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree
++ mkdir -p /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
++ echo 'source configuration:'
 source configuration:
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${SRC_URL:-}'
+++ val=https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
++ '[' -n https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip ']'
++ echo '  SRC_URL = set (105 chars)'
   SRC_URL = set (105 chars)
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${SRC_SHA:-}'
+++ val=
++ '[' -n '' ']'
++ echo '  SRC_SHA = EMPTY'
   SRC_SHA = EMPTY
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${DELTA_URL:-}'
+++ val=https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip
++ '[' -n https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip ']'
++ echo '  DELTA_URL = set (147 chars)'
   DELTA_URL = set (147 chars)
++ for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA
++ eval 'val=${DELTA_SHA:-}'
+++ val=
++ '[' -n '' ']'
++ echo '  DELTA_SHA = EMPTY'
   DELTA_SHA = EMPTY
++ echo '=== PHASE 1: download + extract the base archive ==='
+=== PHASE 1: download + extract the base archive ===
++ fetch https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip '' /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
++ echo 'downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip'
 downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
++ curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
+++ stat -c %s /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl
++ sz=375158122
++ echo '  downloaded 375158122 bytes'
   downloaded 375158122 bytes
++ '[' -n '' ']'
++ case "${1}" in
++ unzip -q -o /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/dl -d /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
++ echo '=== PHASE 1 done ==='
+=== PHASE 1 done ===
+++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
+++ find . -name Makefile -print0
+++ awk '{print gsub(/\//,"/"), $0}'
+++ head -1
+++ xargs -r dirname
+++ xargs -0 grep -l -e '^VERSION = 6' -e '^PATCHLEVEL = 12'
+++ sort -n
+++ cut '-d ' -f2-
++ ROOT=
