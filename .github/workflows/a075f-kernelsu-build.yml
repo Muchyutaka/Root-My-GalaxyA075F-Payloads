@@ -290,9 +290,23 @@ jobs:
           # so feeding it `yes` only earns a SIGPIPE, which pipefail then
           # reports as a failure.
           make olddefconfig </dev/null
-          echo "resolved utsrelease: $(cat include/config/kernel.release 2>/dev/null || true)"
+          # olddefconfig only runs syncconfig; include/config/kernel.release is a
+          # separate FORCE target, so it has to be asked for explicitly.  It is
+          # produced by scripts/setlocalversion, which reads CONFIG_LOCALVERSION
+          # out of include/config/auto.conf - and auto.conf holds the value
+          # UNQUOTED (print_symbol_for_autoconf passes escape_string=false), so
+          # the sed in setlocalversion yields exactly the wanted suffix.
+          # With LOCALVERSION_AUTO=n and no .git in the archive, scm_version
+          # returns empty and nothing is appended.
+          echo "--- include/config/auto.conf ---"
+          grep -E '^CONFIG_LOCALVERSION' include/config/auto.conf || true
+          make include/config/kernel.release
+          echo "resolved utsrelease: $(cat include/config/kernel.release)"
           test "$(cat include/config/kernel.release)" = "${TARGET_VERMAGIC}" || {
-            echo "::error::utsrelease mismatch"; exit 1; }
+            echo "::error::utsrelease mismatch"
+            echo "  expected: ${TARGET_VERMAGIC}"
+            echo "  actual:   $(cat include/config/kernel.release)"
+            exit 1; }
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit "${PIPESTATUS[0]}"
       - name: Install the matching clang
