@@ -1,0 +1,80 @@
+name: a075f-fetch-assets
+
+# Fetches the A075FXXS5BZD2 firmware images from the fork's own release tag
+# "1" and stages them inside the repository so that the offline porting
+# environment can retrieve them over codeload/api.github.com.
+#
+# The sandbox network only allows github.com, codeload.github.com and
+# api.github.com, so the release asset CDN (release-assets.githubusercontent.com)
+# is not reachable directly.
+#
+# Trigger: push a commit whose message contains "[a075f-fetch]". The workflow
+# deletes that marker in its own commit, so it runs exactly once.
+
+on:
+  push:
+    branches:
+      - arena/01a0f70e-root-my-galaxya075f-payloads
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: a075f-fetch-assets
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[a075f-fetch]')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: arena/01a0f70e-root-my-galaxya075f-payloads
+          fetch-depth: 1
+
+      - name: Fetch release assets
+        env:
+          REPO: ${{ github.repository }}
+          TAG: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p build/a075f-fw
+          api="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
+          curl -fsSL "$api" > /tmp/release.json
+          python3 - <<'PY' > /tmp/assets.txt
+          import json
+          data = json.load(open("/tmp/release.json"))
+          for asset in data["assets"]:
+              print("%s\t%s\t%s" % (asset["name"], asset["size"], asset["browser_download_url"]))
+          PY
+          while IFS=$'\t' read -r name size url; do
+            echo "downloading $name ($size bytes)"
+            curl -fsSL --retry 5 --retry-delay 3 -o "build/a075f-fw/${name}" "$url"
+            actual=$(stat -c %s "build/a075f-fw/${name}")
+            if [ "$actual" != "$size" ]; then
+              echo "size mismatch for $name: $actual != $size" >&2
+              exit 1
+            fi
+          done < /tmp/assets.txt
+          ( cd build/a075f-fw && sha256sum ./* | sort -k2 ) > build/a075f-fw.sha256
+
+      - name: Stage into the repository
+        run: |
+          set -euo pipefail
+          rm -f .a075f-fetch
+          git config user.name  "a075f-port-bot"
+          git config user.email "a075f-port-bot@users.noreply.github.com"
+          git add -f build/a075f-fw build/a075f-fw.sha256
+          git rm --cached -q .a075f-fetch 2>/dev/null || true
+          git status --short | head -20
+          if git diff --cached --quiet; then
+            echo "nothing staged"
+            exit 0
+          fi
+          git commit -q -m "chore(a075f): stage A075FXXS5BZD2 firmware images for offline analysis"
+          git push origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads
