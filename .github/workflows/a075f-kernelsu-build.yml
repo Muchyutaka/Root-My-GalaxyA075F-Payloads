@@ -101,15 +101,31 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Fetch the kernel tree
         env:
-          SRC_URL: ${{ vars.A075F_KERNEL_SRC_URL }}
-          SRC_SHA: ${{ vars.A075F_KERNEL_SRC_SHA256 }}
-          DELTA_URL: ${{ vars.A075F_KERNEL_SRC_DELTA_URL }}
-          DELTA_SHA: ${{ vars.A075F_KERNEL_SRC_DELTA_SHA256 }}
+          # Accept either an Actions *variable* or an Actions *secret*, so it
+          # does not matter which of the two tabs the value was put on.
+          SRC_URL: ${{ vars.A075F_KERNEL_SRC_URL || secrets.A075F_KERNEL_SRC_URL }}
+          SRC_SHA: ${{ vars.A075F_KERNEL_SRC_SHA256 || secrets.A075F_KERNEL_SRC_SHA256 }}
+          DELTA_URL: ${{ vars.A075F_KERNEL_SRC_DELTA_URL || secrets.A075F_KERNEL_SRC_DELTA_URL }}
+          DELTA_SHA: ${{ vars.A075F_KERNEL_SRC_DELTA_SHA256 || secrets.A075F_KERNEL_SRC_DELTA_SHA256 }}
         run: |
           set -euo pipefail
+          echo "source configuration:"
+          for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA; do
+            eval "val=\${$v:-}"
+            if [ -n "$val" ]; then
+              echo "  $v = set (${#val} chars) ${val%%\?*}"
+            else
+              echo "  $v = EMPTY"
+            fi
+          done
           if [ -z "${SRC_URL}" ]; then
             echo "::error::A075F_KERNEL_SRC_URL is not set."
-            echo "Set it to the SM-A075F_16 opensource archive on release tag 1."
+            echo "Repo -> Settings -> Secrets and variables -> Actions -> the VARIABLES tab"
+            echo "(not the Secrets tab, though this workflow accepts either), and create:"
+            echo "  name : A075F_KERNEL_SRC_URL"
+            echo "  value: https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip"
+            echo "Optionally also A075F_KERNEL_SRC_DELTA_URL pointing at the"
+            echo "SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip asset."
             exit 1
           fi
           mkdir -p ksrc && cd ksrc
@@ -123,11 +139,19 @@ jobs:
             esac
           }
           fetch "${SRC_URL}" "${SRC_SHA}" base
-          ROOT=$(cd base && find . -maxdepth 4 -name Makefile -print0 | \
-                 xargs -0 grep -l '^PATCHLEVEL = 12' 2>/dev/null | head -1 | xargs -r dirname)
+          # Samsung's opensource archives nest the tree to an unknown depth, so
+          # search the whole archive and keep the SHALLOWEST Makefile that
+          # declares both VERSION = 6 and PATCHLEVEL = 12.
+          ROOT=$(cd base && find . -name Makefile -print0 | \
+                 xargs -0 grep -l -e '^VERSION = 6' -e '^PATCHLEVEL = 12' 2>/dev/null | \
+                 awk '{print gsub(/\//,"/"), $0}' | sort -n | head -1 | cut -d' ' -f2- | \
+                 xargs -r dirname)
           if [ -z "${ROOT}" ]; then
-            echo "::error::could not locate the kernel Makefile (PATCHLEVEL = 12) in the archive"
-            (cd base && find . -maxdepth 3 | head -40)
+            echo "::error::could not locate the kernel Makefile (VERSION = 6, PATCHLEVEL = 12)"
+            echo "--- top three levels of the extracted archive ---"
+            (cd base && find . -maxdepth 3 | head -60)
+            echo "--- any Makefile found at all ---"
+            (cd base && find . -name Makefile | head -20)
             exit 1
           fi
           echo "kernel tree root: base/${ROOT#./}"
