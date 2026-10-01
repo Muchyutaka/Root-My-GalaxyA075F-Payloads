@@ -123,13 +123,6 @@ jobs:
             esac
           }
           fetch "${SRC_URL}" "${SRC_SHA}" base
-          if [ -n "${DELTA_URL}" ]; then
-            echo "applying build-specific delta over the base tree"
-            fetch "${DELTA_URL}" "${DELTA_SHA}" delta
-            # copy the delta over the base, preserving relative paths
-            (cd delta && find . -type f -print0) | \
-              (cd base && xargs -0 -I{} cp -f "../delta/{}" "{}")
-          fi
           ROOT=$(cd base && find . -maxdepth 4 -name Makefile -print0 | \
                  xargs -0 grep -l '^PATCHLEVEL = 12' 2>/dev/null | head -1 | xargs -r dirname)
           if [ -z "${ROOT}" ]; then
@@ -138,6 +131,35 @@ jobs:
             exit 1
           fi
           echo "kernel tree root: base/${ROOT#./}"
+          if [ -n "${DELTA_URL}" ]; then
+            echo "applying build-specific delta over the base tree"
+            fetch "${DELTA_URL}" "${DELTA_SHA}" delta
+            # Samsung's build-specific archives do not necessarily use the same
+            # directory nesting as the base archive, so resolve every delta file
+            # against the base tree by stripping leading path components until
+            # the relative path exists.
+            BASE_REL="${ROOT#./}"
+            cd delta
+            overlaid=0
+            while IFS= read -r -d '' f; do
+              cand="${f#./}"
+              while [ -n "$cand" ] && [ ! -e "../base/${BASE_REL}/${cand}" ]; do
+                case "$cand" in
+                  */*) cand="${cand#*/}" ;;
+                  *)   cand="" ;;
+                esac
+              done
+              if [ -n "$cand" ] && [ -e "../base/${BASE_REL}/${cand}" ]; then
+                mkdir -p "../base/${BASE_REL}/$(dirname "$cand")"
+                cp -f "$f" "../base/${BASE_REL}/${cand}"
+                overlaid=$((overlaid + 1))
+              else
+                echo "  !! delta file has no counterpart in the base tree: ${f#./}" >&2
+              fi
+            done < <(find . -type f -print0)
+            cd ..
+            echo "overlaid ${overlaid} delta file(s)"
+          fi
           cd ..
           rm -rf tree && mv "base/${ROOT#./}" tree
           test -f tree/Makefile
