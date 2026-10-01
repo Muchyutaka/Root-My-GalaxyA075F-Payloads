@@ -69,7 +69,7 @@
  * __start_ftrace_events..__stop_ftrace_events table.
  *
  * __TRACE_LAST_TYPE = 20, not 19: enum trace_type in kernel/trace/trace.h
- * spends the explicit value 0 on __TRACE_FIRST_TYPE, so the 18 named
+ * spends the explicit value 0 on __TRACE_FIRST_TYPE, so the 19 named
  * enumerators that follow (TRACE_FN..TRACE_FUNC_REPEATS) occupy 1..19 and
  * __TRACE_LAST_TYPE lands on 20.
  *
