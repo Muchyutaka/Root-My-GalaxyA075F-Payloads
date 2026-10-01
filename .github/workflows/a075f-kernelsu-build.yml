@@ -210,11 +210,11 @@ jobs:
             if [ -z "${ROOT}" ]; then
               echo "::error::could not locate the kernel Makefile (VERSION = 6, PATCHLEVEL = 12)"
               echo "--- top three levels of the extracted archive ---"
-              (cd "$BASE" && find . -maxdepth 3 | head -60)
+              (cd "$BASE" && find . -maxdepth 3 | head -60 || true)
               echo "--- every Makefile found ---"
-              (cd "$BASE" && find . -name Makefile | head -20)
+              (cd "$BASE" && find . -name Makefile | head -20 || true)
               echo "--- every nested archive found ---"
-              (cd "$BASE" && find . \( -name '*.tar.gz' -o -name '*.tgz' -o -name '*.tar' \) | head -20)
+              (cd "$BASE" && find . \( -name '*.tar.gz' -o -name '*.tgz' -o -name '*.tar' \) | head -20 || true)
               exit 1
             fi
             echo "kernel tree root: base/${ROOT#./}"
@@ -286,7 +286,10 @@ jobs:
             -e "s|^# CONFIG_LOCALVERSION_AUTO is not set|CONFIG_LOCALVERSION_AUTO=n|" \
             .config
           grep -E '^CONFIG_LOCALVERSION' .config
-          yes '' | make olddefconfig
+          # olddefconfig never prompts (it takes each new symbol's default),
+          # so feeding it `yes` only earns a SIGPIPE, which pipefail then
+          # reports as a failure.
+          make olddefconfig </dev/null
           echo "resolved utsrelease: $(cat include/config/kernel.release 2>/dev/null || true)"
           test "$(cat include/config/kernel.release)" = "${TARGET_VERMAGIC}" || {
             echo "::error::utsrelease mismatch"; exit 1; }
@@ -327,8 +330,8 @@ jobs:
           echo "${BINDIR}" >> "$GITHUB_PATH"
           echo "PATH=${BINDIR}:$PATH" >> "$GITHUB_ENV"
           ls -l "${BINDIR}"
-          clang --version | head -2
-          ld.lld --version | head -1
+          clang --version | head -2 || true
+          ld.lld --version | head -1 || true
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit "${PIPESTATUS[0]}"
       - name: Prepare the kernel for module builds
@@ -386,12 +389,15 @@ jobs:
           sed -i -e 's|^# CONFIG_KSU is not set|CONFIG_KSU=m|' \
                  -e 's|^CONFIG_KSU=.*|CONFIG_KSU=m|' .config
           grep -q '^CONFIG_KSU=m' .config || echo 'CONFIG_KSU=m' >> .config
-          yes '' | make olddefconfig
+          # olddefconfig never prompts (it takes each new symbol's default),
+          # so feeding it `yes` only earns a SIGPIPE, which pipefail then
+          # reports as a failure.
+          make olddefconfig </dev/null
           grep -E '^CONFIG_KSU' .config
           test "$(grep -c '^CONFIG_KSU=m' .config)" = "1"
           make -j"$(nproc)" modules_prepare
           make -j"$(nproc)" M="${KSU_DIR}" modules
-          KO=$(find . -name kernelsu.ko | head -1)
+          KO=$(find . -name kernelsu.ko -print -quit)
           test -n "${KO}"
           echo "built ${KO}"
           modinfo "${KO}" | sed -n '1,14p'
@@ -403,7 +409,7 @@ jobs:
           {
           set -e
           set -euo pipefail
-          KO=$(find tree -name kernelsu.ko | head -1)
+          KO=$(find tree -name kernelsu.ko -print -quit)
           test -n "${KO}"
           echo "found ${KO}"
           # vermagic must match the running target exactly
@@ -416,7 +422,8 @@ jobs:
             echo "::error::module name is not kernelsu"; exit 1; }
           # the arm64 syscall hook must have been compiled in
           OBJDUMP=$(command -v aarch64-linux-gnu-objdump || command -v llvm-objdump)
-          "${OBJDUMP}" -d "${KO}" | grep -q 'ksu_syscall_dispatcher' || {
+          grep -q 'ksu_syscall_dispatcher' \
+            < <("${OBJDUMP}" -d "${KO}" 2>/dev/null) || {
             echo "::error::ksu_syscall_dispatcher missing from the module"; exit 1; }
           echo "module audit passed"
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
@@ -427,7 +434,7 @@ jobs:
           {
           set -e
           set -euo pipefail
-          KO=$(find tree -name kernelsu.ko | head -1)
+          KO=$(find tree -name kernelsu.ko -print -quit)
           install -D -m 0644 "${KO}" "kernelsu/${KO_NAME}"
           # keep .symtab/.strtab (symbol_resolver needs them at runtime),
           # drop only the debug info
@@ -464,7 +471,7 @@ jobs:
           cargo ndk -t arm64-v8a build --release
           # cargo-ndk lays binaries out under target/<triple>/release/; accept
           # any location so a layout change upstream does not break the build.
-          BIN=$(find "$PWD/target" -type f -name ksud -perm -u+x | head -1)
+          BIN=$(find "$PWD/target" -type f -name ksud -perm -u+x -print -quit)
           test -n "${BIN}"
           echo "ksud binary: ${BIN}"
           install -D -m 0755 "${BIN}" "../kernelsu/${KSUD_NAME}"
@@ -479,9 +486,9 @@ jobs:
           set -e
           set -euo pipefail
           B="kernelsu/${KSUD_NAME}"
-          file "${B}" | grep -q 'ELF 64-bit LSB.*ARM aarch64' || {
+          grep -q 'ELF 64-bit LSB.*ARM aarch64' < <(file "${B}") || {
             echo "::error::ksud is not an aarch64 ELF"; exit 1; }
-          strings -n 6 "${B}" | grep -q 'late_load' || {
+          grep -q 'late_load' < <(strings -n 6 "${B}") || {
             echo "::error::ksud has no late_load support"; exit 1; }
           echo "ksud audit passed"
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
