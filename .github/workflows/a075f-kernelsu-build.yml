@@ -456,8 +456,27 @@ jobs:
           # so feeding it `yes` only earns a SIGPIPE, which pipefail then
           # reports as a failure.
           make olddefconfig </dev/null
-          grep -E '^CONFIG_KSU' .config
-          test "$(grep -c '^CONFIG_KSU=m' .config)" = "1"
+          echo "--- .config KSU lines AFTER olddefconfig ---"
+          grep -n 'KSU' .config || echo "  (none)"
+          echo "--- include/config/auto.conf KSU lines ---"
+          grep -n 'KSU' include/config/auto.conf || echo "  (none)"
+          echo "--- is the sourced Kconfig reachable through the symlink? ---"
+          ls -lL drivers/kernelsu/Kconfig 2>&1 || true
+          echo "--- tail of drivers/Kconfig, where the source line was inserted ---"
+          tail -6 drivers/Kconfig
+          echo "--- visibility probe: allnoconfig, then look for KSU ---"
+          ./scripts/kconfig/conf --allnoconfig Kconfig >/dev/null 2>&1 || true
+          grep -n 'CONFIG_KSU' .config || echo "  (KSU absent under allnoconfig too)"
+          # put our config back and re-assert the symbol
+          sed -i -e 's|^# CONFIG_KSU is not set|CONFIG_KSU=m|' \
+                 -e 's|^CONFIG_KSU=.*|CONFIG_KSU=m|' .config
+          grep -q '^CONFIG_KSU=m' .config || echo 'CONFIG_KSU=m' >> .config
+          make olddefconfig </dev/null
+          if ! grep -q '^CONFIG_KSU=m' .config; then
+            echo "::error::CONFIG_KSU=m did not survive olddefconfig"
+            exit 1
+          fi
+          echo "CONFIG_KSU=m survived"
           make -j"$(nproc)" modules_prepare
           make -j"$(nproc)" M="${KSU_DIR}" modules
           KO=$(find . -name kernelsu.ko -print -quit)
