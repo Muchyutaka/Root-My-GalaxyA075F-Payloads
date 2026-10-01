@@ -161,10 +161,23 @@ jobs:
             # Samsung's opensource archives nest the tree to an unknown depth, so
             # search the whole archive and keep the SHALLOWEST Makefile that
             # declares both VERSION = 6 and PATCHLEVEL = 12.
-            ROOT=$(cd "$BASE" && find . -name Makefile -print0 | \
-                   xargs -0 grep -l -e '^VERSION = 6' -e '^PATCHLEVEL = 12' 2>/dev/null | \
-                   awk '{print gsub(/\//,"/"), $0}' | sort -n | head -1 | \
-                   cut -d' ' -f2- | xargs -r dirname)
+            #
+            # Two traps here, both of which silently produced an empty ROOT and
+            # then aborted the whole step before the error branch could run:
+            #   * `sort | head -1` closes the pipe early, and with `pipefail`
+            #     that non-zero status propagates into the assignment, where
+            #     `set -e` kills the script.  The shallowest selection is now
+            #     done in awk's END block, so no reader ever exits early.
+            #   * grep exits 1 when nothing matches, which `pipefail` also
+            #     propagates.  `|| ROOT=""` swallows it so the real check below
+            #     is what reports the problem.
+            ROOT=$(cd "$BASE" && \
+                   find . -name Makefile -print0 2>/dev/null | \
+                   xargs -0 grep -l '^VERSION = 6' 2>/dev/null | \
+                   xargs -r -d '\n' grep -l '^PATCHLEVEL = 12' 2>/dev/null | \
+                   awk '{ n = gsub(/\//, "/"); if (!seen || n < best) { seen = 1; best = n; path = $0 } }
+                        END { if (seen) print path }' | \
+                   xargs -r -d '\n' dirname) || ROOT=""
             if [ -z "${ROOT}" ]; then
               echo "::error::could not locate the kernel Makefile (VERSION = 6, PATCHLEVEL = 12)"
               echo "--- top three levels of the extracted archive ---"
@@ -210,7 +223,12 @@ jobs:
             fi
 
             test -f "$BASE/$BASE_REL/Makefile"
-            mv "$BASE/$BASE_REL" "$WS/tree"
+            if [ "$BASE_REL" = "." ]; then
+              # the tree root is the archive root itself - `mv <dir>/.` fails
+              mv "$BASE" "$WS/tree"
+            else
+              mv "$BASE/$BASE_REL" "$WS/tree"
+            fi
             grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' "$WS/tree/Makefile"
             echo "kernel tree ready at $WS/tree"
             echo "=== PHASE 4 done ==="
