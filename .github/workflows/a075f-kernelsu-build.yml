@@ -97,6 +97,9 @@ jobs:
           {
           set -e
           set -euo pipefail
+          # job.log is committed by the diagnostics step of an earlier run, so
+          # without this the transcript of every run would pile up in one file.
+          rm -f "$GITHUB_WORKSPACE/job.log"
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
             build-essential bc bison flex libssl-dev libelf-dev \
@@ -344,22 +347,32 @@ jobs:
           # LLD 19.0.1).  Prefer it so CONFIG_CC_IS_CLANG / CONFIG_LD_IS_LLD
           # detection matches.  kbuild with LLVM=1 invokes bare `clang`, `ld.lld`,
           # `llvm-ar` ... from PATH, so symlink them into one directory and put
-          # that directory at the FRONT of PATH.  If the Android toolchain is
-          # unreachable we fall back to distro clang, which still produces
-          # identical modversions CRCs (those are derived from the symbol
-          # prototypes in the source, not from the compiler).
+          # that directory at the FRONT of PATH.
           BINDIR="$PWD/toolchain-bin"
           mkdir -p "${BINDIR}"
-          if curl -fsSL --retry 3 --retry-delay 2 -o /tmp/clang.tar.gz \
-              "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz"; then
-            mkdir -p clang && tar -xf /tmp/clang.tar.gz -C clang
-            for t in clang clang++ ld.lld ld ld.gold llvm-ar llvm-nm llvm-objcopy \
-                     llvm-objdump llvm-strip llvm-readelf llvm-install-name-tool; do
-              [ -x "clang/bin/$t" ] && ln -sf "$PWD/clang/bin/$t" "${BINDIR}/$t"
+          CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz"
+
+          # Android's bin/clang is a Go compiler_wrapper that re-execs
+          # "clang.real" found NEXT TO ITSELF.  Symlinking only bin/clang into
+          # toolchain-bin therefore breaks it, because the wrapper then looks
+          # for toolchain-bin/clang.real, which does not exist - the build dies
+          # with
+          #   compiler_wrapper.go:279: failed to execute .../clang.real
+          # Symlink the whole bin/ directory so every sibling, clang.real
+          # included, lands alongside the wrapper.
+          if curl -fsSL --retry 3 --retry-delay 2 -o /tmp/clang.tar.gz "${CLANG_URL}" \
+             && tar -tzf /tmp/clang.tar.gz >/dev/null 2>&1; then
+            rm -rf clang && mkdir -p clang
+            tar -xf /tmp/clang.tar.gz -C clang
+            echo "--- clang/bin contents ---"
+            ls -l clang/bin | head -40
+            for f in clang/bin/*; do
+              [ -e "$f" ] || continue
+              ln -sf "$PWD/$f" "${BINDIR}/$(basename "$f")"
             done
             echo "using Android clang r536225"
           else
-            echo "Android clang unreachable, falling back to distro clang"
+            echo "Android clang unreachable or not a valid tarball, falling back to distro clang"
             for t in clang clang++ ld.lld ld.gold llvm-ar llvm-nm llvm-objcopy \
                      llvm-objdump llvm-strip llvm-readelf; do
               p=$(command -v "$t" || true)
@@ -368,11 +381,15 @@ jobs:
           fi
           echo "${BINDIR}" >> "$GITHUB_PATH"
           echo "PATH=${BINDIR}:$PATH" >> "$GITHUB_ENV"
-          ls -l "${BINDIR}"
-          clang --version | head -2 || true
+          ls -l "${BINDIR}" | head -30
+          # Fail fast and loudly rather than three steps later inside kbuild.
+          printf 'int main(void){return 0;}\n' > /tmp/smoke.c
+          "${BINDIR}/clang" --target=aarch64-linux-gnu -c /tmp/smoke.c -o /tmp/smoke.o
+          echo "clang smoke test passed (aarch64 object produced)"
           ld.lld --version | head -1 || true
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit "${PIPESTATUS[0]}"
+
       - name: Prepare the kernel for module builds
         env:
           ARCH: arm64
