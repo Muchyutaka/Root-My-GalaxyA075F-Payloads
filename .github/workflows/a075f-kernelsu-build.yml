@@ -286,6 +286,15 @@ jobs:
           exit "${PIPESTATUS[0]}"
 
       - name: Apply the recovered target configuration
+        env:
+          # Without ARCH kbuild evaluates the runner's host Kconfig tree
+          # (x86_64), not arm64, so olddefconfig resolves against the wrong
+          # symbol set and the resulting .config / include/config/auto.conf
+          # lose almost everything - which is exactly what makes the later
+          # module build report "the present kernel disabled CONFIG_MODULES".
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+          LLVM: '1'
         run: |
           set -uo pipefail
           {
@@ -333,6 +342,14 @@ jobs:
           grep -n 'config LOCALVERSION$' init/Kconfig || echo "  (not found in init/Kconfig)"
           echo "--- LOCALVERSION env as make sees it ---"
           echo "  LOCALVERSION=${LOCALVERSION}"
+          echo "--- config state after olddefconfig ---"
+          wc -l .config include/config/auto.conf 2>/dev/null || true
+          echo "  set symbols in .config:        $(grep -cE '^CONFIG_[A-Z0-9_]+=' .config || true)"
+          echo "  set symbols in auto.conf:      $(grep -cE '^CONFIG_[A-Z0-9_]+=' include/config/auto.conf || true)"
+          echo "  expected (kernel.config):      $(grep -cE '^CONFIG_[A-Z0-9_]+=' "${KCONFIG}" || true)"
+          echo "--- critical symbols ---"
+          grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES|EXT4_FS)=' .config || echo "  (absent from .config)"
+          grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES|EXT4_FS)=' include/config/auto.conf || echo "  (absent from auto.conf)"
           make include/config/kernel.release
           echo "resolved utsrelease: $(cat include/config/kernel.release)"
           test "$(cat include/config/kernel.release)" = "${TARGET_VERMAGIC}" || {

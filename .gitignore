@@ -1,2 +1,6 @@
 /build/
 /diagnostics/
+
+# CI diagnostics transcript committed by the "Capture diagnostics on failure" step
+job.log
+fetch-diagnostics.log
