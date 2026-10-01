@@ -111,87 +111,125 @@ jobs:
           DELTA_URL: ${{ vars.A075F_KERNEL_SRC_DELTA_URL || secrets.A075F_KERNEL_SRC_DELTA_URL || 'https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip' }}
           DELTA_SHA: ${{ vars.A075F_KERNEL_SRC_DELTA_SHA256 || secrets.A075F_KERNEL_SRC_DELTA_SHA256 }}
         run: |
-          set -euo pipefail
-          echo "source configuration:"
-          for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA; do
-            eval "val=\${$v:-}"
-            if [ -n "$val" ]; then
-              echo "  $v = set (${#val} chars) ${val%%\?*}"
-            else
-              echo "  $v = EMPTY"
-            fi
-          done
-          if [ -z "${SRC_URL}" ]; then
-            echo "::error::no kernel source URL resolved - this should be unreachable"
-            echo "because the default is a literal in the workflow file."
-            exit 1
-          fi
-          mkdir -p ksrc && cd ksrc
-          fetch() { # url sha256 outdir
-            curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/dl "$1"
-            if [ -n "$2" ]; then echo "$2  /tmp/dl" | sha256sum -c -; fi
-            mkdir -p "$3"
-            case "$1" in
-              *.zip) unzip -q -o /tmp/dl -d "$3" ;;
-              *)     tar -xf /tmp/dl -C "$3" ;;
-            esac
-          }
-          fetch "${SRC_URL}" "${SRC_SHA}" base
-          # Samsung's opensource archives nest the tree to an unknown depth, so
-          # search the whole archive and keep the SHALLOWEST Makefile that
-          # declares both VERSION = 6 and PATCHLEVEL = 12.
-          ROOT=$(cd base && find . -name Makefile -print0 | \
-                 xargs -0 grep -l -e '^VERSION = 6' -e '^PATCHLEVEL = 12' 2>/dev/null | \
-                 awk '{print gsub(/\//,"/"), $0}' | sort -n | head -1 | cut -d' ' -f2- | \
-                 xargs -r dirname)
-          if [ -z "${ROOT}" ]; then
-            echo "::error::could not locate the kernel Makefile (VERSION = 6, PATCHLEVEL = 12)"
-            echo "--- top three levels of the extracted archive ---"
-            (cd base && find . -maxdepth 3 | head -60)
-            echo "--- any Makefile found at all ---"
-            (cd base && find . -name Makefile | head -20)
-            exit 1
-          fi
-          echo "kernel tree root: base/${ROOT#./}"
-          if [ -n "${DELTA_URL}" ]; then
-            echo "applying build-specific delta over the base tree"
-            fetch "${DELTA_URL}" "${DELTA_SHA}" delta
-            # Samsung's build-specific archives do not necessarily use the same
-            # directory nesting as the base archive, so resolve every delta file
-            # against the base tree by stripping leading path components until
-            # the relative path exists.
-            BASE_REL="${ROOT#./}"
-            cd delta
-            overlaid=0
-            while IFS= read -r -d '' f; do
-              cand="${f#./}"
-              while [ -n "$cand" ] && [ ! -e "../base/${BASE_REL}/${cand}" ]; do
-                case "$cand" in
-                  */*) cand="${cand#*/}" ;;
-                  *)   cand="" ;;
-                esac
-              done
-              if [ -n "$cand" ] && [ -e "../base/${BASE_REL}/${cand}" ]; then
-                mkdir -p "../base/${BASE_REL}/$(dirname "$cand")"
-                cp -f "$f" "../base/${BASE_REL}/${cand}"
-                overlaid=$((overlaid + 1))
-              else
-                echo "  !! delta file has no counterpart in the base tree: ${f#./}" >&2
-              fi
-            done < <(find . -type f -print0)
-            cd ..
-            echo "overlaid ${overlaid} delta file(s)"
-          fi
-          cd ..
-          rm -rf tree && mv "base/${ROOT#./}" tree
-          test -f tree/Makefile
-          grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' tree/Makefile
-          echo "kernel tree ready"
+          set -uo pipefail
+          # Everything below is absolute-path based: the previous version used
+          # relative paths and a bare `cd ..`, which left the shell outside
+          # ksrc before `mv base/... tree`, so the step failed even on a good
+          # download.  The whole body is also teed to a log that the
+          # "Capture diagnostics on failure" step commits, because the CI log
+          # endpoints are not reachable from the porting sandbox.
+          LOG="$GITHUB_WORKSPACE/fetch-diagnostics.log"
+          set -e
+          {
+            WS="$GITHUB_WORKSPACE"
+            KSRC="$WS/ksrc"
+            BASE="$KSRC/base"
+            DELTA="$KSRC/delta"
+            rm -rf "$KSRC" "$WS/tree"
+            mkdir -p "$KSRC" "$BASE" "$DELTA"
 
-      # ---------------------------------------------------------------------
-      # Configuration.  The committed kernel.config is the target's own IKCONFIG
-      # dump, so olddefconfig only has to resolve the KernelSU symbols we add.
-      # ---------------------------------------------------------------------
+            echo "source configuration:"
+            for v in SRC_URL SRC_SHA DELTA_URL DELTA_SHA; do
+              eval "val=\${$v:-}"
+              if [ -n "$val" ]; then
+                echo "  $v = set (${#val} chars)"
+              else
+                echo "  $v = EMPTY"
+              fi
+            done
+
+            fetch() { # url sha256 outdir
+              echo "downloading ${1%%\?*}"
+              curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
+                -o "$KSRC/dl" "${1}"
+              sz=$(stat -c %s "$KSRC/dl")
+              echo "  downloaded ${sz} bytes"
+              if [ -n "${2:-}" ]; then
+                echo "${2}  $KSRC/dl" | sha256sum -c -
+              fi
+              case "${1}" in
+                *.zip) unzip -q -o "$KSRC/dl" -d "${3}" ;;
+                *)     tar -xf "$KSRC/dl" -C "${3}" ;;
+              esac
+            }
+
+            fetch "${SRC_URL}" "${SRC_SHA:-}" "$BASE"
+
+            # Samsung's opensource archives nest the tree to an unknown depth, so
+            # search the whole archive and keep the SHALLOWEST Makefile that
+            # declares both VERSION = 6 and PATCHLEVEL = 12.
+            ROOT=$(cd "$BASE" && find . -name Makefile -print0 | \
+                   xargs -0 grep -l -e '^VERSION = 6' -e '^PATCHLEVEL = 12' 2>/dev/null | \
+                   awk '{print gsub(/\//,"/"), $0}' | sort -n | head -1 | \
+                   cut -d' ' -f2- | xargs -r dirname)
+            if [ -z "${ROOT}" ]; then
+              echo "::error::could not locate the kernel Makefile (VERSION = 6, PATCHLEVEL = 12)"
+              echo "--- top three levels of the extracted archive ---"
+              (cd "$BASE" && find . -maxdepth 3 | head -60)
+              echo "--- every Makefile found ---"
+              (cd "$BASE" && find . -name Makefile | head -20)
+              exit 1
+            fi
+            echo "kernel tree root: base/${ROOT#./}"
+            BASE_REL="${ROOT#./}"
+
+            if [ -n "${DELTA_URL}" ]; then
+              echo "applying build-specific delta over the base tree"
+              fetch "${DELTA_URL}" "${DELTA_SHA:-}" "$DELTA"
+              # Samsung's build-specific archives do not necessarily use the same
+              # directory nesting as the base archive, so resolve every delta file
+              # against the base tree by stripping leading path components until
+              # the relative path exists.
+              overlaid=0
+              while IFS= read -r -d '' f; do
+                # Resolve against the base TREE ROOT, not the archive root: the
+                # base nests the tree one or more directories deeper than the
+                # delta may, so strip leading components until the relative path
+                # exists under the tree root.
+                cand="${f#./}"
+                while [ -n "$cand" ] && [ ! -e "$BASE/$BASE_REL/${cand}" ]; do
+                  case "$cand" in
+                    */*) cand="${cand#*/}" ;;
+                    *)   cand="" ;;
+                  esac
+                done
+                if [ -n "$cand" ] && [ -e "$BASE/$BASE_REL/${cand}" ]; then
+                  mkdir -p "$BASE/$BASE_REL/$(dirname "$cand")"
+                  cp -f "$DELTA/$f" "$BASE/$BASE_REL/${cand}"
+                  overlaid=$((overlaid + 1))
+                else
+                  echo "  !! delta file has no counterpart in the base tree: ${f#./}" >&2
+                fi
+              done < <(cd "$DELTA" && find . -type f -print0)
+              echo "overlaid ${overlaid} delta file(s)"
+            fi
+
+            test -f "$BASE/$BASE_REL/Makefile"
+            mv "$BASE/$BASE_REL" "$WS/tree"
+            grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' "$WS/tree/Makefile"
+            echo "kernel tree ready at $WS/tree"
+          } 2>&1 | tee "$LOG"
+          exit "${PIPESTATUS[0]}"
+
+      # The CI log endpoints (results-receiver.actions.githubusercontent.com and
+      # the Azure blob behind them) are unreachable from the porting sandbox, so
+      # a failed run would otherwise be undiagnosable from here.  Commit the
+      # captured log to the branch instead, where `git show` can read it.
+      - name: Capture diagnostics on failure
+        if: failure()
+        run: |
+          set -uo pipefail
+          git config user.name  "a075f-port-bot"
+          git config user.email "a075f-port-bot@users.noreply.github.com"
+          git add -f fetch-diagnostics.log 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no diagnostics to commit"
+            exit 0
+          fi
+          git commit -q -m "chore(a075f): CI diagnostics for the failed kernelsu build"
+          git push -q origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads || true
+          echo "diagnostics committed"
+
       - name: Apply the recovered target configuration
         run: |
           set -euo pipefail
