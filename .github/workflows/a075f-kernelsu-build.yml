@@ -64,6 +64,16 @@ env:
   # suffix and switch AUTO off so utsrelease matches byte for byte.
   TARGET_LOCALVERSION: -android16-5-abA075FXXS5BZD2-4k
 
+  # scripts/setlocalversion ends with
+  #   echo "${KERNELVERSION}${file_localversion}${config_localversion}${LOCALVERSION}${scm_version}"
+  # so exporting LOCALVERSION appends the whole suffix, and because LOCALVERSION
+  # is set the scm_version branch is skipped entirely (no git tag is available in
+  # the extracted archive anyway).  Driving it from the environment rather than
+  # from CONFIG_LOCALVERSION also means every make invocation - olddefconfig,
+  # modules_prepare, the module build - derives the same string, so the
+  # vermagic cannot drift between steps.
+  LOCALVERSION: -android16-5-abA075FXXS5BZD2-4k
+
   KO_NAME: android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko
   KSUD_NAME: ksud-A075FXXS5BZD2-kdp
   KCONFIG: src/targets/a07-A075FXXS5BZD2/kernel.config
@@ -276,16 +286,20 @@ jobs:
           set -euo pipefail
           cp "${KCONFIG}" tree/.config
           cd tree
-          # Force the exact utsrelease.  The target config has
-          # CONFIG_LOCALVERSION="-4k" with CONFIG_LOCALVERSION_AUTO=y, which
-          # yields the full suffix only because the Samsung tree carries the
-          # android16-5-abA075FXXS5BZD2 git tag.  Replace it outright.
+          # Force the exact utsrelease.  The target config carries
+          # CONFIG_LOCALVERSION="-4k" with CONFIG_LOCALVERSION_AUTO=y, which on
+          # Samsung's kleaf build resolves to the full suffix via the git tag -
+          # a tag the extracted archive does not have.  Drop CONFIG_LOCALVERSION
+          # from .config altogether so include/config/auto.conf cannot
+          # contribute anything, switch AUTO off, and let the LOCALVERSION
+          # environment variable carry the whole suffix instead.
           sed -i \
-            -e "s|^CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=\"${TARGET_LOCALVERSION}\"|" \
+            -e '/^CONFIG_LOCALVERSION=/d' \
+            -e '/^# CONFIG_LOCALVERSION is not set/d' \
             -e "s|^CONFIG_LOCALVERSION_AUTO=.*|CONFIG_LOCALVERSION_AUTO=n|" \
             -e "s|^# CONFIG_LOCALVERSION_AUTO is not set|CONFIG_LOCALVERSION_AUTO=n|" \
             .config
-          grep -E '^CONFIG_LOCALVERSION' .config
+          grep -E '^CONFIG_LOCALVERSION' .config || echo "  (CONFIG_LOCALVERSION removed as intended)"
           # olddefconfig never prompts (it takes each new symbol's default),
           # so feeding it `yes` only earns a SIGPIPE, which pipefail then
           # reports as a failure.
@@ -299,7 +313,18 @@ jobs:
           # With LOCALVERSION_AUTO=n and no .git in the archive, scm_version
           # returns empty and nothing is appended.
           echo "--- include/config/auto.conf ---"
-          grep -E '^CONFIG_LOCALVERSION' include/config/auto.conf || true
+          ls -l include/config/auto.conf || true
+          echo "  lines: $(wc -l < include/config/auto.conf 2>/dev/null || echo 0)"
+          echo "  localversion lines:"
+          grep -i 'localversion' include/config/auto.conf || echo "    (none)"
+          echo "--- .config after olddefconfig ---"
+          grep -E '^CONFIG_LOCALVERSION' .config || echo "  (none)"
+          echo "--- include/generated/autoconf.h ---"
+          grep -i 'localversion' include/generated/autoconf.h 2>/dev/null || echo "  (none)"
+          echo "--- LOCALVERSION symbol present in the tree? ---"
+          grep -n 'config LOCALVERSION$' init/Kconfig || echo "  (not found in init/Kconfig)"
+          echo "--- LOCALVERSION env as make sees it ---"
+          echo "  LOCALVERSION=${LOCALVERSION}"
           make include/config/kernel.release
           echo "resolved utsrelease: $(cat include/config/kernel.release)"
           test "$(cat include/config/kernel.release)" = "${TARGET_VERMAGIC}" || {
