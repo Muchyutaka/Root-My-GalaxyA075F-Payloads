@@ -47,10 +47,10 @@ downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/
 === PHASE 1 done ===
 ++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base
 ++ find . -name Makefile -print0
-++ awk '{print gsub(/\//,"/"), $0}'
-++ head -1
-++ xargs -r dirname
 ++ xargs -0 grep -l -e '^VERSION = 6' -e '^PATCHLEVEL = 12'
+++ awk '{print gsub(/\//,"/"), $0}'
 ++ sort -n
+++ head -1
 ++ cut '-d ' -f2-
+++ xargs -r dirname
 + ROOT=
