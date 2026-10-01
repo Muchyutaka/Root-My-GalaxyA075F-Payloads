@@ -5,20 +5,37 @@ name: a075f-kernelsu-build
 #   kernelsu/android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko
 #   kernelsu/ksud-A075FXXS5BZD2-kdp
 #
-# The offline porting environment has no clang/NDK, so the module and ksud are
-# produced here and committed back to the session branch.
+# and commits both back to the session branch.
 #
-# The kernel tree is supplied through the repository variables
-#   A075F_KERNEL_SRC_URL     tarball/zip of the Samsung SM-A075F_16 opensource
-#                            kernel tree for 6.12.23-android16-5-abA075FXXS5BZD2-4k
-#   A075F_KERNEL_SRC_SHA256  its sha256 (optional; checked when set)
-# Set them under Settings -> Secrets and variables -> Actions -> Variables.
-# When the variable is empty the workflow falls back to the AOSP
-# android16-6.12 GKI tree and rewrites utsrelease so that the resulting
-# vermagic matches the target exactly.
+# ---------------------------------------------------------------------------
+# Why this cannot run in the porting sandbox
+# ---------------------------------------------------------------------------
+# The sandbox has no clang/bison/flex/bc and, crucially, it cannot reach
+# release-assets.githubusercontent.com, so the Samsung opensource tarball on
+# release tag `1` is undownloadable from here.  GitHub Actions has unrestricted
+# network access, so the build lives here.
+#
+# ---------------------------------------------------------------------------
+# Required repository variables (Settings -> Secrets and variables -> Actions
+# -> Variables)
+# ---------------------------------------------------------------------------
+#   A075F_KERNEL_SRC_URL         REQUIRED.  Base Samsung opensource archive for
+#                                the SM-A075F_16 kernel, e.g.
+#                                https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip
+#   A075F_KERNEL_SRC_SHA256      optional.  sha256 of the base archive.
+#   A075F_KERNEL_SRC_DELTA_URL   optional.  Build-specific delta archive that is
+#                                extracted *over* the base, e.g.
+#                                https://github.com/.../SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip
+#   A075F_KERNEL_SRC_DELTA_SHA256 optional.  sha256 of the delta archive.
+#   A075F_KSUD_TAG               optional.  Override the KernelSU tag to build.
+#
+# The kernel configuration is NOT an input: the exact .config was recovered
+# from the target Image's embedded IKCONFIG blob and is committed at
+#   src/targets/a07-A075FXXS5BZD2/kernel.config
+# so the build is reproducible without guessing any Kconfig symbol.
 #
 # Trigger: push a commit whose message contains "[a075f-ksu]", or
-# workflow_dispatch. The workflow removes that marker in its own commit.
+# workflow_dispatch.  The workflow removes that marker in its own commit.
 
 on:
   push:
@@ -34,11 +51,22 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # KernelSU v3.2.5 (b0bc817) is the first line with CONFIG_CFI_CLANG support
+  # (__nocfi annotations + a .cfi_jt symbol resolver) and a 6.12 code path.
+  # It has no CONFIG_KSU_SAMSUNG_KDP / RKP / DEFEX symbols at all - those were
+  # removed after v1.x - so the module is built plain, CONFIG_KSU=m.
   KSU_TAG: v3.2.5
   KSU_COMMIT: b0bc817b4e966aa6aa830834eaf6ef765d821d40
+
   TARGET_VERMAGIC: 6.12.23-android16-5-abA075FXXS5BZD2-4k
+  # CONFIG_LOCALVERSION_AUTO=y is on in the target config, so the stock build
+  # would append the git-describe suffix.  Replace LOCALVERSION with the whole
+  # suffix and switch AUTO off so utsrelease matches byte for byte.
+  TARGET_LOCALVERSION: -android16-5-abA075FXXS5BZD2-4k
+
   KO_NAME: android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko
   KSUD_NAME: ksud-A075FXXS5BZD2-kdp
+  KCONFIG: src/targets/a07-A075FXXS5BZD2/kernel.config
 
 jobs:
   build:
@@ -60,128 +88,226 @@ jobs:
           sudo apt-get install -y -qq \
             build-essential bc bison flex libssl-dev libelf-dev \
             lz4 cpio xz-utils zip unzip python3 python3-pip \
-            clang lld llvm binutils-aarch64-linux-gnu curl git
+            clang lld llvm binutils-aarch64-linux-gnu curl git jq
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add aarch64-linux-android
+          cargo install --locked cargo-ndk
 
+      # ---------------------------------------------------------------------
+      # Kernel tree.  Extraction is layout agnostic: Samsung's opensource
+      # archives wrap the real tree in a version-dependent directory, so we
+      # locate the Makefile that declares VERSION = 6 / PATCHLEVEL = 12.
+      # ---------------------------------------------------------------------
       - name: Fetch the kernel tree
         env:
           SRC_URL: ${{ vars.A075F_KERNEL_SRC_URL }}
           SRC_SHA: ${{ vars.A075F_KERNEL_SRC_SHA256 }}
+          DELTA_URL: ${{ vars.A075F_KERNEL_SRC_DELTA_URL }}
+          DELTA_SHA: ${{ vars.A075F_KERNEL_SRC_DELTA_SHA256 }}
         run: |
           set -euo pipefail
-          mkdir -p ksrc && cd ksrc
-          if [ -n "${SRC_URL}" ]; then
-            echo "using Samsung opensource tree from ${SRC_URL}"
-            curl -fsSL --retry 5 --retry-delay 3 -o tree.tar "${SRC_URL}"
-            if [ -n "${SRC_SHA}" ]; then
-              echo "${SRC_SHA}  tree.tar" | sha256sum -c -
-            fi
-            tar -xf tree.tar --strip-components=1
-          else
-            echo "A075F_KERNEL_SRC_URL is not set; falling back to AOSP android16-6.12 GKI"
-            git init -q .
-            git remote add origin https://github.com/aosp-mirror/kernel_common.git
-            git fetch -q --depth 1 origin android16-6.12
-            git checkout -q FETCH_HEAD
-            # Force the exact target utsrelease so the module vermagic matches.
-            printf '%s\n' "${TARGET_VERMAGIC}" > include/config/kernel.release 2>/dev/null || true
-            mkdir -p include/config
-            printf '%s\n' "${TARGET_VERMAGIC}" > include/config/kernel.release
+          if [ -z "${SRC_URL}" ]; then
+            echo "::error::A075F_KERNEL_SRC_URL is not set."
+            echo "Set it to the SM-A075F_16 opensource archive on release tag 1."
+            exit 1
           fi
-          test -f Makefile
+          mkdir -p ksrc && cd ksrc
+          fetch() { # url sha256 outdir
+            curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/dl "$1"
+            if [ -n "$2" ]; then echo "$2  /tmp/dl" | sha256sum -c -; fi
+            mkdir -p "$3"
+            case "$1" in
+              *.zip) unzip -q -o /tmp/dl -d "$3" ;;
+              *)     tar -xf /tmp/dl -C "$3" ;;
+            esac
+          }
+          fetch "${SRC_URL}" "${SRC_SHA}" base
+          if [ -n "${DELTA_URL}" ]; then
+            echo "applying build-specific delta over the base tree"
+            fetch "${DELTA_URL}" "${DELTA_SHA}" delta
+            # copy the delta over the base, preserving relative paths
+            (cd delta && find . -type f -print0) | \
+              (cd base && xargs -0 -I{} cp -f "../delta/{}" "{}")
+          fi
+          ROOT=$(cd base && find . -maxdepth 4 -name Makefile -print0 | \
+                 xargs -0 grep -l '^PATCHLEVEL = 12' 2>/dev/null | head -1 | xargs -r dirname)
+          if [ -z "${ROOT}" ]; then
+            echo "::error::could not locate the kernel Makefile (PATCHLEVEL = 12) in the archive"
+            (cd base && find . -maxdepth 3 | head -40)
+            exit 1
+          fi
+          echo "kernel tree root: base/${ROOT#./}"
+          cd ..
+          rm -rf tree && mv "base/${ROOT#./}" tree
+          test -f tree/Makefile
+          grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' tree/Makefile
           echo "kernel tree ready"
 
+      # ---------------------------------------------------------------------
+      # Configuration.  The committed kernel.config is the target's own IKCONFIG
+      # dump, so olddefconfig only has to resolve the KernelSU symbols we add.
+      # ---------------------------------------------------------------------
       - name: Apply the recovered target configuration
         run: |
           set -euo pipefail
-          cp build/a075f/kernel.config ksrc/.config
-          # The late-load module only needs the exported symbol set; build the
-          # minimal set of objects the module link requires.
-          cd ksrc
-          yes '' | make olddefconfig >/dev/null 2>&1 || make olddefconfig
+          cp "${KCONFIG}" tree/.config
+          cd tree
+          # Force the exact utsrelease.  The target config has
+          # CONFIG_LOCALVERSION="-4k" with CONFIG_LOCALVERSION_AUTO=y, which
+          # yields the full suffix only because the Samsung tree carries the
+          # android16-5-abA075FXXS5BZD2 git tag.  Replace it outright.
+          sed -i \
+            -e "s|^CONFIG_LOCALVERSION=.*|CONFIG_LOCALVERSION=\"${TARGET_LOCALVERSION}\"|" \
+            -e "s|^CONFIG_LOCALVERSION_AUTO=.*|CONFIG_LOCALVERSION_AUTO=n|" \
+            -e "s|^# CONFIG_LOCALVERSION_AUTO is not set|CONFIG_LOCALVERSION_AUTO=n|" \
+            .config
+          grep -E '^CONFIG_LOCALVERSION' .config
+          yes '' | make olddefconfig
+          echo "resolved utsrelease: $(cat include/config/kernel.release 2>/dev/null || true)"
+          test "$(cat include/config/kernel.release)" = "${TARGET_VERMAGIC}" || {
+            echo "::error::utsrelease mismatch"; exit 1; }
 
-      - name: Clone KernelSU and apply the Samsung KDP/RKP/DEFEX patch
+      - name: Install the matching clang
+        run: |
+          set -euo pipefail
+          # Target was built with Android clang r536225 (clang 19.0.1, LLD 19.0.1).
+          # Prefer it so CONFIG_CC_IS_CLANG / LLD detection matches; fall back to
+          # distro clang, which produces identical modversions CRCs (they are
+          # derived from the symbol prototypes, not the compiler).
+          CLANG_DIR="$PWD/clang"
+          mkdir -p "${CLANG_DIR}"
+          if curl -fsSL --retry 3 --retry-delay 2 -o /tmp/clang.tar.gz \
+              "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz"; then
+            tar -xf /tmp/clang.tar.gz -C "${CLANG_DIR}"
+            echo "${CLANG_DIR}/bin" >> "$GITHUB_PATH"
+            echo "CLANG=${CLANG_DIR}/bin/clang" >> "$GITHUB_ENV"
+            echo "LLVM=${CLANG_DIR}/bin/llvm-*" >> "$GITHUB_ENV"
+            echo "using Android clang r536225"
+          else
+            echo "Android clang unavailable, using distro clang"
+            echo "CLANG=clang" >> "$GITHUB_ENV"
+          fi
+          ${CLANG} --version | head -2 || clang --version | head -2
+
+      - name: Prepare the kernel for module builds
+        env:
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+          LLVM: '1'
+        run: |
+          set -euo pipefail
+          cd tree
+          make -j"$(nproc)" olddefconfig
+          make -j"$(nproc)" modules_prepare
+          echo "modules_prepare done"
+
+      # ---------------------------------------------------------------------
+      # KernelSU.  Integration follows KernelSU's own kernel/setup.sh: symlink
+      # drivers/kernelsu, add the obj line to drivers/Makefile and the source
+      # line to drivers/Kconfig, then build with CONFIG_KSU=m.
+      # ---------------------------------------------------------------------
+      - name: Integrate and build the KernelSU module
+        env:
+          KSU_TAG: ${{ vars.A075F_KSUD_TAG || env.KSU_TAG }}
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+          LLVM: '1'
         run: |
           set -euo pipefail
           git clone -q --depth 1 --branch "${KSU_TAG}" \
             https://github.com/tiann/KernelSU.git KernelSU
           cd KernelSU
+          git fetch -q --depth 1 origin "${KSU_COMMIT}" 2>/dev/null || true
           git checkout -q "${KSU_COMMIT}" 2>/dev/null || true
-          git apply --check ../kernelsu/patches/KernelSU-v3.2.5-samsung-kdp-rkp-defex.patch
-          git apply ../kernelsu/patches/KernelSU-v3.2.5-samsung-kdp-rkp-defex.patch
-          echo "KernelSU $(cat $(git describe --tags 2>/dev/null || echo ${KSU_TAG})) patched"
-
-      - name: Build the no-patch-text KernelSU module
-        env:
-          ARCH: arm64
-          CROSS_COMPILE: aarch64-linux-gnu-
-          LLVM: 1
-        run: |
-          set -euo pipefail
-          cd ksrc
-          make -j"$(nproc)" \
-            KCONFIG_CONFIG=.config \
-            CONFIG_KSU=m \
-            CONFIG_KSU_SAMSUNG_KDP=y \
-            CONFIG_KSU_SAMSUNG_RKP=y \
-            CONFIG_KSU_SAMSUNG_DEFEX=y \
-            CONFIG_KSU_SAMSUNG_NO_PATCH_TEXT=y \
-            KBUILD_MODPOST_WARN=1 \
-            modules_prepare
-          mkdir -p out
-          make -j"$(nproc)" -C . M="$PWD/../KernelSU/kernel" \
-            CONFIG_KSU=m \
-            CONFIG_KSU_SAMSUNG_KDP=y \
-            CONFIG_KSU_SAMSUNG_RKP=y \
-            CONFIG_KSU_SAMSUNG_DEFEX=y \
-            CONFIG_KSU_SAMSUNG_NO_PATCH_TEXT=y \
-            KBUILD_MODPOST_WARN=1 \
-            modules
+          echo "KernelSU $(git describe --tags --always 2>/dev/null || echo "${KSU_TAG}")"
+          cd ..
+          KSU_DIR=$(realpath KernelSU/kernel)
+          ln -sfn "${KSU_DIR}" tree/drivers/kernelsu
+          grep -q 'kernelsu' tree/drivers/Makefile || \
+            printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> tree/drivers/Makefile
+          grep -q 'drivers/kernelsu/Kconfig' tree/drivers/Kconfig || \
+            sed -i '/^endmenu/i source "drivers/kernelsu/Kconfig"' tree/drivers/Kconfig
+          grep -n 'kernelsu' tree/drivers/Makefile tree/drivers/Kconfig
+          cd tree
+          # CONFIG_KSU=m; KPROBES=y and EXT4_FS=y are already =y in the
+          # recovered config, which is exactly what KernelSU's Kconfig needs.
+          ./scripts/config -m KSU
+          yes '' | make olddefconfig
+          grep -E '^CONFIG_KSU' .config
+          test "$(grep -c '^CONFIG_KSU=m' .config)" = "1"
+          make -j"$(nproc)" modules_prepare
+          make -j"$(nproc)" M="${KSU_DIR}" modules
+          KO=$(find . -name kernelsu.ko | head -1)
+          test -n "${KO}"
+          echo "built ${KO}"
+          modinfo "${KO}" | sed -n '1,14p'
 
       - name: Audit the module
         run: |
           set -euo pipefail
-          KO=$(find KernelSU -name 'kernelsu.ko' | head -1)
-          test -n "$KO"
-          echo "found $KO"
-          modinfo "$KO" | sed -n '1,12p'
+          KO=$(find tree -name kernelsu.ko | head -1)
+          test -n "${KO}"
+          echo "found ${KO}"
           # vermagic must match the running target exactly
-          modinfo -F vermagic "$KO" | grep -qx \
-            "${TARGET_VERMAGIC} SMP preempt mod_unload modversions aarch64" || {
-            echo "vermagic mismatch:" >&2
-            modinfo -F vermagic "$KO" >&2
-            exit 1
-          }
-          # name must be kernelsu so ksud late-load finds the asset
-          test "$(modinfo -F name "$KO")" = "kernelsu"
+          V=$(modinfo -F vermagic "${KO}")
+          echo "vermagic: ${V}"
+          [ "${V}" = "${TARGET_VERMAGIC} SMP preempt mod_unload modversions aarch64" ] || {
+            echo "::error::vermagic mismatch"; exit 1; }
+          # ksud late-load looks for the module named kernelsu
+          [ "$(modinfo -F name "${KO}")" = "kernelsu" ] || {
+            echo "::error::module name is not kernelsu"; exit 1; }
+          # the arm64 syscall hook must have been compiled in
+          aarch64-linux-gnu-objdump -d "${KO}" | grep -q 'ksu_syscall_dispatcher' || {
+            echo "::error::ksu_syscall_dispatcher missing from the module"; exit 1; }
           echo "module audit passed"
 
-      - name: Strip debug sections
+      - name: Install the module
         run: |
           set -euo pipefail
-          KO=$(find KernelSU -name 'kernelsu.ko' | head -1)
-          install -D -m 0644 "$KO" "kernelsu/${KO_NAME}"
-          # keep .symtab/.strtab, drop debug info only
+          KO=$(find tree -name kernelsu.ko | head -1)
+          install -D -m 0644 "${KO}" "kernelsu/${KO_NAME}"
+          # keep .symtab/.strtab (symbol_resolver needs them at runtime),
+          # drop only the debug info
           aarch64-linux-gnu-strip --strip-debug "kernelsu/${KO_NAME}" 2>/dev/null || \
             llvm-strip --strip-debug "kernelsu/${KO_NAME}"
           ls -l "kernelsu/${KO_NAME}"
+          modinfo -F vermagic "kernelsu/${KO_NAME}"
 
-      - name: Rebuild ksud with the embedded module
+      # ---------------------------------------------------------------------
+      # ksud.  KernelSU's own recipe is `cross build --target
+      # aarch64-linux-android --release`; cargo-ndk + the NDK linker does the
+      # same without needing the cross container.
+      # ---------------------------------------------------------------------
+      - name: Build ksud for aarch64
+        env:
+          KSU_TAG: ${{ vars.A075F_KSUD_TAG || env.KSU_TAG }}
         run: |
           set -euo pipefail
+          curl -fsSL --retry 3 -o /tmp/ndk.zip \
+            "https://dl.google.com/android/repository/android-ndk-r27d-linux.zip"
+          unzip -q /tmp/ndk.zip -d "$PWD"
+          echo "ANDROID_NDK_HOME=$PWD/android-ndk-r27d" >> "$GITHUB_ENV"
+          echo "$PWD/android-ndk-r27d" >> "$GITHUB_PATH"
           cd KernelSU
-          git apply --check ../kernelsu/patches/KernelSU-v3.2.5-samsung-kdp-rkp-defex.patch 2>/dev/null || true
-          # ksud embeds <kmi>_kernelsu.ko; mirror the naming used by the other
-          # Samsung targets (kernelsu.ko inside the manager assets).
-          mkdir -p manager/app/src/main/assets
-          cp "../kernelsu/${KO_NAME}" manager/app/src/main/assets/kernelsu.ko
-          cd manager
-          ./gradlew --no-daemon assembleRelease || {
-            echo "gradle build unavailable; embedding the module with the repo layout" >&2
-            exit 1
-          }
-          cd ../..
-          APK=$(find KernelSU/manager -name '*.apk' | head -1)
-          echo "manager apk: ${APK}"
+          git fetch -q --depth 1 origin "${KSU_COMMIT}" 2>/dev/null || true
+          git checkout -q "${KSU_COMMIT}" 2>/dev/null || true
+          cargo ndk -t arm64-v8a -o "$PWD/target/ndk" build --release
+          BIN="$PWD/target/ndk/arm64-v8a/ksud"
+          test -x "${BIN}"
+          install -D -m 0755 "${BIN}" "../kernelsu/${KSUD_NAME}"
+          ls -l "../kernelsu/${KSUD_NAME}"
+          file "../kernelsu/${KSUD_NAME}"
+
+      - name: Audit ksud
+        run: |
+          set -euo pipefail
+          B="kernelsu/${KSUD_NAME}"
+          file "${B}" | grep -q 'ELF 64-bit LSB.*ARM aarch64' || {
+            echo "::error::ksud is not an aarch64 ELF"; exit 1; }
+          strings -n 6 "${B}" | grep -q 'late_load' || {
+            echo "::error::ksud has no late_load support"; exit 1; }
+          echo "ksud audit passed"
 
       - name: Publish the artifacts
         run: |
@@ -189,11 +315,11 @@ jobs:
           rm -f .a075f-ksu
           git config user.name  "a075f-port-bot"
           git config user.email "a075f-port-bot@users.noreply.github.com"
-          git add -f "kernelsu/${KO_NAME}"
-          git rm --cached -q .a075f-ksu 2>/dev/null || true
+          git add -f "kernelsu/${KO_NAME}" "kernelsu/${KSUD_NAME}"
           if git diff --cached --quiet; then
-            echo "nothing staged"
+            echo "nothing staged - artifacts already up to date"
             exit 0
           fi
-          git commit -q -m "chore(a075f): KernelSU android16-6.12 no-patch-text module for A075FXXS5BZD2"
+          git commit -q -m "chore(a075f): KernelSU ${KSU_TAG} module + ksud for A075FXXS5BZD2"
           git push origin HEAD:arena/01a0f70e-root-my-galaxya075f-payloads
+          echo "published ${KO_NAME} and ${KSUD_NAME}"

@@ -531,7 +531,40 @@ errors or warnings. Configurations exercised: default,
 
 The Android NDK is not available in the offline porting environment, so the
 `make TARGET=a07-A075FXXS5BZD2 release` binary and the KernelSU `.ko`/`ksud`
-artifacts are produced by CI. See `.github/workflows/a075f-kernelsu-build.yml`.
+artifacts are produced by CI. See `.github/workflows/a075f-kernelsu-build.yml`
+and §10.
+
+### 8.1 Recovered kernel configuration
+
+`src/targets/a07-A075FXXS5BZD2/kernel.config` is the **exact** `.config` of the
+target kernel, extracted from the `IKCONFIG` blob embedded in the Image itself
+(`CONFIG_IKCONFIG_PROC=y`, so `/proc/config.gz` on the device returns the same
+bytes). The blob sits at Image offsets `0x1228760` (`IKCFG_ST`) …
+`0x12341b7` (`IKCFG_ED`) and gzip-decompresses to 221,164 characters / 8090
+lines / 2326 enabled symbols.
+
+Facts from it that matter for the KernelSU build:
+
+```text
+CONFIG_MODULES=y                 CONFIG_MODVERSIONS=y
+CONFIG_MODULE_SIG=y              CONFIG_MODULE_SIG_ALL=y
+# CONFIG_MODULE_SIG_FORCE is not set      <- unsigned modules can be insmod'ed
+CONFIG_KPROBES=y  CONFIG_EXT4_FS=y        <- KernelSU Kconfig depends on both
+CONFIG_KALLSYMS=y CONFIG_KALLSYMS_ALL=y
+CONFIG_CFI_CLANG=y               CONFIG_SHADOW_CALL_STACK=y
+CONFIG_ARM64_PTR_AUTH_KERNEL=y   CONFIG_LTO_NONE=y
+CONFIG_SECURITY_DEFEX=y  (DEFEX_DTM, DEFEX_IMR_V2, DEFEX_USER)
+CONFIG_RELOCATABLE=y  CONFIG_RANDOMIZE_BASE=y  CONFIG_ARM64_VA_BITS_39=y
+CONFIG_LOCALVERSION="-4k"  CONFIG_LOCALVERSION_AUTO=y
+CONFIG_CC_IS_CLANG=y  clang 19.0.1 (Android r536225)  CONFIG_LD_IS_LLD=y
+```
+
+There is **no** `CONFIG_RKP*` and no `CONFIG_KDP*` in this kernel, so the
+old `CONFIG_KSU_SAMSUNG_KDP/RKP/DEFEX` patch set does not apply. KernelSU
+v3.2.5 (`b0bc817`) is the right baseline instead: it is the first line that
+carries `__nocfi` annotations and a `.cfi_jt` symbol resolver (needed because
+`CONFIG_CFI_CLANG=y` here) and has an explicit 6.12 code path. Its `Kconfig`
+only needs `KPROBES` and `EXT4_FS`, both already `y`.
 
 ## 9. Remaining hardware validation
 
@@ -544,3 +577,95 @@ artifacts are produced by CI. See `.github/workflows/a075f-kernelsu-build.yml`.
    `start_pfn 1048576`, RAM `0x40000000`–`0x140000000`).
 3. Run the release payload and record the resulting artifacts in
    `support/targets-v3.json`.
+
+## 10. Building the KernelSU artifacts
+
+Two files are produced by CI, never by hand:
+
+```text
+kernelsu/android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko   the module
+kernelsu/ksud-A075FXXS5BZD2-kdp                          the userspace daemon
+```
+
+### 10.1 Why it has to be CI
+
+The sandbox cannot do it: it has no clang, bison, flex or bc, and it cannot
+reach `release-assets.githubusercontent.com`, so the 357 MB Samsung opensource
+archive on release tag `1` is undownloadable from here. GitHub Actions has
+unrestricted network access.
+
+### 10.2 One-time setup (repository variables)
+
+Settings → Secrets and variables → Actions → Variables:
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `A075F_KERNEL_SRC_URL` | **yes** | `https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource.zip` |
+| `A075F_KERNEL_SRC_SHA256` | no | sha256 of the base archive |
+| `A075F_KERNEL_SRC_DELTA_URL` | no | `https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/download/1/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip` |
+| `A075F_KERNEL_SRC_DELTA_SHA256` | no | sha256 of the delta archive |
+| `A075F_KSUD_TAG` | no | override the KernelSU tag (default `v3.2.5`) |
+
+The `.config` is **not** an input — the target's own IKCONFIG dump is committed
+at `src/targets/a07-A075FXXS5BZD2/kernel.config` (§8.1), so nothing about the
+Kconfig has to be guessed.
+
+### 10.3 Triggering the build
+
+Either push a commit whose message contains `[a075f-ksu]`:
+
+```sh
+git commit --allow-empty -m "chore(a075f): build kernelsu [a075f-ksu]"
+git push origin arena/01a0f70e-root-my-galaxya075f-payloads
+```
+
+or run it by hand: Actions → `a075f-kernelsu-build` → Run workflow.
+
+The workflow extracts the archive (layout-agnostic: it locates the `Makefile`
+that declares `PATCHLEVEL = 12`, so it does not matter which directory Samsung
+wrapped the tree in), overlays the delta if one is configured, applies the
+committed `.config`, forces `CONFIG_LOCALVERSION` /
+`CONFIG_LOCALVERSION_AUTO` so `utsrelease` is exactly
+`6.12.23-android16-5-abA075FXXS5BZD2-4k`, builds Android clang r536225, runs
+`modules_prepare`, integrates KernelSU the way its own `kernel/setup.sh` does
+(`drivers/kernelsu` symlink + `obj-$(CONFIG_KSU)` in `drivers/Makefile` +
+`source "drivers/kernelsu/Kconfig"` before `endmenu`), builds with
+`CONFIG_KSU=m`, audits the result, and commits both artifacts back to the
+branch.
+
+### 10.4 What the audit checks
+
+```text
+vermagic == 6.12.23-android16-5-abA075FXXS5BZD2-4k SMP preempt mod_unload modversions aarch64
+modinfo name == kernelsu
+ksu_syscall_dispatcher present in the disassembly   (arm64 syscall hook built in)
+ksud is an aarch64 ELF and contains late_load support
+```
+
+`vermagic` is the one that bites: `CONFIG_MODVERSIONS=y` means the running
+kernel rejects the module unless the `__versions` CRCs were produced against
+this exact source tree, and `same_magic()` compares the whole string including
+the `SMP preempt mod_unload modversions aarch64` tail.
+
+### 10.5 Loading it on device
+
+```sh
+adb push kernelsu/android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko /data/local/tmp/
+adb push kernelsu/ksud-A075FXXS5BZD2-kdp /data/local/tmp/
+adb shell "su -c true 2>/dev/null; chmod 755 /data/local/tmp/ksud-A075FXXS5BZD2-kdp"
+adb shell "/data/local/tmp/ksud-A075FXXS5BZD2-kdp late-load \
+  /data/local/tmp/android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko"
+```
+
+`CONFIG_MODULE_SIG_FORCE` is not set in the target config, so the unsigned
+module loads (it will taint the kernel, which is expected for a late-load).
+
+### 10.6 Caveat that is still open
+
+`CONFIG_SECURITY_DEFEX=y` is enabled with `DEFEX_DTM`, `DEFEX_IMR_V2` and
+`DEFEX_USER`. Defex blocks `su`/`magisk`-style transitions and its IMR v2
+integrity check can reject a module that patches kernel text. KernelSU v3.2.5
+has no Defex bypass, so the first on-device load may need either
+`CONFIG_SECURITY_DEFEX=n` in the target config or a Defex-specific patch. That
+cannot be decided from the offline artifacts — it is the first thing to check
+when the module loads and `ksud late-load` reports a failure.
