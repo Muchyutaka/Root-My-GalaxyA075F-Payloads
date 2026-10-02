@@ -99,9 +99,9 @@ downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/
 + '[' -n '' ']'
 + shopt -u nullglob
 + overlaid=0
+++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
 + IFS=
 + read -r -d '' f
-++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
 ++ find . -type f -print0
 + cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
 + '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
@@ -1474,5 +1474,314 @@ kernel tree ready at /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-Gala
 8090 .config
 + md5sum .config
 46e0b7042bbb4d921f5e58dcce921537  .config
-+ md5sum src/targets/a07-A075FXXS5BZD2/kernel.config
-md5sum: src/targets/a07-A075FXXS5BZD2/kernel.config: No such file or directory
++ md5sum /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/src/targets/a07-A075FXXS5BZD2/kernel.config
+46e0b7042bbb4d921f5e58dcce921537  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/src/targets/a07-A075FXXS5BZD2/kernel.config
++ head -3 .config
+#
+# Automatically generated file; DO NOT EDIT.
+# Linux/arm64 6.12.23 Kernel Configuration
++ sed -i -e '/^CONFIG_LOCALVERSION=/d' -e '/^# CONFIG_LOCALVERSION is not set/d' -e 's|^CONFIG_LOCALVERSION_AUTO=.*|CONFIG_LOCALVERSION_AUTO=n|' -e 's|^# CONFIG_LOCALVERSION_AUTO is not set|CONFIG_LOCALVERSION_AUTO=n|' .config
++ grep -E '^CONFIG_LOCALVERSION' .config
+CONFIG_LOCALVERSION_AUTO=n
++ make olddefconfig
+  HOSTCC  scripts/basic/fixdep
+  HOSTCC  scripts/kconfig/conf.o
+  HOSTCC  scripts/kconfig/confdata.o
+  HOSTCC  scripts/kconfig/expr.o
+  LEX     scripts/kconfig/lexer.lex.c
+  YACC    scripts/kconfig/parser.tab.[ch]
+  HOSTCC  scripts/kconfig/lexer.lex.o
+  HOSTCC  scripts/kconfig/menu.o
+  HOSTCC  scripts/kconfig/parser.tab.o
+  HOSTCC  scripts/kconfig/preprocess.o
+  HOSTCC  scripts/kconfig/symbol.o
+  HOSTCC  scripts/kconfig/util.o
+  HOSTLD  scripts/kconfig/conf
+#
+# configuration written to .config
+#
++ echo '--- include/config/auto.conf ---'
+--- include/config/auto.conf ---
++ ls -l include/config/auto.conf
+-rw-r--r-- 1 runner runner 132 Oct  2 00:11 include/config/auto.conf
+++ wc -l
++ echo '  lines: 6'
+  lines: 6
++ echo '  localversion lines:'
+  localversion lines:
++ grep -i localversion include/config/auto.conf
++ echo '    (none)'
+    (none)
++ echo '--- .config after olddefconfig ---'
+--- .config after olddefconfig ---
++ grep -E '^CONFIG_LOCALVERSION' .config
++ echo '  (none)'
+  (none)
++ echo '--- include/generated/autoconf.h ---'
+--- include/generated/autoconf.h ---
++ grep -i localversion include/generated/autoconf.h
++ echo '  (none)'
+  (none)
++ echo '--- LOCALVERSION symbol present in the tree? ---'
+--- LOCALVERSION symbol present in the tree? ---
++ grep -n 'config LOCALVERSION$' init/Kconfig
+219:config LOCALVERSION
++ echo '--- LOCALVERSION env as make sees it ---'
+--- LOCALVERSION env as make sees it ---
++ echo '  LOCALVERSION=-android16-5-abA075FXXS5BZD2-4k'
+  LOCALVERSION=-android16-5-abA075FXXS5BZD2-4k
++ echo '--- config state after olddefconfig ---'
+--- config state after olddefconfig ---
++ wc -l .config include/config/auto.conf
+ 11 .config
+  6 include/config/auto.conf
+ 17 total
++ echo '--- FULL .config after olddefconfig ---'
+--- FULL .config after olddefconfig ---
++ cat .config
+#
+# Automatically generated file; DO NOT EDIT.
+# Main menu
+#
+
+#
+# SEC Memory Management Options
+#
+CONFIG_SEC_MM_CUSTOMIZE_ZONE_PAGESET=y
+CONFIG_MMAP_READAROUND_LIMIT=16
+# end of SEC Memory Management Options
++ echo '--- FULL auto.conf after olddefconfig ---'
+--- FULL auto.conf after olddefconfig ---
++ cat include/config/auto.conf
+#
+# Automatically generated file; DO NOT EDIT.
+# Main menu
+#
+CONFIG_MMAP_READAROUND_LIMIT=16
+CONFIG_SEC_MM_CUSTOMIZE_ZONE_PAGESET=y
++ echo '--- top-level Kconfig ---'
+--- top-level Kconfig ---
++ ls -l Kconfig
+-rw-r--r-- 1 runner runner 999 Oct  2 00:11 Kconfig
+++ grep -c '^source' Kconfig
+++ true
++ echo '  source lines: 0'
+  source lines: 0
+++ grep -c '^config ' Kconfig
++ echo '  config lines: 4'
+  config lines: 4
+++ grep -c '^mainmenu' Kconfig
+++ true
++ echo '  mainmenu lines: 0'
+  mainmenu lines: 0
++ head -3 Kconfig
+menu "SEC Memory Management Options"
+
+config SEC_MM
+++ grep -cE '^CONFIG_[A-Z0-9_]+=' .config
++ echo '  set symbols in .config:        2'
+  set symbols in .config:        2
+++ grep -cE '^CONFIG_[A-Z0-9_]+=' include/config/auto.conf
++ echo '  set symbols in auto.conf:      2'
+  set symbols in auto.conf:      2
++ echo '--- FULL auto.conf after olddefconfig ---'
+--- FULL auto.conf after olddefconfig ---
++ cat include/config/auto.conf
+#
+# Automatically generated file; DO NOT EDIT.
+# Main menu
+#
+CONFIG_MMAP_READAROUND_LIMIT=16
+CONFIG_SEC_MM_CUSTOMIZE_ZONE_PAGESET=y
++ echo '--- top-level Kconfig sanity ---'
+--- top-level Kconfig sanity ---
++ ls -l Kconfig
+-rw-r--r-- 1 runner runner 999 Oct  2 00:11 Kconfig
++ head -3 Kconfig
+menu "SEC Memory Management Options"
+
+config SEC_MM
+++ grep -c '^source' Kconfig
++ echo '  '\''source'\'' lines in Kconfig: 0'
+  'source' lines in Kconfig: 0
+++ grep -c '^config ' Kconfig
++ echo '  '\''config '\'' lines in Kconfig: 4'
+  'config ' lines in Kconfig: 4
+++ grep -cE '^CONFIG_[A-Z0-9_]+=' src/targets/a07-A075FXXS5BZD2/kernel.config
+grep: src/targets/a07-A075FXXS5BZD2/kernel.config: No such file or directory
+++ true
++ echo '  expected (kernel.config):      '
+  expected (kernel.config):      
++ echo '--- critical symbols ---'
+--- critical symbols ---
++ grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES|EXT4_FS)=' .config
++ echo '  (absent from .config)'
+  (absent from .config)
++ echo '--- top-level Kconfig sanity ---'
+--- top-level Kconfig sanity ---
++ ls -l Kconfig
+-rw-r--r-- 1 runner runner 999 Oct  2 00:11 Kconfig
+++ grep -c '^source' Kconfig
++ echo '  source lines: 0'
+  source lines: 0
+++ grep -c '^config ' Kconfig
++ echo '  config lines: 4'
+  config lines: 4
+++ grep -c '^mainmenu' Kconfig
++ echo '  mainmenu: 0'
+  mainmenu: 0
++ grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES|EXT4_FS)=' include/config/auto.conf
++ echo '  (absent from auto.conf)'
+  (absent from auto.conf)
++ make include/config/kernel.release
+  UPD     include/config/kernel.release
+++ cat include/config/kernel.release
++ echo 'resolved utsrelease: 6.12.23-android16-5-abA075FXXS5BZD2-4k'
+resolved utsrelease: 6.12.23-android16-5-abA075FXXS5BZD2-4k
+++ cat include/config/kernel.release
++ test 6.12.23-android16-5-abA075FXXS5BZD2-4k = 6.12.23-android16-5-abA075FXXS5BZD2-4k
+--- clang/bin contents ---
+total 783648
+-rw-r--r-- 1 runner runner     10450 Oct  2 00:12 bisect_driver.py
+-rwxr-xr-x 1 runner runner   3677523 Oct  2 00:12 clang
+-rwxr-xr-x 1 runner runner   3677523 Oct  2 00:12 clang++
+lrwxrwxrwx 1 runner runner        10 Oct  2 00:12 clang++.real -> clang.real
+-rwxr-xr-x 1 runner runner 137751672 Oct  2 00:12 clang-19
+-rwxr-xr-x 1 runner runner  76520752 Oct  2 00:12 clang-check
+lrwxrwxrwx 1 runner runner        10 Oct  2 00:12 clang-cl -> clang.real
+-rwxr-xr-x 1 runner runner   3849448 Oct  2 00:12 clang-format
+-rwxr-xr-x 1 runner runner  76196432 Oct  2 00:12 clang-scan-deps
+-rwxr-xr-x 1 runner runner   3677523 Oct  2 00:12 clang-tidy
+-rwxr-xr-x 1 runner runner  53810984 Oct  2 00:12 clang-tidy.real
+-rwxr-xr-x 1 runner runner      3579 Oct  2 00:12 clang-tidy.sh
+lrwxrwxrwx 1 runner runner         8 Oct  2 00:12 clang.real -> clang-19
+-rwxr-xr-x 1 runner runner  45402024 Oct  2 00:12 clangd
+-rwxr-xr-x 1 runner runner  42357016 Oct  2 00:12 dsymutil
+-rwxr-xr-x 1 runner runner     25338 Oct  2 00:12 git-clang-format
+lrwxrwxrwx 1 runner runner         3 Oct  2 00:12 ld.lld -> lld
+lrwxrwxrwx 1 runner runner         3 Oct  2 00:12 ld64.lld -> lld
+-rwxr-xr-x 1 runner runner  61369096 Oct  2 00:12 lld
+lrwxrwxrwx 1 runner runner         3 Oct  2 00:13 lld-link -> lld
+-rwxr-xr-x 1 runner runner    640640 Oct  2 00:13 lldb
+-rwxr-xr-x 1 runner runner    393864 Oct  2 00:13 lldb-argdumper
+-rwxr-xr-x 1 runner runner       170 Oct  2 00:13 lldb.sh
+lrwxrwxrwx 1 runner runner        15 Oct  2 00:13 llvm-addr2line -> llvm-symbolizer
+-rwxr-xr-x 1 runner runner  15360928 Oct  2 00:13 llvm-ar
+-rwxr-xr-x 1 runner runner   4552288 Oct  2 00:13 llvm-as
+-rwxr-xr-x 1 runner runner  51344768 Oct  2 00:13 llvm-bolt
+-rwxr-xr-x 1 runner runner  19999536 Oct  2 00:13 llvm-cfi-verify
+-rwxr-xr-x 1 runner runner    652328 Oct  2 00:13 llvm-config
+-rwxr-xr-x 1 runner runner   5399752 Oct  2 00:13 llvm-cov
+-rwxr-xr-x 1 runner runner   1035384 Oct  2 00:13 llvm-cxxfilt
+-rwxr-xr-x 1 runner runner   3360832 Oct  2 00:13 llvm-dis
+lrwxrwxrwx 1 runner runner         7 Oct  2 00:13 llvm-dlltool -> llvm-ar
+-rwxr-xr-x 1 runner runner  13258480 Oct  2 00:13 llvm-dwarfdump
+-rwxr-xr-x 1 runner runner  41072704 Oct  2 00:13 llvm-dwp
+-rwxr-xr-x 1 runner runner   4796576 Oct  2 00:13 llvm-ifs
+lrwxrwxrwx 1 runner runner         7 Oct  2 00:13 llvm-lib -> llvm-ar
+-rwxr-xr-x 1 runner runner   5101904 Oct  2 00:13 llvm-link
+-rwxr-xr-x 1 runner runner  15261536 Oct  2 00:13 llvm-lipo
+using Android clang r536225
+clang smoke test passed (aarch64 object produced)
+Ubuntu LLD 18.1.3 (compatible with GNU linkers)
+total 248
+lrwxrwxrwx 1 runner runner 102 Oct  2 00:18 bisect_driver.py -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/bisect_driver.py
+lrwxrwxrwx 1 runner runner  91 Oct  2 00:18 clang -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang
+lrwxrwxrwx 1 runner runner  93 Oct  2 00:18 clang++ -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++
+lrwxrwxrwx 1 runner runner  98 Oct  2 00:18 clang++.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++.real
+lrwxrwxrwx 1 runner runner  94 Oct  2 00:18 clang-19 -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-19
+lrwxrwxrwx 1 runner runner  97 Oct  2 00:18 clang-check -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-check
+lrwxrwxrwx 1 runner runner  94 Oct  2 00:18 clang-cl -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-cl
+lrwxrwxrwx 1 runner runner  98 Oct  2 00:18 clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-format
+lrwxrwxrwx 1 runner runner 101 Oct  2 00:18 clang-scan-deps -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-scan-deps
+lrwxrwxrwx 1 runner runner  96 Oct  2 00:18 clang-tidy -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy
+lrwxrwxrwx 1 runner runner 101 Oct  2 00:18 clang-tidy.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.real
+lrwxrwxrwx 1 runner runner  99 Oct  2 00:18 clang-tidy.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.sh
+lrwxrwxrwx 1 runner runner  96 Oct  2 00:18 clang.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang.real
+lrwxrwxrwx 1 runner runner  92 Oct  2 00:18 clangd -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clangd
+lrwxrwxrwx 1 runner runner  94 Oct  2 00:18 dsymutil -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/dsymutil
+lrwxrwxrwx 1 runner runner 102 Oct  2 00:18 git-clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/git-clang-format
+lrwxrwxrwx 1 runner runner  92 Oct  2 00:18 ld.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld.lld
+lrwxrwxrwx 1 runner runner  94 Oct  2 00:18 ld64.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld64.lld
+lrwxrwxrwx 1 runner runner  89 Oct  2 00:18 lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld
+lrwxrwxrwx 1 runner runner  94 Oct  2 00:18 lld-link -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld-link
+lrwxrwxrwx 1 runner runner  90 Oct  2 00:18 lldb -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb
+lrwxrwxrwx 1 runner runner 100 Oct  2 00:18 lldb-argdumper -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb-argdumper
+lrwxrwxrwx 1 runner runner  93 Oct  2 00:18 lldb.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb.sh
+lrwxrwxrwx 1 runner runner 100 Oct  2 00:18 llvm-addr2line -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-addr2line
+lrwxrwxrwx 1 runner runner  93 Oct  2 00:18 llvm-ar -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-ar
+lrwxrwxrwx 1 runner runner  93 Oct  2 00:18 llvm-as -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-as
+lrwxrwxrwx 1 runner runner  95 Oct  2 00:18 llvm-bolt -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-bolt
+lrwxrwxrwx 1 runner runner 101 Oct  2 00:18 llvm-cfi-verify -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-cfi-verify
+lrwxrwxrwx 1 runner runner  97 Oct  2 00:18 llvm-config -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-config
+ls: write error: Broken pipe
+#
+# No change to .config
+#
+make[1]: Nothing to be done for 'modules_prepare'.
+modules_prepare done
+Note: switching to 'b0bc817b4e966aa6aa830834eaf6ef765d821d40'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+KernelSU v3.2.5
+tree/drivers/Makefile:199:obj-$(CONFIG_KSU) += kernelsu/
+tree/drivers/Kconfig:248:source "drivers/kernelsu/Kconfig"
+#
+# configuration written to .config
+#
+--- .config KSU lines AFTER olddefconfig ---
+  (none)
+--- include/config/auto.conf KSU lines ---
+  (none)
+--- is the sourced Kconfig reachable through the symlink? ---
+-rw-r--r-- 1 runner runner 1000 Oct  2 00:18 drivers/kernelsu/Kconfig
+--- tail of drivers/Kconfig, where the source line was inserted ---
+source "drivers/cdx/Kconfig"
+
+source "drivers/dpll/Kconfig"
+
+source "drivers/kernelsu/Kconfig"
+endmenu
+--- where are KSU's depends symbols defined? ---
+arch/Kconfig:70:config KPROBES
+arch/Kconfig:126:config KPROBES_ON_FTRACE
+lib/Kconfig.debug:2337:config KPROBES_SANITY_TEST
+fs/ext4/Kconfig:29:config EXT4_FS
+fs/ext4/Kconfig:74:config EXT4_FS_POSIX_ACL
+fs/ext4/Kconfig:84:config EXT4_FS_SECURITY
+--- their values in .config ---
+  (absent)
+--- allmodconfig visibility probe (stderr shown) ---
+#
+# No change to .config
+#
+  KSU absent under allmodconfig
+#
+# configuration written to .config
+#
+kconfig dropped CONFIG_KSU; writing it into the generated files
+--- final state ---
+include/config/auto.conf:7:CONFIG_KSU=m
+include/generated/autoconf.h:7:#define CONFIG_KSU_MODULE 1
+  SYNC    include/config/auto.conf.cmd
+make[1]: Nothing to be done for 'modules_prepare'.
+***
+*** The present kernel disabled CONFIG_MODULES.
+*** You cannot build or install external modules.
+***
+make[1]: *** [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree/Makefile:1889: __external_modules_error] Error 1
+make: *** [Makefile:242: __sub-make] Error 2
