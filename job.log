@@ -99,10 +99,10 @@ downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/
 + '[' -n '' ']'
 + shopt -u nullglob
 + overlaid=0
-++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
-++ find . -type f -print0
 + IFS=
 + read -r -d '' f
+++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
+++ find . -type f -print0
 + cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
 + '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
 + '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
@@ -1467,7 +1467,12 @@ kernel tree ready at /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-Gala
 + set -e
 + set -euo pipefail
 + cp src/targets/a07-A075FXXS5BZD2/kernel.config tree/.config
-+ echo '--- .config as copied in ---'
---- .config as copied in ---
++ cd tree
++ echo '--- .config as copied in (inside tree/) ---'
+--- .config as copied in (inside tree/) ---
 + wc -l .config
-wc: .config: No such file or directory
+8090 .config
++ md5sum .config
+46e0b7042bbb4d921f5e58dcce921537  .config
++ md5sum src/targets/a07-A075FXXS5BZD2/kernel.config
+md5sum: src/targets/a07-A075FXXS5BZD2/kernel.config: No such file or directory
