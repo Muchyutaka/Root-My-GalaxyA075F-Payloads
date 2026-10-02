@@ -106,8 +106,8 @@ downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/
 + overlaid=0
 + skipped=0
 + IFS=
-++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
 + read -r -d '' f
+++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
 ++ find . -type f -print0
 + rel=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
 + cand=
@@ -1713,7 +1713,7 @@ CONFIG_LOCALVERSION_AUTO=n
 + echo '--- include/config/auto.conf ---'
 --- include/config/auto.conf ---
 + ls -l include/config/auto.conf
--rw-r--r-- 1 runner runner 59268 Oct  2 03:28 include/config/auto.conf
+-rw-r--r-- 1 runner runner 59268 Oct  2 03:45 include/config/auto.conf
 ++ wc -l
 + echo '  lines: 2312'
   lines: 2312
@@ -14519,78 +14519,78 @@ resolved utsrelease: 6.12.23-android16-5-abA075FXXS5BZD2-4k
 + test 6.12.23-android16-5-abA075FXXS5BZD2-4k = 6.12.23-android16-5-abA075FXXS5BZD2-4k
 --- clang/bin contents ---
 total 783648
--rw-r--r-- 1 runner runner     10450 Oct  2 03:29 bisect_driver.py
--rwxr-xr-x 1 runner runner   3677523 Oct  2 03:29 clang
--rwxr-xr-x 1 runner runner   3677523 Oct  2 03:29 clang++
-lrwxrwxrwx 1 runner runner        10 Oct  2 03:29 clang++.real -> clang.real
--rwxr-xr-x 1 runner runner 137751672 Oct  2 03:29 clang-19
--rwxr-xr-x 1 runner runner  76520752 Oct  2 03:29 clang-check
-lrwxrwxrwx 1 runner runner        10 Oct  2 03:29 clang-cl -> clang.real
--rwxr-xr-x 1 runner runner   3849448 Oct  2 03:29 clang-format
--rwxr-xr-x 1 runner runner  76196432 Oct  2 03:30 clang-scan-deps
--rwxr-xr-x 1 runner runner   3677523 Oct  2 03:30 clang-tidy
--rwxr-xr-x 1 runner runner  53810984 Oct  2 03:30 clang-tidy.real
--rwxr-xr-x 1 runner runner      3579 Oct  2 03:30 clang-tidy.sh
-lrwxrwxrwx 1 runner runner         8 Oct  2 03:30 clang.real -> clang-19
--rwxr-xr-x 1 runner runner  45402024 Oct  2 03:30 clangd
--rwxr-xr-x 1 runner runner  42357016 Oct  2 03:30 dsymutil
--rwxr-xr-x 1 runner runner     25338 Oct  2 03:30 git-clang-format
-lrwxrwxrwx 1 runner runner         3 Oct  2 03:30 ld.lld -> lld
-lrwxrwxrwx 1 runner runner         3 Oct  2 03:30 ld64.lld -> lld
--rwxr-xr-x 1 runner runner  61369096 Oct  2 03:30 lld
-lrwxrwxrwx 1 runner runner         3 Oct  2 03:30 lld-link -> lld
--rwxr-xr-x 1 runner runner    640640 Oct  2 03:30 lldb
--rwxr-xr-x 1 runner runner    393864 Oct  2 03:30 lldb-argdumper
--rwxr-xr-x 1 runner runner       170 Oct  2 03:30 lldb.sh
-lrwxrwxrwx 1 runner runner        15 Oct  2 03:30 llvm-addr2line -> llvm-symbolizer
--rwxr-xr-x 1 runner runner  15360928 Oct  2 03:30 llvm-ar
--rwxr-xr-x 1 runner runner   4552288 Oct  2 03:30 llvm-as
--rwxr-xr-x 1 runner runner  51344768 Oct  2 03:30 llvm-bolt
--rwxr-xr-x 1 runner runner  19999536 Oct  2 03:30 llvm-cfi-verify
--rwxr-xr-x 1 runner runner    652328 Oct  2 03:30 llvm-config
--rwxr-xr-x 1 runner runner   5399752 Oct  2 03:30 llvm-cov
--rwxr-xr-x 1 runner runner   1035384 Oct  2 03:30 llvm-cxxfilt
--rwxr-xr-x 1 runner runner   3360832 Oct  2 03:30 llvm-dis
-lrwxrwxrwx 1 runner runner         7 Oct  2 03:30 llvm-dlltool -> llvm-ar
--rwxr-xr-x 1 runner runner  13258480 Oct  2 03:30 llvm-dwarfdump
--rwxr-xr-x 1 runner runner  41072704 Oct  2 03:30 llvm-dwp
--rwxr-xr-x 1 runner runner   4796576 Oct  2 03:30 llvm-ifs
-lrwxrwxrwx 1 runner runner         7 Oct  2 03:30 llvm-lib -> llvm-ar
--rwxr-xr-x 1 runner runner   5101904 Oct  2 03:30 llvm-link
--rwxr-xr-x 1 runner runner  15261536 Oct  2 03:30 llvm-lipo
+-rw-r--r-- 1 runner runner     10450 Oct  2 03:46 bisect_driver.py
+-rwxr-xr-x 1 runner runner   3677523 Oct  2 03:46 clang
+-rwxr-xr-x 1 runner runner   3677523 Oct  2 03:46 clang++
+lrwxrwxrwx 1 runner runner        10 Oct  2 03:46 clang++.real -> clang.real
+-rwxr-xr-x 1 runner runner 137751672 Oct  2 03:46 clang-19
+-rwxr-xr-x 1 runner runner  76520752 Oct  2 03:47 clang-check
+lrwxrwxrwx 1 runner runner        10 Oct  2 03:47 clang-cl -> clang.real
+-rwxr-xr-x 1 runner runner   3849448 Oct  2 03:47 clang-format
+-rwxr-xr-x 1 runner runner  76196432 Oct  2 03:47 clang-scan-deps
+-rwxr-xr-x 1 runner runner   3677523 Oct  2 03:47 clang-tidy
+-rwxr-xr-x 1 runner runner  53810984 Oct  2 03:47 clang-tidy.real
+-rwxr-xr-x 1 runner runner      3579 Oct  2 03:47 clang-tidy.sh
+lrwxrwxrwx 1 runner runner         8 Oct  2 03:47 clang.real -> clang-19
+-rwxr-xr-x 1 runner runner  45402024 Oct  2 03:47 clangd
+-rwxr-xr-x 1 runner runner  42357016 Oct  2 03:47 dsymutil
+-rwxr-xr-x 1 runner runner     25338 Oct  2 03:47 git-clang-format
+lrwxrwxrwx 1 runner runner         3 Oct  2 03:47 ld.lld -> lld
+lrwxrwxrwx 1 runner runner         3 Oct  2 03:47 ld64.lld -> lld
+-rwxr-xr-x 1 runner runner  61369096 Oct  2 03:47 lld
+lrwxrwxrwx 1 runner runner         3 Oct  2 03:47 lld-link -> lld
+-rwxr-xr-x 1 runner runner    640640 Oct  2 03:47 lldb
+-rwxr-xr-x 1 runner runner    393864 Oct  2 03:47 lldb-argdumper
+-rwxr-xr-x 1 runner runner       170 Oct  2 03:47 lldb.sh
+lrwxrwxrwx 1 runner runner        15 Oct  2 03:47 llvm-addr2line -> llvm-symbolizer
+-rwxr-xr-x 1 runner runner  15360928 Oct  2 03:47 llvm-ar
+-rwxr-xr-x 1 runner runner   4552288 Oct  2 03:47 llvm-as
+-rwxr-xr-x 1 runner runner  51344768 Oct  2 03:47 llvm-bolt
+-rwxr-xr-x 1 runner runner  19999536 Oct  2 03:47 llvm-cfi-verify
+-rwxr-xr-x 1 runner runner    652328 Oct  2 03:47 llvm-config
+-rwxr-xr-x 1 runner runner   5399752 Oct  2 03:47 llvm-cov
+-rwxr-xr-x 1 runner runner   1035384 Oct  2 03:47 llvm-cxxfilt
+-rwxr-xr-x 1 runner runner   3360832 Oct  2 03:47 llvm-dis
+lrwxrwxrwx 1 runner runner         7 Oct  2 03:47 llvm-dlltool -> llvm-ar
+-rwxr-xr-x 1 runner runner  13258480 Oct  2 03:47 llvm-dwarfdump
+-rwxr-xr-x 1 runner runner  41072704 Oct  2 03:47 llvm-dwp
+-rwxr-xr-x 1 runner runner   4796576 Oct  2 03:47 llvm-ifs
+lrwxrwxrwx 1 runner runner         7 Oct  2 03:47 llvm-lib -> llvm-ar
+-rwxr-xr-x 1 runner runner   5101904 Oct  2 03:47 llvm-link
+-rwxr-xr-x 1 runner runner  15261536 Oct  2 03:47 llvm-lipo
 using Android clang r536225
 clang smoke test passed (aarch64 object produced)
 Ubuntu LLD 18.1.3 (compatible with GNU linkers)
 total 248
-lrwxrwxrwx 1 runner runner 102 Oct  2 03:35 bisect_driver.py -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/bisect_driver.py
-lrwxrwxrwx 1 runner runner  91 Oct  2 03:35 clang -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang
-lrwxrwxrwx 1 runner runner  93 Oct  2 03:35 clang++ -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++
-lrwxrwxrwx 1 runner runner  98 Oct  2 03:35 clang++.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++.real
-lrwxrwxrwx 1 runner runner  94 Oct  2 03:35 clang-19 -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-19
-lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 clang-check -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-check
-lrwxrwxrwx 1 runner runner  94 Oct  2 03:35 clang-cl -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-cl
-lrwxrwxrwx 1 runner runner  98 Oct  2 03:35 clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-format
-lrwxrwxrwx 1 runner runner 101 Oct  2 03:35 clang-scan-deps -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-scan-deps
-lrwxrwxrwx 1 runner runner  96 Oct  2 03:35 clang-tidy -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy
-lrwxrwxrwx 1 runner runner 101 Oct  2 03:35 clang-tidy.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.real
-lrwxrwxrwx 1 runner runner  99 Oct  2 03:35 clang-tidy.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.sh
-lrwxrwxrwx 1 runner runner  96 Oct  2 03:35 clang.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang.real
-lrwxrwxrwx 1 runner runner  92 Oct  2 03:35 clangd -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clangd
-lrwxrwxrwx 1 runner runner  94 Oct  2 03:35 dsymutil -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/dsymutil
-lrwxrwxrwx 1 runner runner 102 Oct  2 03:35 git-clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/git-clang-format
-lrwxrwxrwx 1 runner runner  92 Oct  2 03:35 ld.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld.lld
-lrwxrwxrwx 1 runner runner  94 Oct  2 03:35 ld64.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld64.lld
-lrwxrwxrwx 1 runner runner  89 Oct  2 03:35 lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld
-lrwxrwxrwx 1 runner runner  94 Oct  2 03:35 lld-link -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld-link
-lrwxrwxrwx 1 runner runner  90 Oct  2 03:35 lldb -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb
-lrwxrwxrwx 1 runner runner 100 Oct  2 03:35 lldb-argdumper -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb-argdumper
-lrwxrwxrwx 1 runner runner  93 Oct  2 03:35 lldb.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb.sh
-lrwxrwxrwx 1 runner runner 100 Oct  2 03:35 llvm-addr2line -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-addr2line
-lrwxrwxrwx 1 runner runner  93 Oct  2 03:35 llvm-ar -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-ar
-lrwxrwxrwx 1 runner runner  93 Oct  2 03:35 llvm-as -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-as
-lrwxrwxrwx 1 runner runner  95 Oct  2 03:35 llvm-bolt -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-bolt
-lrwxrwxrwx 1 runner runner 101 Oct  2 03:35 llvm-cfi-verify -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-cfi-verify
-lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-config
+lrwxrwxrwx 1 runner runner 102 Oct  2 03:52 bisect_driver.py -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/bisect_driver.py
+lrwxrwxrwx 1 runner runner  91 Oct  2 03:52 clang -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang
+lrwxrwxrwx 1 runner runner  93 Oct  2 03:52 clang++ -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++
+lrwxrwxrwx 1 runner runner  98 Oct  2 03:52 clang++.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang++.real
+lrwxrwxrwx 1 runner runner  94 Oct  2 03:52 clang-19 -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-19
+lrwxrwxrwx 1 runner runner  97 Oct  2 03:52 clang-check -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-check
+lrwxrwxrwx 1 runner runner  94 Oct  2 03:52 clang-cl -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-cl
+lrwxrwxrwx 1 runner runner  98 Oct  2 03:52 clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-format
+lrwxrwxrwx 1 runner runner 101 Oct  2 03:52 clang-scan-deps -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-scan-deps
+lrwxrwxrwx 1 runner runner  96 Oct  2 03:52 clang-tidy -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy
+lrwxrwxrwx 1 runner runner 101 Oct  2 03:52 clang-tidy.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.real
+lrwxrwxrwx 1 runner runner  99 Oct  2 03:52 clang-tidy.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang-tidy.sh
+lrwxrwxrwx 1 runner runner  96 Oct  2 03:52 clang.real -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clang.real
+lrwxrwxrwx 1 runner runner  92 Oct  2 03:52 clangd -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/clangd
+lrwxrwxrwx 1 runner runner  94 Oct  2 03:52 dsymutil -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/dsymutil
+lrwxrwxrwx 1 runner runner 102 Oct  2 03:52 git-clang-format -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/git-clang-format
+lrwxrwxrwx 1 runner runner  92 Oct  2 03:52 ld.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld.lld
+lrwxrwxrwx 1 runner runner  94 Oct  2 03:52 ld64.lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/ld64.lld
+lrwxrwxrwx 1 runner runner  89 Oct  2 03:52 lld -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld
+lrwxrwxrwx 1 runner runner  94 Oct  2 03:52 lld-link -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lld-link
+lrwxrwxrwx 1 runner runner  90 Oct  2 03:52 lldb -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb
+lrwxrwxrwx 1 runner runner 100 Oct  2 03:52 lldb-argdumper -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb-argdumper
+lrwxrwxrwx 1 runner runner  93 Oct  2 03:52 lldb.sh -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/lldb.sh
+lrwxrwxrwx 1 runner runner 100 Oct  2 03:52 llvm-addr2line -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-addr2line
+lrwxrwxrwx 1 runner runner  93 Oct  2 03:52 llvm-ar -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-ar
+lrwxrwxrwx 1 runner runner  93 Oct  2 03:52 llvm-as -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-as
+lrwxrwxrwx 1 runner runner  95 Oct  2 03:52 llvm-bolt -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-bolt
+lrwxrwxrwx 1 runner runner 101 Oct  2 03:52 llvm-cfi-verify -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-cfi-verify
+lrwxrwxrwx 1 runner runner  97 Oct  2 03:52 llvm-config -> /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/clang/bin/llvm-config
 #
 # configuration written to .config
 #
@@ -14606,20 +14606,24 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   WRAP    arch/arm64/include/generated/uapi/asm/resource.h
   WRAP    arch/arm64/include/generated/uapi/asm/sembuf.h
   WRAP    arch/arm64/include/generated/uapi/asm/shmbuf.h
-  WRAP    arch/arm64/include/generated/uapi/asm/socket.h
-  WRAP    arch/arm64/include/generated/uapi/asm/siginfo.h
   HOSTCC  scripts/dtc/dtc.o
+  WRAP    arch/arm64/include/generated/uapi/asm/siginfo.h
+  HOSTCC  scripts/dtc/flattree.o
+  WRAP    arch/arm64/include/generated/uapi/asm/socket.h
   WRAP    arch/arm64/include/generated/uapi/asm/sockios.h
   WRAP    arch/arm64/include/generated/uapi/asm/stat.h
-  UPD     include/generated/uapi/linux/version.h
   WRAP    arch/arm64/include/generated/uapi/asm/swab.h
   WRAP    arch/arm64/include/generated/uapi/asm/termbits.h
   WRAP    arch/arm64/include/generated/uapi/asm/termios.h
-  HOSTCC  scripts/dtc/flattree.o
   WRAP    arch/arm64/include/generated/uapi/asm/types.h
   SYSHDR  arch/arm64/include/generated/uapi/asm/unistd_64.h
-  UPD     include/generated/utsrelease.h
   HOSTCC  scripts/dtc/fstree.o
+  UPD     include/generated/uapi/linux/version.h
+  UPD     include/generated/utsrelease.h
+  HOSTCC  scripts/dtc/data.o
+  HOSTCC  scripts/dtc/livetree.o
+  HOSTCC  scripts/dtc/treesource.o
+  HOSTCC  scripts/dtc/srcpos.o
   UPD     include/generated/compile.h
   WRAP    arch/arm64/include/generated/asm/early_ioremap.h
   WRAP    arch/arm64/include/generated/asm/mcs_spinlock.h
@@ -14633,7 +14637,6 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   WRAP    arch/arm64/include/generated/asm/dma-mapping.h
   WRAP    arch/arm64/include/generated/asm/dma.h
   WRAP    arch/arm64/include/generated/asm/emergency-restart.h
-  HOSTCC  scripts/unifdef
   WRAP    arch/arm64/include/generated/asm/hw_irq.h
   WRAP    arch/arm64/include/generated/asm/irq_regs.h
   WRAP    arch/arm64/include/generated/asm/kdebug.h
@@ -14650,80 +14653,78 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   WRAP    arch/arm64/include/generated/asm/video.h
   SYSTBL  arch/arm64/include/generated/asm/syscall_table_32.h
   SYSTBL  arch/arm64/include/generated/asm/syscall_table_64.h
+  HOSTCC  scripts/unifdef
   SYSHDR  arch/arm64/include/generated/asm/unistd_32.h
-  HOSTCC  scripts/dtc/data.o
   SYSHDR  arch/arm64/include/generated/asm/unistd_compat_32.h
-  HOSTCC  scripts/dtc/livetree.o
-  HOSTCC  scripts/dtc/treesource.o
-  HOSTCC  scripts/dtc/srcpos.o
   HOSTCC  scripts/dtc/checks.o
   HOSTCC  scripts/dtc/util.o
+  LEX     scripts/dtc/dtc-lexer.lex.c
+  YACC    scripts/dtc/dtc-parser.tab.[ch]
+  HOSTCC  scripts/dtc/libfdt/fdt.o
+  HOSTCC  scripts/dtc/libfdt/fdt_ro.o
+  HOSTCC  scripts/dtc/libfdt/fdt_wip.o
   HDRINST usr/include/asm-generic/mman.h
   HDRINST usr/include/asm-generic/sembuf.h
   HDRINST usr/include/asm-generic/ipcbuf.h
   HDRINST usr/include/asm-generic/posix_types.h
+  HOSTCC  scripts/dtc/libfdt/fdt_sw.o
   HDRINST usr/include/asm-generic/bitsperlong.h
+  HOSTCC  scripts/dtc/libfdt/fdt_rw.o
   HDRINST usr/include/asm-generic/types.h
-  LEX     scripts/dtc/dtc-lexer.lex.c
-  YACC    scripts/dtc/dtc-parser.tab.[ch]
   HDRINST usr/include/asm-generic/termios.h
-  HOSTCC  scripts/dtc/libfdt/fdt.o
   HDRINST usr/include/asm-generic/errno-base.h
   HDRINST usr/include/asm-generic/termbits.h
   HDRINST usr/include/asm-generic/stat.h
+  HOSTCC  scripts/dtc/libfdt/fdt_strerror.o
   HDRINST usr/include/asm-generic/socket.h
   HDRINST usr/include/asm-generic/kvm_para.h
   HDRINST usr/include/asm-generic/errno.h
+  HOSTCC  scripts/dtc/libfdt/fdt_empty_tree.o
   HDRINST usr/include/asm-generic/fcntl.h
   HDRINST usr/include/asm-generic/swab.h
+  HOSTCC  scripts/dtc/libfdt/fdt_addresses.o
   HDRINST usr/include/asm-generic/ioctls.h
-  HOSTCC  scripts/dtc/libfdt/fdt_ro.o
   HDRINST usr/include/asm-generic/ioctl.h
+  HOSTCC  scripts/dtc/libfdt/fdt_overlay.o
   HDRINST usr/include/asm-generic/setup.h
   HDRINST usr/include/asm-generic/statfs.h
+  HOSTCC  scripts/dtc/fdtoverlay.o
   HDRINST usr/include/asm-generic/mman-common.h
   HDRINST usr/include/asm-generic/unistd.h
-  HOSTCC  scripts/dtc/libfdt/fdt_wip.o
+  HOSTCC  scripts/dtc/dtc-lexer.lex.o
   HDRINST usr/include/asm-generic/auxvec.h
   HDRINST usr/include/asm-generic/signal.h
-  HOSTCC  scripts/dtc/libfdt/fdt_sw.o
   HDRINST usr/include/asm-generic/int-ll64.h
   HDRINST usr/include/asm-generic/resource.h
   HDRINST usr/include/asm-generic/termbits-common.h
+  HOSTCC  scripts/dtc/dtc-parser.tab.o
   HDRINST usr/include/asm-generic/int-l64.h
+  HOSTLD  scripts/dtc/fdtoverlay
   HDRINST usr/include/asm-generic/shmbuf.h
   HDRINST usr/include/asm-generic/signal-defs.h
-  HOSTCC  scripts/dtc/libfdt/fdt_rw.o
   HDRINST usr/include/asm-generic/hugetlb_encode.h
   HDRINST usr/include/asm-generic/bpf_perf_event.h
   HDRINST usr/include/asm-generic/param.h
   HDRINST usr/include/asm-generic/msgbuf.h
-  HOSTCC  scripts/dtc/libfdt/fdt_strerror.o
   HDRINST usr/include/asm-generic/poll.h
   HDRINST usr/include/asm-generic/ucontext.h
-  HOSTCC  scripts/dtc/libfdt/fdt_empty_tree.o
   HDRINST usr/include/asm-generic/siginfo.h
   HDRINST usr/include/asm-generic/sockios.h
-  HOSTCC  scripts/dtc/libfdt/fdt_addresses.o
   HDRINST usr/include/drm/vc4_drm.h
   HDRINST usr/include/drm/msm_drm.h
-  HOSTCC  scripts/dtc/libfdt/fdt_overlay.o
   HDRINST usr/include/drm/drm_mode.h
   HDRINST usr/include/drm/tegra_drm.h
-  HOSTCC  scripts/dtc/fdtoverlay.o
   HDRINST usr/include/drm/armada_drm.h
-  HOSTCC  scripts/dtc/dtc-lexer.lex.o
   HDRINST usr/include/drm/drm_sarea.h
   HDRINST usr/include/drm/lima_drm.h
   HDRINST usr/include/drm/nouveau_drm.h
   HDRINST usr/include/drm/etnaviv_drm.h
   HDRINST usr/include/drm/drm.h
   HDRINST usr/include/drm/amdgpu_drm.h
-  HOSTCC  scripts/dtc/dtc-parser.tab.o
   HDRINST usr/include/drm/vmwgfx_drm.h
   HDRINST usr/include/drm/panfrost_drm.h
-  HOSTLD  scripts/dtc/fdtoverlay
   HDRINST usr/include/drm/panthor_drm.h
+  HOSTLD  scripts/dtc/dtc
   HDRINST usr/include/drm/radeon_drm.h
   HDRINST usr/include/drm/omap_drm.h
   HDRINST usr/include/drm/qaic_accel.h
@@ -14734,64 +14735,65 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/drm/drm_fourcc.h
   HDRINST usr/include/drm/exynos_drm.h
   HDRINST usr/include/drm/ivpu_accel.h
+  HOSTCC  scripts/gendwarfksyms/gendwarfksyms.o
+  HOSTCC  scripts/kallsyms
+  HOSTCC  scripts/selinux/genheaders/genheaders
   HDRINST usr/include/drm/habanalabs_accel.h
   HDRINST usr/include/drm/pvr_drm.h
   HDRINST usr/include/drm/virtgpu_drm.h
+  HOSTCC  scripts/gendwarfksyms/cache.o
   HDRINST usr/include/drm/qxl_drm.h
   HDRINST usr/include/linux/mman.h
   HDRINST usr/include/linux/tty.h
+  HOSTCC  scripts/selinux/mdp/mdp
   HDRINST usr/include/linux/netfilter_arp.h
-  HOSTLD  scripts/dtc/dtc
+  HOSTCC  scripts/gendwarfksyms/die.o
   HDRINST usr/include/linux/in.h
   HDRINST usr/include/linux/pcitest.h
   HDRINST usr/include/linux/virtio_ids.h
   HDRINST usr/include/linux/nfs2.h
   HDRINST usr/include/linux/uhid.h
   HDRINST usr/include/linux/if_vlan.h
+  HOSTCC  scripts/gendwarfksyms/dwarf.o
   HDRINST usr/include/linux/kernel-page-flags.h
+  HOSTCC  scripts/sorttable
   HDRINST usr/include/linux/quota.h
   HDRINST usr/include/linux/netfilter.h
-  HOSTCC  scripts/gendwarfksyms/gendwarfksyms.o
-  HOSTCC  scripts/gendwarfksyms/cache.o
   HDRINST usr/include/linux/tps6594_pfsm.h
-  HOSTCC  scripts/selinux/genheaders/genheaders
   HDRINST usr/include/linux/timerfd.h
   HDRINST usr/include/linux/bpf.h
-  HOSTCC  scripts/selinux/mdp/mdp
-  HOSTCC  scripts/gendwarfksyms/die.o
   HDRINST usr/include/linux/kexec.h
-  HOSTCC  scripts/kallsyms
   HDRINST usr/include/linux/nfs3.h
   HDRINST usr/include/linux/hdlc.h
+  HOSTCC  scripts/gendwarfksyms/kabi.o
   HDRINST usr/include/linux/lp.h
   HDRINST usr/include/linux/vfio_zdev.h
-  HOSTCC  scripts/gendwarfksyms/dwarf.o
+  HOSTCC  scripts/asn1_compiler
   HDRINST usr/include/linux/sem.h
   HDRINST usr/include/linux/blkzoned.h
+  HOSTCC  scripts/gendwarfksyms/symbols.o
   HDRINST usr/include/linux/netfilter_bridge/ebt_mark_m.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_ip.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_redirect.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_arpreply.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_arp.h
+  HOSTCC  scripts/sign-file
   HDRINST usr/include/linux/netfilter_bridge/ebt_among.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_log.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_pkttype.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_vlan.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_nflog.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_stp.h
-  HOSTCC  scripts/gendwarfksyms/kabi.o
   HDRINST usr/include/linux/netfilter_bridge/ebt_mark_t.h
   HDRINST usr/include/linux/netfilter_bridge/ebtables.h
+  HOSTCC  scripts/gendwarfksyms/types.o
   HDRINST usr/include/linux/netfilter_bridge/ebt_ip6.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_limit.h
-  HOSTCC  scripts/sorttable
   HDRINST usr/include/linux/netfilter_bridge/ebt_802_3.h
   HDRINST usr/include/linux/netfilter_bridge/ebt_nat.h
   HDRINST usr/include/linux/in6.h
-  HOSTCC  scripts/asn1_compiler
   HDRINST usr/include/linux/blkpg.h
   HDRINST usr/include/linux/mmtimer.h
-  HOSTCC  scripts/gendwarfksyms/symbols.o
   HDRINST usr/include/linux/nilfs2_ondisk.h
   HDRINST usr/include/linux/sync_file.h
   HDRINST usr/include/linux/virtio_net.h
@@ -14800,17 +14802,16 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/cachefiles.h
   HDRINST usr/include/linux/udmabuf.h
   HDRINST usr/include/linux/virtio_i2c.h
-  HOSTCC  scripts/gendwarfksyms/types.o
   HDRINST usr/include/linux/am437x-vpfe.h
   HDRINST usr/include/linux/cryptouser.h
   HDRINST usr/include/linux/virtio_crypto.h
   HDRINST usr/include/linux/pr.h
-  HOSTCC  scripts/sign-file
   HDRINST usr/include/linux/atmsap.h
   HDRINST usr/include/linux/cgroupstats.h
   HDRINST usr/include/linux/adfs_fs.h
   HDRINST usr/include/linux/posix_types.h
   HDRINST usr/include/linux/pfkeyv2.h
+  HOSTLD  scripts/gendwarfksyms/gendwarfksyms
   HDRINST usr/include/linux/openat2.h
   HDRINST usr/include/linux/mctp.h
   HDRINST usr/include/linux/aspeed-video.h
@@ -14818,8 +14819,9 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/if_pppol2tp.h
   HDRINST usr/include/linux/ipv6_route.h
   HDRINST usr/include/linux/cycx_cfm.h
-  HOSTLD  scripts/gendwarfksyms/gendwarfksyms
   HDRINST usr/include/linux/types.h
+  GEN     arch/arm64/include/generated/asm/cpucap-defs.h
+  GEN     arch/arm64/include/generated/asm/sysreg-defs.h
   HDRINST usr/include/linux/vbox_err.h
   HDRINST usr/include/linux/if_ether.h
   HDRINST usr/include/linux/edd.h
@@ -14832,8 +14834,11 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/atmarp.h
   HDRINST usr/include/linux/vesa.h
   HDRINST usr/include/linux/counter.h
+  CC      scripts/mod/empty.o
+  HOSTCC  scripts/mod/mk_elfconfig
   HDRINST usr/include/linux/futex.h
   HDRINST usr/include/linux/pktcdvd.h
+  CC      scripts/mod/devicetable-offsets.s
   HDRINST usr/include/linux/if.h
   HDRINST usr/include/linux/termios.h
   HDRINST usr/include/linux/tipc_config.h
@@ -14842,10 +14847,11 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/suspend_ioctls.h
   HDRINST usr/include/linux/misc/bcm_vk.h
   HDRINST usr/include/linux/cn_proc.h
-  GEN     arch/arm64/include/generated/asm/cpucap-defs.h
-  GEN     arch/arm64/include/generated/asm/sysreg-defs.h
   HDRINST usr/include/linux/input.h
+  MKELF   scripts/mod/elfconfig.h
+  HOSTCC  scripts/mod/modpost.o
   HDRINST usr/include/linux/nfc.h
+  HOSTCC  scripts/mod/sumversion.o
   HDRINST usr/include/linux/nfs_idmap.h
   HDRINST usr/include/linux/rpl_iptunnel.h
   HDRINST usr/include/linux/papr_pdsm.h
@@ -14853,6 +14859,7 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/netdev.h
   HDRINST usr/include/linux/vt.h
   HDRINST usr/include/linux/veth.h
+  HOSTCC  scripts/mod/symsearch.o
   HDRINST usr/include/linux/phantom.h
   HDRINST usr/include/linux/netfilter_bridge.h
   HDRINST usr/include/linux/qrtr.h
@@ -14860,11 +14867,10 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/ipsec.h
   HDRINST usr/include/linux/can/error.h
   HDRINST usr/include/linux/can/raw.h
-  CC      scripts/mod/empty.o
-  HOSTCC  scripts/mod/mk_elfconfig
+  UPD     scripts/mod/devicetable-offsets.h
   HDRINST usr/include/linux/can/isotp.h
-  CC      scripts/mod/devicetable-offsets.s
   HDRINST usr/include/linux/can/netlink.h
+  HOSTCC  scripts/mod/file2alias.o
   HDRINST usr/include/linux/can/bcm.h
   HDRINST usr/include/linux/can/gw.h
   HDRINST usr/include/linux/can/vxcan.h
@@ -14873,16 +14879,12 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/firewire-cdev.h
   HDRINST usr/include/linux/rseq.h
   HDRINST usr/include/linux/openvswitch.h
-  MKELF   scripts/mod/elfconfig.h
   HDRINST usr/include/linux/netdevice.h
-  HOSTCC  scripts/mod/modpost.o
-  HOSTCC  scripts/mod/sumversion.o
   HDRINST usr/include/linux/hw_breakpoint.h
   HDRINST usr/include/linux/lwtunnel.h
   HDRINST usr/include/linux/auto_dev-ioctl.h
   HDRINST usr/include/linux/keyboard.h
   HDRINST usr/include/linux/unix_diag.h
-  HOSTCC  scripts/mod/symsearch.o
   HDRINST usr/include/linux/v4l2-controls.h
   HDRINST usr/include/linux/sched.h
   HDRINST usr/include/linux/dma-heap.h
@@ -14892,10 +14894,8 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/vboxguest.h
   HDRINST usr/include/linux/omap3isp.h
   HDRINST usr/include/linux/ipc.h
-  UPD     scripts/mod/devicetable-offsets.h
   HDRINST usr/include/linux/max2175.h
   HDRINST usr/include/linux/virtio_gpio.h
-  HOSTCC  scripts/mod/file2alias.o
   HDRINST usr/include/linux/usbip.h
   HDRINST usr/include/linux/atm.h
   HDRINST usr/include/linux/vduse.h
@@ -14944,6 +14944,7 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/i2c.h
   HDRINST usr/include/linux/pidfd.h
   HDRINST usr/include/linux/f2fs.h
+  HOSTLD  scripts/mod/modpost
   HDRINST usr/include/linux/limits.h
   HDRINST usr/include/linux/close_range.h
   HDRINST usr/include/linux/um_timetravel.h
@@ -14956,13 +14957,17 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/reiserfs_fs.h
   HDRINST usr/include/linux/tcp.h
   HDRINST usr/include/linux/vdpa.h
+  CC      kernel/bounds.s
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_frag.h
+  CHKSHA1 include/linux/atomic/atomic-arch-fallback.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_hl.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_REJECT.h
+  CHKSHA1 include/linux/atomic/atomic-instrumented.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_ipv6header.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_NPT.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_opts.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_mh.h
+  CHKSHA1 include/linux/atomic/atomic-long.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_srh.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6_tables.h
   HDRINST usr/include/linux/netfilter_ipv6/ip6t_LOG.h
@@ -14979,8 +14984,8 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/nfsd/cld.h
   HDRINST usr/include/linux/nfsd/debug.h
   HDRINST usr/include/linux/nfsd/stats.h
-  HOSTLD  scripts/mod/modpost
   HDRINST usr/include/linux/nfsd/export.h
+  UPD     include/generated/bounds.h
   HDRINST usr/include/linux/selinux_netlink.h
   HDRINST usr/include/linux/ptp_clock.h
   HDRINST usr/include/linux/kfd_sysfs.h
@@ -14990,13 +14995,10 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/nfs.h
   HDRINST usr/include/linux/arm_sdei.h
   HDRINST usr/include/linux/acct.h
-  HDRINST usr/include/linux/hyperv.h
-  HDRINST usr/include/linux/nl80211.h
   UPD     include/generated/timeconst.h
-  CC      kernel/bounds.s
-  CHKSHA1 include/linux/atomic/atomic-arch-fallback.h
-  CHKSHA1 include/linux/atomic/atomic-instrumented.h
-  CHKSHA1 include/linux/atomic/atomic-long.h
+  HDRINST usr/include/linux/hyperv.h
+  CC      arch/arm64/kernel/asm-offsets.s
+  HDRINST usr/include/linux/nl80211.h
   HDRINST usr/include/linux/if_x25.h
   HDRINST usr/include/linux/utime.h
   HDRINST usr/include/linux/kvm_para.h
@@ -15021,9 +15023,7 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/tc_act/tc_defact.h
   HDRINST usr/include/linux/tc_act/tc_vlan.h
   HDRINST usr/include/linux/tc_act/tc_ctinfo.h
-  UPD     include/generated/bounds.h
   HDRINST usr/include/linux/tc_act/tc_gact.h
-  CC      arch/arm64/kernel/asm-offsets.s
   HDRINST usr/include/linux/tc_act/tc_nat.h
   HDRINST usr/include/linux/tc_act/tc_ct.h
   HDRINST usr/include/linux/tc_act/tc_skbmod.h
@@ -15078,8 +15078,8 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/netfilter_arp/arp_tables.h
   HDRINST usr/include/linux/kernel.h
   HDRINST usr/include/linux/errno.h
-  HDRINST usr/include/linux/ioam6_iptunnel.h
   HDRINST usr/include/linux/fd.h
+  HDRINST usr/include/linux/ioam6_iptunnel.h
   HDRINST usr/include/linux/msg.h
   HDRINST usr/include/linux/mptcp.h
   HDRINST usr/include/linux/icmp.h
@@ -15194,8 +15194,10 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/spi/spidev.h
   HDRINST usr/include/linux/spi/spi.h
   HDRINST usr/include/linux/nsfs.h
+  UPD     include/generated/asm-offsets.h
   HDRINST usr/include/linux/ivtvfb.h
   HDRINST usr/include/linux/cdrom.h
+  CALL    scripts/checksyscalls.sh
   HDRINST usr/include/linux/trace_mmap.h
   HDRINST usr/include/linux/tcp_metrics.h
   HDRINST usr/include/linux/vfio_ccw.h
@@ -15208,14 +15210,20 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/shm.h
   HDRINST usr/include/linux/ax25.h
   HDRINST usr/include/linux/times.h
+  LDS     arch/arm64/kernel/vdso/vdso.lds
+  CC      arch/arm64/kernel/vdso/vgettimeofday.o
+  AS      arch/arm64/kernel/vdso/note.o
   HDRINST usr/include/linux/fsverity.h
   HDRINST usr/include/linux/remoteproc_cdev.h
+  AS      arch/arm64/kernel/vdso/sigreturn.o
   HDRINST usr/include/linux/fsmap.h
   HDRINST usr/include/linux/route.h
   HDRINST usr/include/linux/virtio_vsock.h
+  CC      arch/arm64/kernel/vdso/vgetrandom.o
   HDRINST usr/include/linux/serial_core.h
   HDRINST usr/include/linux/seg6.h
   HDRINST usr/include/linux/bpqether.h
+  AS      arch/arm64/kernel/vdso/vgetrandom-chacha.o
   HDRINST usr/include/linux/sctp.h
   HDRINST usr/include/linux/atm_tcp.h
   HDRINST usr/include/linux/sock_diag.h
@@ -15257,9 +15265,7 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/netfilter_ipv4/ipt_LOG.h
   HDRINST usr/include/linux/netfilter_ipv4/ipt_CLUSTERIP.h
   HDRINST usr/include/linux/netfilter_ipv4/ipt_ah.h
-  UPD     include/generated/asm-offsets.h
   HDRINST usr/include/linux/netfilter_ipv4/ipt_ecn.h
-  CALL    scripts/checksyscalls.sh
   HDRINST usr/include/linux/netfilter_ipv4/ipt_ttl.h
   HDRINST usr/include/linux/netfilter_ipv4/ipt_ECN.h
   HDRINST usr/include/linux/netfilter_ipv4/ipt_REJECT.h
@@ -15272,19 +15278,13 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/nfs4.h
   HDRINST usr/include/linux/cxl_mem.h
   HDRINST usr/include/linux/sonet.h
-  LDS     arch/arm64/kernel/vdso/vdso.lds
   HDRINST usr/include/linux/psci.h
   HDRINST usr/include/linux/virtio_input.h
-  CC      arch/arm64/kernel/vdso/vgettimeofday.o
   HDRINST usr/include/linux/soundcard.h
-  AS      arch/arm64/kernel/vdso/note.o
-  AS      arch/arm64/kernel/vdso/sigreturn.o
   HDRINST usr/include/linux/can.h
   HDRINST usr/include/linux/media-bus-format.h
   HDRINST usr/include/linux/mii.h
-  CC      arch/arm64/kernel/vdso/vgetrandom.o
   HDRINST usr/include/linux/netfilter_ipv6.h
-  AS      arch/arm64/kernel/vdso/vgetrandom-chacha.o
   HDRINST usr/include/linux/if_xdp.h
   HDRINST usr/include/linux/rxrpc.h
   HDRINST usr/include/linux/fpga-dfl.h
@@ -15321,9 +15321,12 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/atmppp.h
   HDRINST usr/include/linux/matroxfb.h
   HDRINST usr/include/linux/virtio_types.h
+  LD      arch/arm64/kernel/vdso/vdso.so.dbg
   HDRINST usr/include/linux/dm-ioctl.h
   HDRINST usr/include/linux/eventfd.h
   HDRINST usr/include/linux/tipc.h
+  VDSOSYM include/generated/vdso-offsets.h
+  OBJCOPY arch/arm64/kernel/vdso/vdso.so
   HDRINST usr/include/linux/securebits.h
   HDRINST usr/include/linux/zorro_ids.h
   HDRINST usr/include/linux/wmi.h
@@ -15363,13 +15366,17 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/virtio_blk.h
   HDRINST usr/include/linux/seg6_genl.h
   HDRINST usr/include/linux/userfaultfd.h
+  LDS     arch/arm64/kernel/vdso32/vdso.lds
+  CC32    arch/arm64/kernel/vdso32/note.o
   HDRINST usr/include/linux/virtio_fs.h
+  CC32    arch/arm64/kernel/vdso32/vgettimeofday.o
   HDRINST usr/include/linux/raid/md_p.h
   HDRINST usr/include/linux/raid/md_u.h
   HDRINST usr/include/linux/mroute.h
   HDRINST usr/include/linux/mei.h
-  HDRINST usr/include/linux/dma-buf.h
+  HOSTCC  arch/arm64/kernel/vdso32/../../../arm/vdso/vdsomunge
   HDRINST usr/include/linux/param.h
+  HDRINST usr/include/linux/dma-buf.h
   HDRINST usr/include/linux/keyctl.h
   HDRINST usr/include/linux/tc_ematch/tc_em_cmp.h
   HDRINST usr/include/linux/tc_ematch/tc_em_text.h
@@ -15389,6 +15396,7 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/elf.h
   HDRINST usr/include/linux/media/raspberrypi/pisp_be_config.h
   HDRINST usr/include/linux/media/raspberrypi/pisp_common.h
+  LD32    arch/arm64/kernel/vdso32/vdso.so.raw
   HDRINST usr/include/linux/gsmmux.h
   HDRINST usr/include/linux/dqblk_xfs.h
   HDRINST usr/include/linux/hpet.h
@@ -15402,18 +15410,16 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/pci_regs.h
   HDRINST usr/include/linux/qnx4_fs.h
   HDRINST usr/include/linux/synclink.h
+  MUNGE   arch/arm64/kernel/vdso32/vdso32.so.dbg
   HDRINST usr/include/linux/poll.h
   HDRINST usr/include/linux/vbox_vmmdev_types.h
   HDRINST usr/include/linux/net_dropmon.h
   HDRINST usr/include/linux/rkisp1-config.h
-  LD      arch/arm64/kernel/vdso/vdso.so.dbg
   HDRINST usr/include/linux/virtio_scsi.h
   HDRINST usr/include/linux/mount.h
   HDRINST usr/include/linux/ntsync.h
-  VDSOSYM include/generated/vdso-offsets.h
-  OBJCOPY arch/arm64/kernel/vdso/vdso.so
-  HDRINST usr/include/linux/if_fc.h
   HDRINST usr/include/linux/pg.h
+  HDRINST usr/include/linux/if_fc.h
   HDRINST usr/include/linux/nubus.h
   HDRINST usr/include/linux/const.h
   HDRINST usr/include/linux/connector.h
@@ -15449,14 +15455,11 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/virtio_mem.h
   HDRINST usr/include/linux/coff.h
   HDRINST usr/include/linux/hdlc/ioctl.h
+  OBJCOPY arch/arm64/kernel/vdso32/vdso.so
   HDRINST usr/include/linux/rtnetlink.h
   HDRINST usr/include/linux/seg6_iptunnel.h
   HDRINST usr/include/linux/sunrpc/debug.h
-  LDS     arch/arm64/kernel/vdso32/vdso.lds
-  CC32    arch/arm64/kernel/vdso32/note.o
   HDRINST usr/include/linux/cec.h
-  CC32    arch/arm64/kernel/vdso32/vgettimeofday.o
-  HOSTCC  arch/arm64/kernel/vdso32/../../../arm/vdso/vdsomunge
   HDRINST usr/include/linux/netfilter/xt_osf.h
   HDRINST usr/include/linux/netfilter/xt_nfacct.h
   HDRINST usr/include/linux/netfilter/nfnetlink_compat.h
@@ -15472,8 +15475,8 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/netfilter/xt_limit.h
   HDRINST usr/include/linux/netfilter/nfnetlink_hook.h
   HDRINST usr/include/linux/netfilter/xt_quota.h
-  HDRINST usr/include/linux/netfilter/xt_realm.h
   HDRINST usr/include/linux/netfilter/nf_conntrack_sctp.h
+  HDRINST usr/include/linux/netfilter/xt_realm.h
   HDRINST usr/include/linux/netfilter/xt_hashlimit.h
   HDRINST usr/include/linux/netfilter/xt_TCPMSS.h
   HDRINST usr/include/linux/netfilter/xt_cgroup.h
@@ -15491,14 +15494,11 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/linux/netfilter/nf_log.h
   HDRINST usr/include/linux/netfilter/xt_dccp.h
   HDRINST usr/include/linux/netfilter/nfnetlink_conntrack.h
-  LD32    arch/arm64/kernel/vdso32/vdso.so.raw
   HDRINST usr/include/linux/netfilter/xt_pkttype.h
   HDRINST usr/include/linux/netfilter/xt_policy.h
   HDRINST usr/include/linux/netfilter/xt_CLASSIFY.h
   HDRINST usr/include/linux/netfilter/nfnetlink_cttimeout.h
-  MUNGE   arch/arm64/kernel/vdso32/vdso32.so.dbg
   HDRINST usr/include/linux/netfilter/xt_ipcomp.h
-  OBJCOPY arch/arm64/kernel/vdso32/vdso.so
   HDRINST usr/include/linux/netfilter/xt_TEE.h
   HDRINST usr/include/linux/netfilter/nf_nat.h
   HDRINST usr/include/linux/netfilter/nfnetlink_acct.h
@@ -15587,8 +15587,8 @@ lrwxrwxrwx 1 runner runner  97 Oct  2 03:35 llvm-config -> /home/runner/work/Roo
   HDRINST usr/include/misc/uacce/uacce.h
   HDRINST usr/include/misc/uacce/hisi_qm.h
   HDRINST usr/include/misc/mrvl_cn10k_dpi.h
-  HDRINST usr/include/mtd/inftl-user.h
   HDRINST usr/include/misc/ocxl.h
+  HDRINST usr/include/mtd/inftl-user.h
   HDRINST usr/include/mtd/mtd-user.h
   HDRINST usr/include/mtd/ubi-user.h
   HDRINST usr/include/mtd/nftl-user.h
@@ -15736,7 +15736,7 @@ tree/drivers/Kconfig:248:source "drivers/kernelsu/Kconfig"
 --- include/config/auto.conf KSU lines ---
   (none)
 --- is the sourced Kconfig reachable through the symlink? ---
--rw-r--r-- 1 runner runner 1000 Oct  2 03:35 drivers/kernelsu/Kconfig
+-rw-r--r-- 1 runner runner 1000 Oct  2 03:52 drivers/kernelsu/Kconfig
 --- tail of drivers/Kconfig, where the source line was inserted ---
 source "drivers/cdx/Kconfig"
 
@@ -15771,6 +15771,11 @@ scripts/Kconfig.include:45: Sorry, this C compiler is not supported.
 .config:6986:# CONFIG_KSU_DISABLE_POLICY is not set
   SYNC    include/config/auto.conf.cmd
   CALL    scripts/checksyscalls.sh
+--- generated selinux headers ---
+-rw-r--r-- 1 runner runner 105600 Oct  2 03:52 security/selinux/av_permissions.h
+-rw-r--r-- 1 runner runner   8683 Oct  2 03:52 security/selinux/flask.h
+SECCLASS_ count: 97
+29:#include "flask.h"
 -- KernelSU: Git repo detected at /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU
 -- KernelSU version: 32525
 -- KSU_NEW_DCACHE_FLUSH: 1
@@ -15792,12 +15797,47 @@ scripts/Kconfig.include:45: Sorry, this C compiler is not supported.
   CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/infra/seccomp_cache.o
   CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/infra/su_mount_ns.o
   CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/infra/symbol_resolver.o
-In file included from /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/infra/file_wrapper.c:16:
-./security/selinux/include/objsec.h:29:10: fatal error: 'flask.h' file not found
-   29 | #include "flask.h"
-      |          ^~~~~~~~~
-1 error generated.
-make[2]: *** [scripts/Makefile.build:240: /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/infra/file_wrapper.o] Error 1
-make[2]: *** Waiting for unfinished jobs....
-make[1]: *** [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree/Makefile:1992: /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel] Error 2
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/manager/apk_sign.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/manager/pkg_observer.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/manager/throne_tracker.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/policy/allowlist.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/policy/app_profile.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/policy/feature.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/runtime/boot_event.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/runtime/ksud_integration.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/selinux/selinux.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/selinux/rules.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/selinux/sepolicy.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/sulog/event.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/sulog/fd.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/supercall/dispatch.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/supercall/perm.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/supercall/supercall.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/feature/adb_root.o
+  CC [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/feature/selinux_hide.o
+  LD [M]  /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.o
+-- KernelSU: Git repo detected at /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU
+-- KernelSU version: 32525
+-- KSU_NEW_DCACHE_FLUSH: 1
+-- KernelSU Manager signature size: 0x033b
+-- KernelSU Manager signature hash: c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6
+  MODPOST /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/Module.symvers
+WARNING: ./Module.symvers is missing.
+         Modules may not have dependencies or modversions.
+         You may get many unresolved symbol errors.
+         You can set KBUILD_MODPOST_WARN=1 to turn errors into warning
+         if you want to proceed at your own risk.
+ERROR: modpost: "prepare_creds" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "kobject_del" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "_printk" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "synchronize_rcu" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "alt_cb_patch_nops" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "__put_cred" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "param_ops_bool" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "override_creds" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "down_read" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+ERROR: modpost: "kern_path" [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/kernelsu.ko] undefined!
+WARNING: modpost: suppressed 209 unresolved symbol warnings because there were too many)
+make[2]: *** [scripts/Makefile.modpost:213: /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/KernelSU/kernel/Module.symvers] Error 1
+make[1]: *** [/home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/tree/Makefile:1944: modpost] Error 2
 make: *** [Makefile:242: __sub-make] Error 2
