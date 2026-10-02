@@ -596,6 +596,34 @@ jobs:
           grep -n 'CONFIG_KSU' .config include/config/auto.conf \
             include/generated/autoconf.h || true
           make -j"$(nproc)" modules_prepare
+          # --- SELinux generated headers --------------------------------------
+          # security/selinux/include/objsec.h:29 does #include "flask.h" and
+          # security/selinux/include/avc.h includes it as well.  flask.h and
+          # av_permissions.h are NOT in the source tree: scripts/selinux/
+          # genheaders/genheaders generates them out of classmap.h and
+          # initial_sid_to_string.h, and security/selinux/Makefile only declares
+          # them as prerequisites of selinux.o.  An external module build
+          # (make M=... modules) never compiles selinux.o, so that rule never
+          # fires and the headers stay missing - which is exactly
+          #   ./security/selinux/include/objsec.h:29:10:
+          #     fatal error: 'flask.h' file not found
+          # KernelSU's kernel/Kbuild already passes -I$(srctree)/security/selinux,
+          # -I$(srctree)/security/selinux/include and -I$(objtree)/security/
+          # selinux, so generating the two headers in the canonical place (the
+          # selinux object dir, which is the source dir for this in-tree build)
+          # is the whole fix - no Kbuild patch is needed.
+          if [ ! -e security/selinux/flask.h ] && [ ! -e security/selinux/include/flask.h ]; then
+            test -x scripts/selinux/genheaders/genheaders || {
+              echo "scripts/selinux/genheaders/genheaders was not built"
+              exit 1
+            }
+            ./scripts/selinux/genheaders/genheaders \
+              security/selinux/flask.h security/selinux/av_permissions.h
+          fi
+          echo "--- generated selinux headers ---"
+          ls -l security/selinux/flask.h security/selinux/av_permissions.h
+          echo "SECCLASS_ count: $(grep -c '^#define SECCLASS_' security/selinux/flask.h || true)"
+          grep -n 'flask' security/selinux/include/objsec.h || true
           make -j"$(nproc)" M="${KSU_DIR}" modules
           KO=$(find . -name kernelsu.ko -print -quit)
           test -n "${KO}"
