@@ -99,10 +99,10 @@ downloading https://github.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/releases/
 + '[' -n '' ']'
 + shopt -u nullglob
 + overlaid=0
-+ IFS=
-+ read -r -d '' f
 ++ cd /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/delta
 ++ find . -type f -print0
++ IFS=
++ read -r -d '' f
 + cand=Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c
 + '[' -n Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
 + '[' '!' -e /home/runner/work/Root-My-GalaxyA075F-Payloads/Root-My-GalaxyA075F-Payloads/ksrc/base/kernel-6.12/Kernel/vendor/mediatek/kernel_modules/gpu/gpu_mali/mali_avalon/a16w_jm/drivers/gpu/arm/midgard/mmu/mali_kbase_mmu.c ']'
