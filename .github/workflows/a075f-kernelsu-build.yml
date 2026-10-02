@@ -102,8 +102,8 @@ jobs:
           rm -f "$GITHUB_WORKSPACE/job.log"
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
-            build-essential bc bison flex libssl-dev libelf-dev \
-            lz4 cpio xz-utils zip unzip python3 python3-pip \
+            build-essential bc bison flex libssl-dev libelf-dev libdw-dev \
+            zlib1g-dev lz4 cpio xz-utils zip unzip python3 python3-pip \
             clang lld llvm binutils-aarch64-linux-gnu curl git jq kmod
           rustup toolchain install stable --profile minimal --no-self-update
           rustup default stable
@@ -469,7 +469,8 @@ jobs:
             rm -rf clang && mkdir -p clang
             tar -xf /tmp/clang.tar.gz -C clang
             echo "--- clang/bin contents ---"
-            ls -l clang/bin | head -40 || true
+            ls -l clang/bin > "$PWD/clang-bin.ls" 2>&1 || true
+            head -40 "$PWD/clang-bin.ls" || true
             for f in clang/bin/*; do
               [ -e "$f" ] || continue
               ln -sf "$PWD/$f" "${BINDIR}/$(basename "$f")"
@@ -492,7 +493,8 @@ jobs:
           "${BINDIR}/clang" --target=aarch64-linux-gnu -c /tmp/smoke.c -o /tmp/smoke.o
           echo "clang smoke test passed (aarch64 object produced)"
           ld.lld --version | head -1 || true
-          ls -l "${BINDIR}" | head -30 || true
+          ls -l "${BINDIR}" > "${BINDIR}.ls" 2>&1 || true
+          head -30 "${BINDIR}.ls" || true
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit "${PIPESTATUS[0]}"
 
