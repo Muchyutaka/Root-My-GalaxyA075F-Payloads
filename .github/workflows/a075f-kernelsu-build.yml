@@ -304,10 +304,10 @@ jobs:
           cp "${KCONFIG}" tree/.config
           cd tree
           echo "--- .config as copied in (inside tree/) ---"
-          wc -l .config
-          md5sum .config
-          md5sum "${KCONFIG}"
-          head -3 .config
+          wc -l .config || true
+          md5sum .config || true
+          md5sum "${GITHUB_WORKSPACE}/${KCONFIG}" || true
+          head -3 .config || true
           # Force the exact utsrelease.  The target config carries
           # CONFIG_LOCALVERSION="-4k" with CONFIG_LOCALVERSION_AUTO=y, which on
           # Samsung's kleaf build resolves to the full suffix via the git tag -
@@ -350,7 +350,15 @@ jobs:
           echo "--- config state after olddefconfig ---"
           wc -l .config include/config/auto.conf 2>/dev/null || true
           echo "--- FULL .config after olddefconfig ---"
-          cat .config
+          cat .config || true
+          echo "--- FULL auto.conf after olddefconfig ---"
+          cat include/config/auto.conf || true
+          echo "--- top-level Kconfig ---"
+          ls -l Kconfig || true
+          echo "  source lines: $(grep -c '^source' Kconfig || true)"
+          echo "  config lines: $(grep -c '^config ' Kconfig || true)"
+          echo "  mainmenu lines: $(grep -c '^mainmenu' Kconfig || true)"
+          head -3 Kconfig || true
           echo "  set symbols in .config:        $(grep -cE '^CONFIG_[A-Z0-9_]+=' .config || true)"
           echo "  set symbols in auto.conf:      $(grep -cE '^CONFIG_[A-Z0-9_]+=' include/config/auto.conf || true)"
           echo "--- FULL auto.conf after olddefconfig ---"
