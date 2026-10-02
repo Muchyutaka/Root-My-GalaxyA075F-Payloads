@@ -257,6 +257,7 @@ jobs:
                 done
                 if [ -n "$cand" ] && [ -e "$BASE/$BASE_REL/${cand}" ]; then
                   mkdir -p "$BASE/$BASE_REL/$(dirname "$cand")"
+                  echo "  overlay: ${f#./}  ->  ${cand}"
                   cp -f "$DELTA/$f" "$BASE/$BASE_REL/${cand}"
                   overlaid=$((overlaid + 1))
                 else
@@ -275,6 +276,22 @@ jobs:
               mv "$BASE/$BASE_REL" "$WS/tree"
             fi
             grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' "$WS/tree/Makefile"
+            # The tree root must look like a real kernel root.  A Samsung
+            # build-specific fragment called Kconfig must never be mistaken
+            # for, or allowed to replace, the kernel's own top-level Kconfig -
+            # that mistake collapses the whole config to a couple of symbols
+            # and makes every later step report CONFIG_MODULES as disabled.
+            echo "--- tree sanity ---"
+            if ! grep -q '^mainmenu' "$WS/tree/Kconfig"; then
+              echo "::error::tree/Kconfig has no mainmenu - the delta overlay clobbered the kernel Kconfig"
+              echo "  head of tree/Kconfig:"
+              head -5 "$WS/tree/Kconfig" || true
+              exit 1
+            fi
+            echo "  tree/Kconfig mainmenu: $(grep -m1 '^mainmenu' "$WS/tree/Kconfig")"
+            echo "  tree/Kconfig source lines: $(grep -c '^source' "$WS/tree/Kconfig")"
+            echo "  tree/Makefile: $(grep -m1 '^VERSION' "$WS/tree/Makefile") $(grep -m1 '^PATCHLEVEL' "$WS/tree/Makefile")"
+
             # Samsung's archives extract every file read-only (mode 444/555).
             # make never touches the sources so modules_prepare survives, but
             # appending to drivers/Makefile and dropping the kernelsu symlink
