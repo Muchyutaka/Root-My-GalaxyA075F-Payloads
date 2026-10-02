@@ -232,6 +232,14 @@ jobs:
             fi
             echo "kernel tree root: base/${ROOT#./}"
             BASE_REL="${ROOT#./}"
+            # The directory name the delta mirrors the tree under.  Used to
+            # anchor delta paths instead of guessing by stripping components.
+            if [ "$BASE_REL" = "." ]; then
+              BASE_ROOT=""
+            else
+              BASE_ROOT=$(basename "$BASE_REL")
+            fi
+            echo "delta anchor directory: ${BASE_ROOT:-<none, tree root is the archive root>}"
             echo "=== PHASE 2 done: tree root located ==="
 
             if [ -n "${DELTA_URL}" ]; then
@@ -243,28 +251,58 @@ jobs:
               # against the base tree by stripping leading path components until
               # the relative path exists.
               overlaid=0
+              skipped=0
+              # Samsung's delta mirrors the base tree under a directory named
+              # after the base tree root, e.g.
+              #   Kernel/kernel-6.12/mm/page_alloc.c  ->  mm/page_alloc.c
+              # so anchor on that component.  Without the anchor, the "strip
+              # leading components until the path exists" search happily
+              # reduces
+              #   Kernel/kernel/kernel_device_modules-6.12/mm/sec_mm/Kconfig
+              # all the way to a bare "Kconfig" and overwrites the kernel's own
+              # top-level Kconfig with a Samsung fragment - which collapses the
+              # whole config to two symbols and makes every later step report
+              # CONFIG_MODULES as disabled.
               while IFS= read -r -d '' f; do
-                # Resolve against the base TREE ROOT, not the archive root: the
-                # base nests the tree one or more directories deeper than the
-                # delta may, so strip leading components until the relative path
-                # exists under the tree root.
-                cand="${f#./}"
-                while [ -n "$cand" ] && [ ! -e "$BASE/$BASE_REL/${cand}" ]; do
+                rel="${f#./}"
+                cand=""
+                anchored=0
+                if [ -n "${BASE_ROOT}" ]; then
+                  case "/$rel/" in
+                    */"$BASE_ROOT"/*)
+                      cand="${rel#*/$BASE_ROOT/}"
+                      anchored=1
+                      ;;
+                  esac
+                fi
+                if [ "$anchored" -eq 0 ]; then
+                  # Not under the base tree root: this belongs to a different
+                  # tree (the MTK vendor kernel modules in this delta).  Fall
+                  # back to stripping, but never down to a bare top-level
+                  # filename - Makefile/Kconfig/Kbuild must never be a target.
+                  cand="$rel"
+                  while [ -n "$cand" ] && [ ! -e "$BASE/$BASE_REL/${cand}" ]; do
+                    case "$cand" in
+                      */*) cand="${cand#*/}" ;;
+                      *)   cand="" ;;
+                    esac
+                  done
                   case "$cand" in
-                    */*) cand="${cand#*/}" ;;
+                    */*) ;;
                     *)   cand="" ;;
                   esac
-                done
+                fi
                 if [ -n "$cand" ] && [ -e "$BASE/$BASE_REL/${cand}" ]; then
                   mkdir -p "$BASE/$BASE_REL/$(dirname "$cand")"
-                  echo "  overlay: ${f#./}  ->  ${cand}"
+                  echo "  overlay: ${rel}  ->  ${cand}"
                   cp -f "$DELTA/$f" "$BASE/$BASE_REL/${cand}"
                   overlaid=$((overlaid + 1))
                 else
-                  echo "  !! delta file has no counterpart in the base tree: ${f#./}" >&2
+                  echo "  -- skipped, no counterpart under ${BASE_ROOT:-the tree root}: ${rel}" >&2
+                  skipped=$((skipped + 1))
                 fi
               done < <(cd "$DELTA" && find . -type f -print0)
-              echo "overlaid ${overlaid} delta file(s)"
+              echo "overlaid ${overlaid} delta file(s), skipped ${skipped}"
             echo "=== PHASE 3 done: delta applied ==="
             fi
 
