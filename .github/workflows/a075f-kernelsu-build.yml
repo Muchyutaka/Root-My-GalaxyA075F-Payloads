@@ -530,6 +530,19 @@ jobs:
           ARCH: arm64
           CROSS_COMPILE: aarch64-linux-gnu-
           LLVM: '1'
+          # KernelSU deliberately references ten kernel symbols that carry no
+          # EXPORT_SYMBOL - path_umount, init_mm, mntns_operations,
+          # selinux_blob_sizes, kallsyms_lookup_size_offset, __set_fixmap,
+          # copy_to_kernel_nofault, dcache_clean_inval_poc,
+          # strncpy_from_user_nofault and __tracepoint_sys_enter.  They are
+          # resolved by the kernel's module loader through kallsyms at insmod
+          # time (that is how every shipping Samsung kernelsu .ko in this repo
+          # is built - `nm -u` on them shows the same undefined names), so
+          # modpost must be told to report them as warnings instead of
+          # errors: scripts/Makefile.modpost turns KBUILD_MODPOST_WARN into
+          # modpost's -w.  Without it the build dies with
+          #   ERROR: modpost: "path_umount" [drivers/kernelsu/kernelsu.ko] undefined!
+          KBUILD_MODPOST_WARN: '1'
         run: |
           set -uo pipefail
           {
@@ -681,6 +694,17 @@ jobs:
           grep -q 'ksu_syscall_dispatcher' \
             < <("${OBJDUMP}" -d "${KO}" 2>/dev/null) || {
             echo "::error::ksu_syscall_dispatcher missing from the module"; exit 1; }
+          # The module must carry __versions, i.e. real modversions CRCs taken
+          # from the kernel we just built.  Without them the loader would skip
+          # the version check for every exported symbol it uses.
+          readelf -SW "${KO}" > /tmp/sections.txt 2>/dev/null
+          grep -q '__versions' /tmp/sections.txt || {
+            echo "::error::module has no __versions section"; exit 1; }
+          readelf -SW "${KO}" | grep -E '__versions|__bug_table|\.symtab|\.text$' || true
+          echo "CRC entries: $(nm "${KO}" 2>/dev/null | grep -c '__crc_' || true)"
+          # these are resolved through kallsyms at insmod time, not through
+          # __ksymtab, so they must stay undefined in the .ko
+          nm -u "${KO}" 2>/dev/null | grep -E ' (init_mm|path_umount|mntns_operations|selinux_blob_sizes|kallsyms_lookup_size_offset|strncpy_from_user_nofault|__tracepoint_sys_enter)$' | sort -u || true
           echo "module audit passed"
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit "${PIPESTATUS[0]}"
