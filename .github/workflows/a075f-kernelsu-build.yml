@@ -382,6 +382,39 @@ jobs:
             -e "s|^# CONFIG_LOCALVERSION_AUTO is not set|CONFIG_LOCALVERSION_AUTO=n|" \
             .config
           grep -E '^CONFIG_LOCALVERSION' .config || echo "  (CONFIG_LOCALVERSION removed as intended)"
+          # The kernel is compiled in this job for exactly one reason: to produce
+          # Module.symvers so that modpost can stamp the module's __versions
+          # CRCs.  The recovered config carries CONFIG_DEBUG_INFO=y with
+          # DEBUG_INFO_DWARF5 / DEBUG_INFO_BTF / DEBUG_INFO_BTF_MODULES, which
+          # cost gigabytes of DWARF and pull pahole + resolve_btfids into the
+          # final link, where it dies with
+          #   BTFIDS  vmlinux
+          #   FAILED: load BTF from vmlinux: Invalid argument
+          #   make[2]: *** [scripts/Makefile.vmlinux:34: vmlinux] Error 255
+          # (pahole itself succeeds - BTF .tmp_vmlinux1.btf.o is produced - it is
+          # resolve_btfids that cannot read it back.)
+          # None of those symbols can affect the deliverable: genksyms derives
+          # the CRCs from the preprocessed source, and the vermagic string comes
+          # from include/config/kernel.release.  Switching them off also removes
+          # the CONFIG_DEBUG_INFO_BTF_MODULES rule that makes `modules` depend on
+          # the final vmlinux link, so the build stops right after modpost has
+          # written Module.symvers.  The committed kernel.config is untouched -
+          # only the working copy inside tree/ is adjusted, and
+          # CONFIG_MODULE_ALLOW_BTF_MISMATCH=y is already set in the target
+          # config, so the kernel accepts a module without matching BTF.
+          sed -i \
+            -e 's|^CONFIG_DEBUG_INFO=y|# CONFIG_DEBUG_INFO is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_DWARF4=y|# CONFIG_DEBUG_INFO_DWARF4 is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_DWARF5=y|# CONFIG_DEBUG_INFO_DWARF5 is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_REDUCED=y|# CONFIG_DEBUG_INFO_REDUCED is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_COMPRESSED=y|# CONFIG_DEBUG_INFO_COMPRESSED is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_COMPRESSED_ZLIB=y|# CONFIG_DEBUG_INFO_COMPRESSED_ZLIB is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_COMPRESSED_ZSTD=y|# CONFIG_DEBUG_INFO_COMPRESSED_ZSTD is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_BTF=y|# CONFIG_DEBUG_INFO_BTF is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_BTF_MODULES=y|# CONFIG_DEBUG_INFO_BTF_MODULES is not set|' \
+            .config
+          echo "--- debug-info symbols after the adjustment ---"
+          grep -E '^CONFIG_DEBUG_INFO' .config || echo "  (all off, as intended)"
           # olddefconfig never prompts (it takes each new symbol's default),
           # so feeding it `yes` only earns a SIGPIPE, which pipefail then
           # reports as a failure.
