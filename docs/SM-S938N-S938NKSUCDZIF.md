@@ -5,7 +5,7 @@
 - Kernel: `6.6.127-android15-8-p33f4ffe-abogkiS938NKSUCDZIF-4k`
 - Extracted boot image SHA-256: `b34704a033512bec67f1a79fd2eabcf33a77e0c50262a693599daf69ed810c06`
 - Extracted kernel SHA-256: `225a068d7b9293ffe560611ca9e2bc4ce7aa2f47e78452770f6d139faedcba1e`
-- App payload SHA-256: `310d1e93139572d4fe040bde8e224d59139d09944c7e0186cff6d64aae3da8c3`
+- App payload SHA-256: `328514c90fe8cbc0d43225abcaef7a1cdb211a124dd4dc8c88078ea0080c8470`
 
 The profile and P0 fingerprint were derived from the supplied firmware image. The release payload compiles as an AArch64 ELF shared object and meets the app feed's 104,128-byte size requirement. The physical kernel-load assumption and trace-event behavior are inherited/derived but have not been confirmed on the device. This target has not completed a hardware run; keep it experimental until that evidence exists.
 
