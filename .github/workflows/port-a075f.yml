@@ -910,9 +910,21 @@ jobs:
             echo "commit: rc=$? (possibly nothing to commit)" >> diagnostics.txt
           fi
           if git push -q -f "${AUTH}" "HEAD:${RESULTS_BRANCH}" 2>>diagnostics.txt; then
-            echo "push: ok" >> diagnostics.txt
+            echo "push: ok (token url)" >> diagnostics.txt
           else
-            echo "PUSH FAILED: rc=$?" >> diagnostics.txt
+            echo "PUSH(token url) FAILED: rc=$?" >> diagnostics.txt
+            # Fallback: push through the checkout's own credential helper
+            # (the mechanism the proven first successful push used).
+            HELPER=$(git -C "$WS" config --get credential.helper 2>/dev/null || true)
+            if [ -n "$HELPER" ]; then
+              git config credential.helper "$HELPER"
+            fi
+            git remote add -f origin "https://github.com/${REPO}.git"
+            if git push -q -f origin "HEAD:${RESULTS_BRANCH}" 2>>diagnostics.txt; then
+              echo "push: ok (checkout credential helper)" >> diagnostics.txt
+            else
+              echo "PUSH(helper) FAILED: rc=$? helper=${HELPER:-none}" >> diagnostics.txt
+            fi
           fi
           git log -1 --format="head: %h %s" 2>/dev/null >> diagnostics.txt
           # ---- reporting channel ------------------------------------------
@@ -956,8 +968,15 @@ jobs:
               echo "issue: create FAILED" >> diagnostics.txt
             fi
           fi
-          ANN=$( { echo "run ${GITHUB_RUN_ID}: $(grep -E "push: ok|PUSH FAILED|commit:|issue:" diagnostics.txt 2>/dev/null | tr '\n' ' | ')"; } )
-          echo "::error file=.github/workflows/port-a075f.yml,line=1,title=a075f diagnostics::${ANN}"
+          ANN=$( {
+            echo "run ${GITHUB_RUN_ID}:"
+            grep -E "push: ok|PUSH.*FAILED|commit:|issue:" diagnostics.txt 2>/dev/null | sed 's/^/  status: /'
+            grep -E "fatal:|error:|rejected|403|401" diagnostics.txt 2>/dev/null | head -6 | sed 's/^/  err: /'
+          } )
+          echo "::error file=.github/workflows/port-a075f.yml,line=1,title=a075f diagnostics::$(echo "$ANN" | tr '\n' '|')"
+          echo "::group::a075f diagnostics full status"
+          echo "$ANN"
+          echo "::endgroup::"
           echo "--- diagnostics.txt ---"
           cat diagnostics.txt 2>/dev/null
           echo "=== diagnostics step done $(date -u +%H:%M:%S) ==="
