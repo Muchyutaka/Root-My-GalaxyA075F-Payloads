@@ -30,6 +30,9 @@ on:
 
 permissions:
   contents: write
+  # The failure-diagnostics step posts its findings as an issue comment so
+  # the porting sandbox (which cannot read CI logs) can retrieve them.
+  issues: write
 
 concurrency:
   group: a075f-port
@@ -912,6 +915,49 @@ jobs:
             echo "PUSH FAILED: rc=$?" >> diagnostics.txt
           fi
           git log -1 --format="head: %h %s" 2>/dev/null >> diagnostics.txt
+          # ---- reporting channel ------------------------------------------
+          # The porting sandbox cannot read CI logs; GitHub issues and check
+          # annotations are its retrieval paths.  Post the full picture
+          # (diagnostics.txt + verifier report + job.log tail) as an issue
+          # comment (creating the issue on first use) and leave a compact
+          # annotation on the step.
+          DIAG_BODY=$( {
+            echo "Run: [${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${REPO}/actions/runs/${GITHUB_RUN_ID}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "## diagnostics.txt"
+            echo '```'
+            cat diagnostics.txt 2>/dev/null
+            echo '```'
+            echo ""
+            echo "## verifier report"
+            echo '```'
+            cat reports/a075f/verification.md 2>/dev/null
+            echo '```'
+            echo ""
+            echo "## job.log (last 120 lines)"
+            echo '```'
+            tail -n 120 job.log 2>/dev/null
+            echo '```'
+          } )
+          ISSUE_NUM=$(gh api "repos/${REPO}/issues?state=open&per_page=100" \
+            --jq "[.[] | select(.title == \"a075f CI diagnostics\")] | .[0].number // empty" \
+            2>>diagnostics.txt || true)
+          if [ -n "$ISSUE_NUM" ]; then
+            if gh api -X POST "repos/${REPO}/issues/${ISSUE_NUM}/comments" -f body="$DIAG_BODY" 2>>diagnostics.txt; then
+              echo "issue: commented on #${ISSUE_NUM}" >> diagnostics.txt
+            else
+              echo "issue: comment on #${ISSUE_NUM} FAILED" >> diagnostics.txt
+            fi
+          else
+            NEW_ISSUE=$(gh api -X POST "repos/${REPO}/issues" -f title="a075f CI diagnostics" -f body="$DIAG_BODY" --jq .number 2>>diagnostics.txt || true)
+            if [ -n "$NEW_ISSUE" ]; then
+              echo "issue: created #${NEW_ISSUE}" >> diagnostics.txt
+            else
+              echo "issue: create FAILED" >> diagnostics.txt
+            fi
+          fi
+          ANN=$( { echo "run ${GITHUB_RUN_ID}: $(grep -E "push: ok|PUSH FAILED|commit:|issue:" diagnostics.txt 2>/dev/null | tr '\n' ' | ')"; } )
+          echo "::error file=.github/workflows/port-a075f.yml,line=1,title=a075f diagnostics::${ANN}"
           echo "--- diagnostics.txt ---"
           cat diagnostics.txt 2>/dev/null
           echo "=== diagnostics step done $(date -u +%H:%M:%S) ==="
