@@ -276,12 +276,16 @@
  * variant of the first (anonymous) union (union starts at offset 0, so
  * compound_head overlaps _mapcount - "bit zero is set" distinguishes
  * tail pages); page_type is the first field of the second union, which
- * follows the 5-word (40-byte) first union.  Derived from the exact
- * A075FXXS5BZD2 BTF (previous values 0x08/0x30 are the 5.10-device
- * carry-over). */
-#define PAGE_COMPOUND_HEAD_OFF 0x00
+ * The 5-word (40-byte) first anonymous union follows, and the
+ * 4-byte page_type/_mapcount union follows that.  Per upstream v6.12
+ * include/linux/mm_types.h (flags is a direct member at 0x00, union1
+ * @0x08, union2 @0x30); the A155N 5.10 measurements agree
+ * (compound_head always opens union1, page_type opens union2).
+ * struct page source is dumped into the CI diagnostics on failure, so
+ * the vendor layout is re-confirmed on every run. */
+#define PAGE_COMPOUND_HEAD_OFF 0x08
 #define PAGE_SLAB_CACHE_OFF 0x08
-#define PAGE_PAGE_TYPE_OFF 0x28
+#define PAGE_PAGE_TYPE_OFF 0x30
 #define STRUCT_PAGE_SIZE SIZEOF_PAGE
 #define STRUCT_PAGE_COMPOUND_HEAD_OFF PAGE_COMPOUND_HEAD_OFF
 #define STRUCT_SLAB_CACHE_OFF PAGE_SLAB_CACHE_OFF

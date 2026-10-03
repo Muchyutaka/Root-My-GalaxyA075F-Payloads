@@ -898,6 +898,17 @@ jobs:
           else
             echo "NOTE: previous ${RESULTS_BRANCH} unavailable; fresh diagnostics only" >> diagnostics.txt
           fi
+          # struct page source from the extracted vendor kernel tree -
+          # the BTF page-member diagnostics reference this when the
+          # flattened lookup of compound_head/page_type fails
+          if [ -f tree/include/linux/mm_types.h ]; then
+            {
+              echo "--- struct page source (tree/include/linux/mm_types.h) ---"
+              sed -n '/^struct page {/,/^};/p' tree/include/linux/mm_types.h | head -160
+            } >> diagnostics.txt 2>/dev/null
+          else
+            echo "NOTE: tree/include/linux/mm_types.h absent" >> diagnostics.txt
+          fi
           if [ -f job.log ]; then git add -f job.log 2>>diagnostics.txt; fi
           if [ -d reports ]; then git add -f reports/ 2>>diagnostics.txt; fi
           git add -f diagnostics.txt 2>>diagnostics.txt

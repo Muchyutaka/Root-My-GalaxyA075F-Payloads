@@ -245,6 +245,27 @@ class BTF:
                             else None})
         return d, out
 
+    def raw_members(self, idx):
+        """First-level members only, no anonymous-field promotion.
+
+        Diagnostic use: when a flattened lookup fails, this shows exactly
+        what the encoder wrote (named vs anonymous fields, raw bit offsets)
+        so the report explains the shape mismatch."""
+        d = self.table[idx]
+        off = self._start[idx] + 12
+        out = []
+        for i in range(d["vlen"]):
+            mno, mtype, enc = struct.unpack_from("<III", self.types, off + i * 12)
+            end = self.strings.index(b"\0", mno)
+            mname = self.strings[mno:end].decode("utf-8", "replace")
+            if d["kflag"]:
+                bit_off, bit_size = enc & 0xFFFFFF, enc >> 24
+            else:
+                bit_off, bit_size = enc, 0
+            out.append({"name": mname, "type": mtype, "bit_off": bit_off,
+                        "bit_size": bit_size})
+        return out
+
 
 def find_btf(raw: bytes):
     prefix = b"\x9f\xeb\x01\x00"
@@ -638,6 +659,28 @@ def _run(a):
             want = macro(mname)
             detail = (f"{sname}.{member or 'size'} 0x{got:x} vs 0x{want:x}"
                       if got is not None else f"{sname}.{member} not in BTF")
+            if got is None and member:
+                # Diagnostic: dump each same-named variant's RAW (un-flattened)
+                # members so the report shows the actual encoded shape -
+                # named vs anonymous fields, raw bit offsets - and explains
+                # why the flattened lookup missed.
+                try:
+                    vidxs = [i for i, d in btf.table.items()
+                             if d["name"] == sname
+                             and d["kind"] in (BTF.K_STRUCT, BTF.K_UNION)][:4]
+                    for vi in vidxs:
+                        disp = []
+                        for rm in btf.raw_members(vi)[:60]:
+                            tag = rm["name"] or f"<anon-t{rm['type']}>"
+                            bo = (f"@0x{rm['bit_off'] // 8:x}"
+                                  if rm["bit_off"] % 8 == 0
+                                  else f"@b{rm['bit_off']}")
+                            disp.append(tag + bo)
+                        detail += (f" | type 0x{vi:x} sz 0x{btf.size(vi):x} "
+                                   f"({len(btf.raw_members(vi))}m): "
+                                   + ", ".join(disp))
+                except Exception as diag_e:  # never let diagnostics break the run
+                    detail += f" | member-diag failed: {diag_e}"
             check(f"btf.{mname}", got is not None and got == want, detail)
             if got is not None:
                 rep["values"][mname] = f"0x{got:x}"
