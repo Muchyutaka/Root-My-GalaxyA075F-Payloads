@@ -849,7 +849,10 @@ jobs:
           git checkout -q --orphan "a075f-diag-$$"
           if git fetch -q origin "${RESULTS_BRANCH}" 2>/dev/null \
              && git cat-file -e FETCH_HEAD 2>/dev/null; then
-            git restore --source=FETCH_HEAD --staged --worktree -- . 2>/dev/null || true
+            # carry over previously published artifacts (never the fresh
+            # job.log / reports from this run - those are the diagnostics)
+            git restore --source=FETCH_HEAD --staged --worktree \
+              -- firmware artifacts kernelsu 2>/dev/null || true
           fi
           git add -f job.log 2>/dev/null || true
           git add -f reports/ 2>/dev/null || true
