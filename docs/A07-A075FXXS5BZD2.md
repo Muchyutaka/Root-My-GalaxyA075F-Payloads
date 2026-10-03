@@ -268,6 +268,17 @@ so the saved return PC is `0xffffffc080101ef8`, i.e. image offset `0x00101ef8`
 (`worker_thread+0xac`). For an idle kworker blocked in `worker_thread`,
 `get_wchan()` skips `__schedule` and `schedule` and returns exactly this PC.
 
+Binary confirmation on the exact A075FXXS5BZD2 Image (CI verification,
+2026-10-03): scanning only `worker_thread`'s own body —
+`[0x101e4c, 0x102234)`, where `0x102234` is the next symbol after
+`worker_thread` in the recovered symbol table — finds exactly **one**
+`bl schedule` (at `+0xa8`, target `schedule` = `0x11c4fbc`).  An earlier
+unbounded scan reported a second `bl schedule` at `0x1034b8` (return PC
+`0x1034bc`); that call site lies ~4 KiB past the symbol-bounded body, i.e.
+inside a later function, and is not part of `worker_thread`.  The
+body-bounded value `0x101ef8` is therefore the one the kernel actually
+leaves on an idle worker's stack.
+
 ### 5.3 vfork caller — not used
 
 `SLIDE_TRACEFS_VFORK_CALLER_OFF` is deliberately **not** defined for this target.

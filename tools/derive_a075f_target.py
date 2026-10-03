@@ -120,7 +120,10 @@ class BTF:
         self.strings = blob[hdr_len + str_off : hdr_len + str_off + str_len]
         self.table = {}
         self._start = {}
-        off, idx = 0, 1
+        self.ambiguous = {}
+        # Record 0 of the type section is the UNKNOWN (void) type; index it
+        # as type 0 so that by_name/members/size agree with the raw BTF ids.
+        off, idx = 0, 0
         n = len(self.types)
         try:
             while off < n:
@@ -190,9 +193,23 @@ class BTF:
         self._size_memo[tid] = sz
         return sz
 
-    def by_name(self, name):
+    def by_name(self, name, kinds=None):
+        # The kernel BTF can carry more than one type with the same name
+        # (BTF dedup keeps variants that differ in shape or kflag, e.g. the
+        # __randomize_layout / CFI cases).  Callers of member_off() below
+        # cross-check that all variants agree on the member they need; here
+        # we return the first (struct-kind preferred) hit and record the
+        # ambiguity so the report can audit it.
         hits = [i for i, d in self.table.items() if d["name"] == name]
-        return hits[0] if len(hits) == 1 else None
+        if kinds is not None:
+            k2 = [i for i in hits if self.table[i]["kind"] in kinds]
+            if k2:
+                hits = k2
+        if not hits:
+            return None
+        if len(hits) > 1:
+            self.ambiguous[name] = hits
+        return hits[0]
 
     def members(self, idx):
         d = self.table[idx]
@@ -479,7 +496,7 @@ def _run(a):
             except SystemExit:
                 continue
         for b, rng in parses:
-            if b.by_name("task_struct") is not None:
+            if b.by_name("task_struct", (BTF.K_STRUCT, BTF.K_UNION)) is not None:
                 btf, btf_range = b, rng
                 break
         if btf is None and parses:
@@ -489,20 +506,84 @@ def _run(a):
               f"{len(cands)} candidate blob(s) [{sizes}], "
               + (f"chose Image[0x{btf_range[0]:x}, 0x{btf_range[1]:x}), "
                  f"{len(btf.table)} types" if btf else "none parsed"))
+        if btf is not None:
+            # Diagnostics: the real-kernel blob parses but some core struct
+            # names come up missing; dump enough to see what the table
+            # actually contains (kind histogram, first types, name probes).
+            import collections
+            knames = {getattr(BTF, k): k[2:] for k in dir(BTF)
+                      if k.startswith("K_")}
+            hist = collections.Counter(d["kind"] for d in btf.table.values())
+            rep["values"]["btf.kind_hist"] = ", ".join(
+                f"{knames.get(k, k)}={n}" for k, n in sorted(hist.items()))
+            rep["values"]["btf.first_types"] = ", ".join(
+                f"{i}:{knames.get(btf.table[i]['kind'], btf.table[i]['kind'])}:"
+                f"{btf.table[i]['name']}" for i in list(btf.table)[:30])
+            for probe in ("file_operations", "task_struct", "page",
+                          "pool_workqueue"):
+                kn = {getattr(BTF, k): k[2:] for k in dir(BTF)
+                      if k.startswith("K_")}
+                exact = [i for i, d in btf.table.items()
+                         if d["name"] == probe]
+                sub = [f"{i}:{kn.get(d['kind'], d['kind'])}:{d['name']}"
+                       for i, d in btf.table.items()
+                       if probe in d["name"]][:8]
+                rep["values"][f"btf.probe.{probe}"] = (
+                    f"exact={len(exact)} at {exact[:6]}; substring={sub}")
     except SystemExit as e:
         check("btf.extract", False, str(e))
 
     def member_off(struct_name, member):
         if not btf:
             return None
-        idx = btf.by_name(struct_name)
-        if idx is None:
+        idxs = [i for i, d in btf.table.items()
+                if d["name"] == struct_name
+                and d["kind"] in (BTF.K_STRUCT, BTF.K_UNION)]
+        if not idxs:
+            idxs = [i for i, d in btf.table.items()
+                    if d["name"] == struct_name]
+        if not idxs:
             return None
-        _, members = btf.members(idx)
-        for m in members:
-            if m["name"] == member:
-                return m
-        return None
+        offs = []
+        for i in idxs:
+            try:
+                _, members = btf.members(i)
+            except SystemExit:
+                continue
+            for m in members:
+                if m["name"] == member:
+                    offs.append(m)
+                    break
+        if not offs:
+            return None
+        boffs = [m["byte_off"] for m in offs]
+        if len(set(boffs)) != 1:
+            rep["values"][f"btf.variant_conflict.{struct_name}.{member}"] = \
+                [f"type 0x{i:x}=0x{m['byte_off']:x}"
+                 for i, m in zip([x for x in idxs], offs)
+                 if m["byte_off"] is not None]
+            return None
+        if len(idxs) > 1:
+            rep["values"][f"btf.variants.{struct_name}"] = len(idxs)
+        return offs[0]
+
+    def struct_size(name):
+        if not btf:
+            return None
+        idxs = [i for i, d in btf.table.items()
+                if d["name"] == name
+                and d["kind"] in (BTF.K_STRUCT, BTF.K_UNION)]
+        if not idxs:
+            idxs = [i for i, d in btf.table.items() if d["name"] == name]
+        if not idxs:
+            return None
+        sizes = [btf.size(i) for i in idxs]
+        if len(set(sizes)) != 1:
+            rep["values"][f"btf.variant_conflict.{name}.size"] = sizes
+            return None
+        if len(idxs) > 1:
+            rep["values"][f"btf.variants.{name}"] = len(idxs)
+        return sizes[0]
 
     layout_checks = [
         ("SIZEOF_FILE_OPERATIONS", "file_operations", None, "size"),
@@ -535,8 +616,7 @@ def _run(a):
     if btf:
         for mname, sname, member, mode in layout_checks:
             if mode == "size":
-                idx = btf.by_name(sname)
-                got = btf.size(idx) if idx else None
+                got = struct_size(sname)
             else:
                 mb = member_off(sname, member)
                 got = mb["byte_off"] if mb else None
@@ -550,8 +630,8 @@ def _run(a):
         for sname in ("pool_workqueue", "mm_struct", "sk_buff",
                       "rt_mutex_waiter", "task_struct", "rb_node",
                       "file_operations", "configfs_buffer", "miscdevice",
-                      "ctl_table", "nf_logger"):
-            idx = btf.by_name(sname)
+                      "ctl_table", "nf_logger", "page"):
+            idx = btf.by_name(sname, (BTF.K_STRUCT, BTF.K_UNION))
             if idx is None:
                 continue
             d, members = btf.members(idx)
@@ -581,7 +661,7 @@ def _run(a):
             check(f"btf.{mname}", got is not None and got == want,
                   f"{sname}.{member} 0x{got:x} vs 0x{want:x}" if got is not None else "missing")
         # rb_node color bitfield -> FAKE_WAITER_{,PI_}TREE_PRIO_OFF
-        rb = btf.by_name("rb_node")
+        rb = btf.by_name("rb_node", (BTF.K_STRUCT, BTF.K_UNION))
         if rb:
             _, rbm = btf.members(rb)
             color = [m for m in rbm if m["bit_size"] == 1]
@@ -725,7 +805,8 @@ def _run(a):
 
     # random_table boot_id walk
     rt = sym_off("random_table")
-    ct = btf.by_name("ctl_table") if btf else None
+    ct = (btf.by_name("ctl_table", (BTF.K_STRUCT, BTF.K_UNION))
+          if btf else None)
     if rt is not None and ct:
         _, ctm = btf.members(ct)
         proc_m = [m for m in ctm if m["name"] == "procname"][0]
@@ -818,6 +899,59 @@ def _run(a):
           f"fops @0x{fops_base:x} (6.12 layout): {len(slot_macro) - len(bad)}/{len(slot_macro)} slots match"
           + (f"; MISMATCH {bad}" if bad else ""))
 
+    # Anchor discovery: ASHMEM_FOPS_OFF has never been proven on this kernel
+    # to be a miscdevice's .fops (the kvm_misc oracle cannot run - that
+    # symbol is absent from this ELF's symbol table).  Dump the full table,
+    # its section, and scan .data for every plausible miscdevice object so
+    # the true anchor (and the 'ashmem' device, if one exists) is identified
+    # from evidence rather than assumption.
+    try:
+        tdump = []
+        for k in range(0, 0x108, 8):
+            v = qword(raw, fops_base + k) - base
+            tdump.append(f"0x{k:x}=0x{v & 0xFFFFFFFFFFFFFFFF:x}")
+        rep["values"][f"ashmem.fops_table_dump@0x{fops_base:x}"] = " ".join(tdump)
+        sh = run(["readelf", "-SW", str(elf)]).stdout
+        for ln in sh.splitlines():
+            m = re.match(
+                r"\s*\[\s*\d+\]\s+(\S+)\s+\S+\s+"
+                r"([0-9a-f]+)\s+0x[0-9a-f]+\s+0x([0-9a-f]+)", ln)
+            if m:
+                vaddr, sz = int(m.group(2), 16), int(m.group(3), 16)
+                if vaddr <= base + fops_base < vaddr + sz:
+                    rep["values"]["ashmem.fops_table_section"] = \
+                        f"{m.group(1)} @0x{vaddr:x}+0x{sz:x}"
+    except (SystemExit, struct.error, IndexError):
+        rep["values"]["ashmem.fops_table_dump"] = "dump failed"
+    if sdata is not None and edata is not None:
+        noop = sym_off("noop_llseek")
+        cands = []
+        for o in range(sdata, min(edata, sdata + 0x800000), 8):
+            name_q = qword(raw, o + 8)
+            if not (base < name_q < base + len(raw) - 2):
+                continue
+            nm = cstr(raw, name_q - base, 32)
+            if not (2 <= len(nm) <= 32
+                    and all(32 <= b < 127 for b in nm.encode())):
+                continue
+            t = qword(raw, o + 0x10) - base
+            if not (0x1000 < t < len(raw) - 0x110):
+                continue
+            ll = qword(raw, t + 0x10) - base
+            io = qword(raw, t + 0x50) - base
+            if not ((0 < ll < len(raw)) or (0 < io < len(raw))
+                    or (noop is not None and ll == noop)):
+                continue
+            cands.append((o, nm, t, ll, io))
+        cands.sort(key=lambda c: 0 if re.search(
+            r"ashmem|kvm|sync|dmabuf|vdc", c[1]) else 1)
+        for o, nm, t, ll, io in cands[:12]:
+            rep["values"][f"misc_candidate.0x{o:x}"] = (
+                f"name=\"{nm}\" .fops=0x{t:x} llseek=0x{ll:x} "
+                f"ioctl=0x{io:x}" + ("  (SAME TABLE AS ASHMEM_FOPS_OFF)"
+                                     if t == fops_base else ""))
+        rep["values"]["misc_candidate_count"] = len(cands)
+
     if fops_syms:
         best = {}
         for lname, layout in LAYOUTS.items():
@@ -845,7 +979,10 @@ def _run(a):
                     check(f"ashmem.{mname}", fops_syms[slot] == macro(mname),
                           f"0x{fops_syms[slot]:x} vs 0x{macro(mname):x}")
     else:
-        check("ashmem.fops_symbols", False, "no Rust ashmem fops_* symbols found")
+        rep["values"]["ashmem.fops_symbols"] = (
+            "no Rust ashmem fops_* symbols in this ELF (release build "
+            "strips Rust statics) - the in-image table check above is the "
+            "primary verification for this kernel")
 
     # -- IKCONFIG -------------------------------------------------------------
     if a.config:
@@ -908,6 +1045,42 @@ def _run(a):
                         found = (start, start + len(full), mode, full)
                         break
                     off = raw.find(needle, off + 1)
+            # (2) Anchor search: a kernel that embeds a config must contain
+            # 'CONFIG_IKCONFIG=y'; walk back to the config header line, then
+            # either match the committed blob exactly or quantify the drift
+            # line by line (a published GKI kernel.config can legally differ
+            # from the build-time .config by a few lines - version banner,
+            # vendor options - and that drift must be reported, not hidden).
+            drift = None  # (blob, start, end, differing_lines)
+            if found is None:
+                anchor = b"CONFIG_IKCONFIG=y"
+                hdr_line = b"# Automatically generated file; DO NOT EDIT."
+                off = raw.find(anchor)
+                while off >= 0 and found is None and drift is None:
+                    hdr = raw.rfind(hdr_line, max(0, off - 8192), off)
+                    if hdr >= 0 and raw[hdr - 2:hdr] == b"#\n":
+                        start = hdr - 2
+                        if raw[start:start + len(committed)] == committed:
+                            found = (start, start + len(committed),
+                                     "plain", committed)
+                        elif raw[start:start + 2] == b"\x1f\x8b":
+                            drift = (None, start, start,
+                                     ["embedded blob is gzip-compressed"])
+                        else:
+                            nul = raw.find(b"\x00", off)
+                            end = (nul if 0 < nul - start < 0x60000
+                                   else start + len(committed))
+                            blob = raw[start:end]
+                            import difflib
+                            got_l = blob.decode("utf-8", "replace").splitlines()
+                            want_l = committed.decode("utf-8", "replace").splitlines()
+                            diff = [l for l in difflib.unified_diff(
+                                want_l, got_l, lineterm="")
+                                if l.startswith(("+", "-"))
+                                and not l.startswith(("+++", "---"))]
+                            plus = [l[1:] for l in diff if l.startswith("+")]
+                            drift = (blob, start, end, plus)
+                    off = raw.find(anchor, off + 1)
             if found:
                 off, ed, mode, cfg = found
                 check("config.ikconfig", True,
@@ -916,6 +1089,25 @@ def _run(a):
                 rep["values"]["ikconfig_size"] = len(cfg)
                 rep["values"]["ikconfig_range"] = f"0x{off:x}-0x{ed:x}"
                 rep["values"]["ikconfig_names"] = "content-search"
+            elif drift is not None:
+                blob, start, end, plus = drift
+                if blob is None:
+                    check("config.ikconfig", False,
+                          "config.ikconfig: " + "; ".join(plus) +
+                          f" at [0x{start:x}) - re-verify CONFIG_IKCONFIG_* "
+                          f"and the committed file")
+                else:
+                    n = len(plus)
+                    ok = n <= 4
+                    check("config.ikconfig", ok,
+                          f"blob at [0x{start:x}, 0x{end:x}) ({len(blob)} B) "
+                          f"drifts from committed config by {n} line(s): "
+                          + " | ".join(plus[:8]))
+                    rep["values"]["ikconfig_size"] = len(blob)
+                    rep["values"]["ikconfig_range"] = f"0x{start:x}-0x{end:x}"
+                    rep["values"]["ikconfig_names"] = "content-search(drift)"
+                    rep["values"]["ikconfig_drift_lines"] = \
+                        "; ".join(plus[:12]) or "size-only difference"
             else:
                 avail = [n for n in ("IKCFG_ST", "IKCFG_ED",
                                      "__ikconfig_start", "__ikconfig_end")

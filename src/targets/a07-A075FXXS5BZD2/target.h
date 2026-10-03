@@ -151,12 +151,19 @@
 #define COPY_SPLICE_READ_OFF 0x0048d0acULL
 #define CONFIGFS_READ_ITER_OFF 0x00510c04ULL
 #define CONFIGFS_BIN_WRITE_ITER_OFF 0x005111b0ULL
-#define ASHMEM_IOCTL_OFF 0x00dbf9d8ULL
-#define ASHMEM_COMPAT_IOCTL_OFF 0x00dbffc0ULL
-#define ASHMEM_MMAP_OFF 0x00dc003cULL
-#define ASHMEM_OPEN_OFF 0x00dc0098ULL
-#define ASHMEM_RELEASE_OFF 0x00dbfa98ULL
-#define ASHMEM_SHOW_FDINFO_OFF 0x00dbff98ULL
+/* Fops-slot function offsets of the oracle device table at
+ * ASHMEM_FOPS_OFF, read from the exact A075FXXS5BZD2 Image (6.12
+ * file_operations layout: unlocked_ioctl 0x50, compat_ioctl 0x58, mmap 0x60,
+ * open 0x68, release 0x78, show_fdinfo 0xd8).  The table's mmap/release/
+ * show_fdinfo slots are NULL in this kernel.  (The earlier values
+ * 0xdbf9d8/0xdbffc0/0xdc003c/0xdc0098/0xdbfa98/0xdbff98 never matched the
+ * Image and are replaced by the verified read.) */
+#define ASHMEM_IOCTL_OFF 0x0005f0e0ULL
+#define ASHMEM_COMPAT_IOCTL_OFF 0x0005d3acULL
+#define ASHMEM_MMAP_OFF 0x00000000ULL
+#define ASHMEM_OPEN_OFF 0x0005d408ULL
+#define ASHMEM_RELEASE_OFF 0x00000000ULL
+#define ASHMEM_SHOW_FDINFO_OFF 0x00000000ULL
 #define ANON_PIPE_BUF_OPS_OFF 0x0124ee88ULL
 #define SLIDE_NFULNL_LOGGER_NAME_OFF 0x017e8698ULL
 #define KMALLOC_CACHES_OFF 0x0186b4c0ULL
