@@ -9,4 +9,8 @@
 
 The profile and P0 fingerprint were derived from the supplied firmware image. The release payload compiles as an AArch64 ELF shared object and meets the app feed's 104,128-byte size requirement. The physical kernel-load assumption and trace-event behavior are inherited/derived but have not been confirmed on the device. This target has not completed a hardware run; keep it experimental until that evidence exists.
 
+## Separate on-device observation
+
+The supplied device log is for DirtyFrag CVE-2026-43284, not this profile's CVE-2026-43499 payload. In that run, the DirtyFrag patch steps landed and its daemon started, but the app could not verify root, and KernelSU refused the soft restart because Root My Galaxy Next had no `su` permission (or Shizuku was not available). This is useful evidence about that separate route only; it does not validate this firmware-derived profile or justify marking it device-tested.
+
 The feed exposes KernelSU 3.3.0 and KernelSU-Next 3.4.0 daemons built for the Android 15 / 6.6 KMI. The repository also contains the upstream Samsung patches, KSU build workflow and `dfroot-lkm` source/workflow. The app repository already bundles the `dirtyfrag-android15-6.6.ko` module for this KMI.
