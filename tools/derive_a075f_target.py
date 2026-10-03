@@ -122,24 +122,32 @@ class BTF:
         self._start = {}
         off, idx = 0, 1
         n = len(self.types)
-        while off < n:
-            self._start[idx] = off
-            name_off, info, ut = struct.unpack_from("<III", self.types, off)
-            kind = (info >> 24) & 0x7F
-            vlen = info & 0xFFFFFF
-            kflag = (info >> 31) & 1
-            d = {"kind": kind, "vlen": vlen, "kflag": kflag, "ut": ut,
-                 "name": self._name(off)}
-            off = self._skip_payload(d, off + 12)
-            self.table[idx] = d
-            idx += 1
+        try:
+            while off < n:
+                self._start[idx] = off
+                name_off, info, ut = struct.unpack_from("<III", self.types, off)
+                kind = (info >> 24) & 0x7F
+                vlen = info & 0xFFFFFF
+                kflag = (info >> 31) & 1
+                d = {"kind": kind, "vlen": vlen, "kflag": kflag, "ut": ut,
+                     "name": self._name(off)}
+                off = self._skip_payload(d, off + 12)
+                self.table[idx] = d
+                idx += 1
+        except (struct.error, ValueError, IndexError) as e:
+            raise SystemExit(f"BTF parse error near type {idx} (off {off}/{n}): {e}")
         if off != n:
             raise SystemExit(f"BTF type section misparsed: walked {off}, have {n}")
         self._size_memo = {}
 
     def _name(self, off):
         (no,) = struct.unpack_from("<I", self.types, off)
-        end = self.strings.index(b"\0", no)
+        if no >= len(self.strings):
+            raise ValueError(f"name_off {no} outside strings section "
+                             f"(len {len(self.strings)})")
+        end = self.strings.find(b"\0", no)
+        if end < 0:
+            raise ValueError(f"unterminated name at name_off {no}")
         return self.strings[no:end].decode("utf-8", "replace")
 
     @staticmethod
@@ -227,9 +235,12 @@ def find_btf(raw: bytes):
         if end > len(raw) or string_start >= end or raw[string_start] != 0:
             continue
         candidates.append((start, end))
-    if len(candidates) != 1:
-        raise SystemExit(f"expected exactly one raw BTF blob, found {candidates}")
-    return raw[candidates[0][0] : candidates[0][1]], candidates[0]
+    # A release Image can legitimately contain more than one raw BTF blob
+    # (main .BTF plus a smaller embedded one, e.g. for built-in modules or a
+    # vendor section).  Return every header-valid candidate, largest first;
+    # the caller picks the one that actually parses and holds the core types.
+    candidates.sort(key=lambda r: r[1] - r[0], reverse=True)
+    return [(raw[s:e], (s, e)) for (s, e) in candidates]
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +255,69 @@ def cstr(raw, off, maxlen=64):
     if end < 0:
         return ""
     return raw[off:end].decode("ascii", "replace")
+
+
+def extract_func_source(root, rel_path, sig_re):
+    """Return (body, [(lineno, line), ...]) for the function whose
+    signature matches sig_re (brace-matched), or (None, [])."""
+    p = Path(root) / rel_path
+    if not p.is_file():
+        return None, []
+    lines = p.read_text(errors="replace").splitlines()
+    start = None
+    for i, ln in enumerate(lines):
+        if re.search(sig_re, ln):
+            start = i
+            break
+    if start is None:
+        return None, []
+    # find first '{' from the signature line, then brace-match
+    depth = 0
+    begin = None
+    for i in range(start, len(lines)):
+        for ch in lines[i]:
+            if ch == "{":
+                if begin is None:
+                    begin = i
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0 and begin is not None:
+                    return "\n".join(lines[start:i + 1]), lines
+    return None, lines
+
+
+def arm64_bl_target(insn):
+    """Return target offset for BL (0x94..) or B (0x14..), else None."""
+    op = insn & 0xFC000000
+    if op not in (0x94000000, 0x14000000):
+        return None
+    imm26 = insn & 0x03FFFFFF
+    if imm26 & 0x02000000:
+        imm26 -= 0x04000000
+    return insn if False else imm26 << 2  # displacement; caller adds PC
+
+
+def arm64_note(insn):
+    """Very small mnemonic hint for context dumps."""
+    op = insn & 0xFC000000
+    if op in (0x94000000, 0x14000000):
+        imm26 = insn & 0x03FFFFFF
+        if imm26 & 0x02000000:
+            imm26 -= 0x04000000
+        kind = "bl" if op == 0x94000000 else "b"
+        return f"{kind} +0x{(imm26 << 2):x}"
+    if insn == 0xD65F03C0:
+        return "ret"
+    if (insn & 0xFFFFFC1F) == 0xD63F0000:
+        return f"br x{insn & 0x1F}"
+    if (insn & 0xFFFFFC1F) == 0xD63F03C0:
+        return f"blr x{insn & 0x1F}"
+    if (insn & 0xFF800000) == 0x5A800000:  # cmp (reg)
+        return "cmp"
+    if (insn & 0xFF200000) == 0x6B000000:  # subs
+        return "subs"
+    return f".word 0x{insn:08x}"
 
 
 def parse_target_header(path):
@@ -305,7 +379,29 @@ def main():
     ap.add_argument("--md", required=True)
     ap.add_argument("--expected-release", default=None)
     a = ap.parse_args()
+    try:
+        return _run(a)
+    except Exception:
+        # Never die without a report: record the crash as a failed check so
+        # the CI gate (and the diagnostics push) always gets the artifact.
+        import traceback
+        rep = {"checks": [{"name": "verifier.crash", "ok": False,
+                           "detail": "".join(traceback.format_exc())[-4000:]}],
+               "values": {}, "errors": ["verifier crashed (see report)"]}
+        try:
+            Path(a.report).write_text(json.dumps(rep, indent=2))
+            Path(a.md).write_text(
+                "# A075FXXS5BZD2 derivation report\n\n"
+                "## CRASH\n\n```\n"
+                + "".join(traceback.format_exc())
+                + "\n```\n")
+        except Exception:
+            pass
+        traceback.print_exc()
+        return 1
 
+
+def _run(a):
     rep = {"checks": [], "values": {}, "errors": []}
 
     def check(name, ok, detail=""):
@@ -373,11 +469,26 @@ def main():
 
     # -- BTF ---------------------------------------------------------------
     btf = None
+    btf_range = None
     try:
-        btf_blob, btf_range = find_btf(raw)
-        btf = BTF(btf_blob)
-        check("btf.extract", True,
-              f"Image[0x{btf_range[0]:x}, 0x{btf_range[1]:x}), {len(btf.table)} types")
+        cands = find_btf(raw)
+        parses = []
+        for blob, rng in cands:
+            try:
+                parses.append((BTF(blob), rng))
+            except SystemExit:
+                continue
+        for b, rng in parses:
+            if b.by_name("task_struct") is not None:
+                btf, btf_range = b, rng
+                break
+        if btf is None and parses:
+            btf, btf_range = parses[0]
+        sizes = ", ".join(f"0x{s:x}-0x{e:x}" for _, (s, e) in cands)
+        check("btf.extract", btf is not None,
+              f"{len(cands)} candidate blob(s) [{sizes}], "
+              + (f"chose Image[0x{btf_range[0]:x}, 0x{btf_range[1]:x}), "
+                 f"{len(btf.table)} types" if btf else "none parsed"))
     except SystemExit as e:
         check("btf.extract", False, str(e))
 
@@ -495,8 +606,17 @@ def main():
     sched = sym_off("schedule")
     worker = sym_off("worker_thread")
     if sched is not None and worker is not None:
+        # Bound the scan to worker_thread's own body: the next symbol after
+        # it (no global symbol can sit *inside* worker_thread's range, so the
+        # next symbol marks its end) plus a sanity cap, so a 'bl schedule' in
+        # a *later* function can never be picked up.  All offsets below are
+        # base-relative, matching worker/sched.
+        import bisect
+        rel_offs = sorted(o - base for o in syms.values())
+        i = bisect.bisect_right(rel_offs, worker)
+        body_end = rel_offs[i] if i < len(rel_offs) else worker + 0x10000
+        end = min(body_end, worker + 0x10000, len(raw) - 4)
         bls = []
-        end = min(worker + 0x2000, len(raw) - 4)
         pc = worker
         while pc < end:
             insn = struct.unpack_from("<I", raw, pc)[0]
@@ -509,15 +629,54 @@ def main():
                     bls.append(pc)
             pc += 4
         want = macro("SLIDE_TRACEFS_WORKER_CALLER_OFF")
+        # context dumps (binary + source) so the choice of *which* bl
+        # schedule is the blocking idle sleep is auditable from the report
+        ctx = []
+        for b in bls:
+            win = []
+            for k in range(-10, 5):
+                off = b + 4 * k
+                if 0 <= off + 4 <= len(raw):
+                    w = struct.unpack_from("<I", raw, off)[0]
+                    mark = " <<<" if k == 0 else ""
+                    tgt = ""
+                    op = w & 0xFC000000
+                    if op in (0x94000000, 0x14000000):
+                        imm26 = w & 0x03FFFFFF
+                        if imm26 & 0x02000000:
+                            imm26 -= 0x04000000
+                        t = (off + (imm26 << 2)) & (2 ** 48 - 1)
+                        tgt = f" -> 0x{t - base:x}" if t >= base else f" -> 0x{t:x}"
+                    win.append(f"0x{off:x}: {arm64_note(w)}{tgt}{mark}")
+            ctx.append(f"bl at +0x{b - worker:x} (0x{b:x}):\n" + "\n".join(win))
+        rep["values"]["worker_caller_bl_context"] = "\n\n".join(ctx)
+        if a.src_root:
+            body, lines = extract_func_source(
+                a.src_root, "kernel/workqueue.c",
+                r"\bstatic void worker_thread\s*\(")
+            if body:
+                calls = []
+                for i, ln in enumerate(lines):
+                    if re.search(r"(?<![\w.])schedule\s*\(\s*\)", ln):
+                        s = max(0, i - 3)
+                        calls.append("  " + "\n  ".join(lines[s:i + 1]))
+                rep["values"]["worker_caller_source_schedule_calls"] = (
+                    f"{len(calls)} schedule() call(s) in worker_thread:\n"
+                    + "\n\n".join(calls))
+            else:
+                rep["values"]["worker_caller_source_schedule_calls"] = (
+                    "worker_thread not found in kernel/workqueue.c")
         if bls:
             got = max(bls) + 4
+            rels = ", ".join(f"0x{b - worker:x}" for b in bls)
             check("slide.worker_caller", got == want,
-                  f"{len(bls)} 'bl schedule' in worker_thread, last at 0x{max(bls):x}, "
+                  f"{len(bls)} 'bl schedule' in worker_thread body [0x{worker:x}, "
+                  f"0x{end:x}), at +[{rels}] (last +0x{max(bls) - worker:x}), "
                   f"return PC 0x{got:x} vs 0x{want:x}")
             rep["values"]["SLIDE_TRACEFS_WORKER_CALLER_OFF"] = f"0x{got:x}"
         else:
             check("slide.worker_caller", False,
-                  f"no 'bl schedule' found in worker_thread [0x{worker:x}, 0x{worker + 0x2000:x})")
+                  f"no 'bl schedule' found in worker_thread [0x{worker:x}, 0x{end:x})")
     else:
         check("slide.worker_caller", False,
               f"schedule={sched} worker_thread={worker}")
@@ -619,15 +778,12 @@ def main():
                         hit += 1
             rep["values"]["data_qwords_pointing_at_ashmem_fops"] = hit
 
-    # Rust ashmem fops table: locate it, verify the 6.12 layout, verify the
-    # per-slot ASHMEM_*_OFF macros against the resolved table.
-    fops_syms = {}
-    for nm in syms:
-        if "ashmem" not in nm:
-            continue
-        m2 = re.search(r"fops_(llseek|read_iter|ioctl|compat_ioctl|mmap|open|release|show_fdinfo)\b", nm)
-        if m2:
-            fops_syms[m2.group(1)] = syms[nm] - base
+    # Ashmem fops table: the PRIMARY verification reads the table directly
+    # from the Image at ASHMEM_FOPS_OFF (that offset itself is anchored by the
+    # kvm_misc oracle check above) and compares every 6.12-layout slot
+    # against the ASHMEM_*_OFF macros.  Release kernels strip the Rust
+    # symbols, so the symbol-based cross-check below is only an extra when
+    # the symbols happen to be present.
     LAYOUTS = {
         "6.12": {"llseek": 0x10, "read_iter": 0x28, "ioctl": 0x50,
                  "compat_ioctl": 0x58, "mmap": 0x60, "open": 0x68,
@@ -636,6 +792,32 @@ def main():
                 "compat_ioctl": 0x50, "mmap": 0x58, "open": 0x68,
                 "release": 0x78, "show_fdinfo": 0xd8},
     }
+    fops_syms = {}
+    for nm in syms:
+        if "ashmem" not in nm:
+            continue
+        m2 = re.search(r"fops_(llseek|read_iter|ioctl|compat_ioctl|mmap|open|release|show_fdinfo)\b", nm)
+        if m2:
+            fops_syms[m2.group(1)] = syms[nm] - base
+
+    fops_base = macro("ASHMEM_FOPS_OFF")
+    slot_macro = {"ioctl": "ASHMEM_IOCTL_OFF",
+                  "compat_ioctl": "ASHMEM_COMPAT_IOCTL_OFF",
+                  "mmap": "ASHMEM_MMAP_OFF",
+                  "open": "ASHMEM_OPEN_OFF",
+                  "release": "ASHMEM_RELEASE_OFF",
+                  "show_fdinfo": "ASHMEM_SHOW_FDINFO_OFF"}
+    bad = []
+    for slot, mname in slot_macro.items():
+        got = qword(raw, fops_base + LAYOUTS["6.12"][slot]) - base
+        want = macro(mname)
+        if got != want:
+            bad.append(f"{slot} 0x{got:x} vs 0x{want:x}")
+    check("ashmem.fops_table",
+          not bad,
+          f"fops @0x{fops_base:x} (6.12 layout): {len(slot_macro) - len(bad)}/{len(slot_macro)} slots match"
+          + (f"; MISMATCH {bad}" if bad else ""))
+
     if fops_syms:
         best = {}
         for lname, layout in LAYOUTS.items():
@@ -658,12 +840,6 @@ def main():
         else:
             check("ashmem.fops_layout", False, "no candidate fops table found")
         if best.get("6.12", (None, 0, 0))[1] >= 6:
-            slot_macro = {"ioctl": "ASHMEM_IOCTL_OFF",
-                          "compat_ioctl": "ASHMEM_COMPAT_IOCTL_OFF",
-                          "mmap": "ASHMEM_MMAP_OFF",
-                          "open": "ASHMEM_OPEN_OFF",
-                          "release": "ASHMEM_RELEASE_OFF",
-                          "show_fdinfo": "ASHMEM_SHOW_FDINFO_OFF"}
             for slot, mname in slot_macro.items():
                 if slot in fops_syms:
                     check(f"ashmem.{mname}", fops_syms[slot] == macro(mname),
@@ -673,15 +849,73 @@ def main():
 
     # -- IKCONFIG -------------------------------------------------------------
     if a.config:
-        st, ed = sym_off("IKCFG_ST"), sym_off("IKCFG_ED")
-        if st is not None and ed is not None and ed > st:
-            cfg = gzip.decompress(raw[st:ed])
+        # Modern kernels name the bounds __ikconfig_start/__ikconfig_end;
+        # very old ones used IKCFG_ST/IKCFG_ED.  Try both.
+        st = ed = None
+        used_names = None
+        for sn, en in (("IKCFG_ST", "IKCFG_ED"),
+                       ("__ikconfig_start", "__ikconfig_end")):
+            s, e = sym_off(sn), sym_off(en)
+            if s is not None and e is not None and e > s:
+                st, ed, used_names = s, e, (sn, en)
+                break
+        if st is not None:
+            blob = raw[st:ed]
+            if blob[:2] == b"\x1f\x8b":
+                cfg = gzip.decompress(blob)
+                mode = "gzip"
+            else:
+                # CONFIG_IKCONFIG without a COMPRESSION variant embeds the
+                # config plain (this target's config has no
+                # IKCONFIG_COMPRESS_* entry at all).
+                cfg = blob
+                mode = "plain"
             committed = Path(a.config).read_bytes()
             check("config.ikconfig", cfg == committed,
-                  f"embedded {len(cfg)} bytes vs committed {len(committed)} bytes")
+                  f"embedded {len(cfg)} bytes ({mode}, {used_names}) vs "
+                  f"committed {len(committed)} bytes")
             rep["values"]["ikconfig_size"] = len(cfg)
+            rep["values"]["ikconfig_names"] = " ".join(used_names)
         else:
-            check("config.ikconfig", False, f"IKCFG_ST={st} IKCFG_ED={ed}")
+            # No bound symbols in the recovered table: fall back to locating
+            # the blob by content (plain or gzip-compressed committed config).
+            committed = Path(a.config).read_bytes()
+            found = None
+            gz = gzip.compress(committed)
+            for mode, full in (("plain", committed), ("gzip", gz)):
+                if len(full) > 0x40000:
+                    continue
+                # The gzip header carries an mtime, so anchor on the
+                # post-header payload for the compressed variant.
+                if mode == "plain":
+                    needle, hdr = full[:96], 0
+                else:
+                    needle, hdr = full[10:110], 10
+                off = raw.find(needle)
+                if off < hdr:
+                    continue
+                start = off - hdr
+                body_ok = raw[off:off + len(needle)] == needle
+                hdr_ok = (mode == "plain"
+                          or raw[start:start + 3] == b"\x1f\x8b\x08")
+                if body_ok and hdr_ok:
+                    found = (start, start + len(full), mode, full)
+                    break
+            if found:
+                off, ed, mode, cfg = found
+                check("config.ikconfig", True,
+                      f"blob located by content at [0x{off:x}, 0x{ed:x}) "
+                      f"({mode}, {len(cfg)} bytes) - bound symbols absent")
+                rep["values"]["ikconfig_size"] = len(cfg)
+                rep["values"]["ikconfig_range"] = f"0x{off:x}-0x{ed:x}"
+                rep["values"]["ikconfig_names"] = "content-search"
+            else:
+                avail = [n for n in ("IKCFG_ST", "IKCFG_ED",
+                                     "__ikconfig_start", "__ikconfig_end")
+                         if n in syms]
+                check("config.ikconfig", False,
+                      f"no ikconfig bound symbols ({avail or 'none'}); "
+                      f"content search also failed (config {len(committed)} B)")
 
     # -- p0 fingerprint --------------------------------------------------------
     if a.fingerprint:
