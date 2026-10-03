@@ -125,8 +125,9 @@ class BTF:
         # as type 0 so that by_name/members/size agree with the raw BTF ids.
         off, idx = 0, 0
         n = len(self.types)
-        try:
-            while off < n:
+        self.parse_error = None
+        while off < n:
+            try:
                 self._start[idx] = off
                 name_off, info, ut = struct.unpack_from("<III", self.types, off)
                 kind = (info >> 24) & 0x7F
@@ -137,10 +138,19 @@ class BTF:
                 off = self._skip_payload(d, off + 12)
                 self.table[idx] = d
                 idx += 1
-        except (struct.error, ValueError, IndexError) as e:
-            raise SystemExit(f"BTF parse error near type {idx} (off {off}/{n}): {e}")
-        if off != n:
-            raise SystemExit(f"BTF type section misparsed: walked {off}, have {n}")
+            except (struct.error, ValueError, IndexError) as e:
+                # Mid-section fault: keep everything parsed so far (the core
+                # kernel types are low-ID and are usually intact), record
+                # where the walk died, and stop.  A hard SystemExit here
+                # lost the whole blob over one bad tail record.
+                self.parse_error = f"type {idx} (off {off}/{n}): {e}"
+                break
+        if off != n and not self.parse_error:
+            # Walked the whole section but did not land on the end: the
+            # payload arithmetic disagrees with the data (e.g. a vendor
+            # BTF quirk or a truncated section).  Keep the partial table
+            # if it has substance; the report will say.
+            self.parse_error = f"length mismatch: walked {off}, have {n}"
         self._size_memo = {}
 
     def _name(self, off):
@@ -537,11 +547,12 @@ def _run(a):
     try:
         cands = find_btf(raw)
         parses = []
+        perrs = []
         for blob, rng in cands:
             try:
                 parses.append((BTF(blob), rng))
-            except SystemExit:
-                continue
+            except SystemExit as e:
+                perrs.append(f"0x{rng[0]:x}: {e}")
         for b, rng in parses:
             if b.by_name("task_struct", (BTF.K_STRUCT, BTF.K_UNION)) is not None:
                 btf, btf_range = b, rng
@@ -549,10 +560,17 @@ def _run(a):
         if btf is None and parses:
             btf, btf_range = parses[0]
         sizes = ", ".join(f"0x{s:x}-0x{e:x}" for _, (s, e) in cands)
-        check("btf.extract", btf is not None,
-              f"{len(cands)} candidate blob(s) [{sizes}], "
-              + (f"chose Image[0x{btf_range[0]:x}, 0x{btf_range[1]:x}), "
-                 f"{len(btf.table)} types" if btf else "none parsed"))
+        detail = f"{len(cands)} candidate blob(s) [{sizes}]"
+        if btf:
+            detail += (f", chose Image[0x{btf_range[0]:x}, 0x{btf_range[1]:x}), "
+                       f"{len(btf.table)} types")
+            if btf.parse_error:
+                detail += f" (partial parse: {btf.parse_error})"
+        else:
+            detail += ", none parsed"
+            if perrs:
+                detail += " [" + "; ".join(perrs[:4])[:400] + "]"
+        check("btf.extract", btf is not None, detail)
         if btf is not None:
             # Diagnostics: the real-kernel blob parses but some core struct
             # names come up missing; dump enough to see what the table
