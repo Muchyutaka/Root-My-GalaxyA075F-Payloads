@@ -665,20 +665,52 @@ def _run(a):
                 # named vs anonymous fields, raw bit offsets - and explains
                 # why the flattened lookup missed.
                 try:
+                    def _sig(tid, depth=0, budget=[48]):
+                        """Nesting signature of a struct/union: named members
+                        by name, anonymous ones as {recursive signature}."""
+                        if budget[0] <= 0:
+                            return "..."
+                        sub = btf.table.get(tid)
+                        if sub is None or sub["kind"] not in (BTF.K_STRUCT,
+                                                              BTF.K_UNION):
+                            return "?"
+                        parts = []
+                        for im in btf.raw_members(tid)[:12]:
+                            budget[0] -= 1
+                            if im["name"]:
+                                parts.append(im["name"])
+                            else:
+                                parts.append("{" + _sig(im["type"], depth + 1,
+                                                        budget) + "}")
+                        return ",".join(parts[:12])
+
                     vidxs = [i for i, d in btf.table.items()
                              if d["name"] == sname
                              and d["kind"] in (BTF.K_STRUCT, BTF.K_UNION)][:4]
                     for vi in vidxs:
+                        rawm = btf.raw_members(vi)
                         disp = []
-                        for rm in btf.raw_members(vi)[:60]:
-                            tag = rm["name"] or f"<anon-t{rm['type']}>"
+                        for rm in rawm[:60]:
+                            if rm["name"]:
+                                tag = rm["name"]
+                            else:
+                                sub = btf.table.get(rm["type"])
+                                kk = ({BTF.K_STRUCT: "S", BTF.K_UNION: "U"}
+                                      .get(sub["kind"], "?") if sub else "?")
+                                tag = f"<anon{kk}-t{rm['type']}:" + _sig(
+                                    rm["type"]) + ">"
                             bo = (f"@0x{rm['bit_off'] // 8:x}"
                                   if rm["bit_off"] % 8 == 0
                                   else f"@b{rm['bit_off']}")
                             disp.append(tag + bo)
                         detail += (f" | type 0x{vi:x} sz 0x{btf.size(vi):x} "
-                                   f"({len(btf.raw_members(vi))}m): "
-                                   + ", ".join(disp))
+                                   f"({len(rawm)}m): " + ", ".join(disp))
+                    try:
+                        flat = [m["name"] or "<anon>"
+                                for m in btf.members(vidxs[0])[1][:40]]
+                        detail += " | flattened[0..40]: " + ", ".join(flat)
+                    except SystemExit:
+                        pass
                 except Exception as diag_e:  # never let diagnostics break the run
                     detail += f" | member-diag failed: {diag_e}"
             check(f"btf.{mname}", got is not None and got == want, detail)
