@@ -926,7 +926,10 @@ def _run(a):
     if sdata is not None and edata is not None:
         noop = sym_off("noop_llseek")
         cands = []
-        for o in range(sdata, min(edata, sdata + 0x800000), 8):
+        # .data can extend to (or past) the end of the raw Image (BSS is not
+        # stored in the Image), so keep the scan inside the buffer.
+        scan_hi = min(edata, sdata + 0x800000, len(raw) - 0x18)
+        for o in range(sdata, scan_hi, 8):
             name_q = qword(raw, o + 8)
             if not (base < name_q < base + len(raw) - 2):
                 continue

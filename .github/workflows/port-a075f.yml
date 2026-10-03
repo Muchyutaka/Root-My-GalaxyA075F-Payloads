@@ -919,7 +919,7 @@ jobs:
             grep -E "push: ok|PUSH.*FAILED|commit:|orphan|carry-over:|NOTE:" diagnostics.txt 2>/dev/null | sed 's/^/  status: /'
             grep -E "fatal:|error:|rejected|403|401" diagnostics.txt 2>/dev/null | head -6 | sed 's/^/  err: /'
             echo "  --- verifier ---"
-            grep -E "^checks:|\*\*FAIL\*\*" reports/a075f/verification.md 2>/dev/null | sed 's/^/  /' | head -40
+            grep -E "^checks:|\*\*FAIL\*\*|CRASH" reports/a075f/verification.md 2>/dev/null | sed 's/^/  /' | head -40
             echo "  --- job.log tail ---"
             tail -n 20 job.log 2>/dev/null | sed 's/^/  /'
           } | sed -E 's#x-access-token:[^@ ]+@#x-access-token:***@#g')
