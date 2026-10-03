@@ -843,154 +843,75 @@ jobs:
       - name: Capture diagnostics on failure
         if: failure()
         run: |
-          # Fresh scratch repo (not the shallow checkout) removes every
-          # history/checkout hazard.  The runner executes step scripts with
-          # `bash -eo pipefail`, i.e. errexit is ALWAYS active here, and a
-          # failed `{...} | tee` pipeline aborts the script before the
-          # trailing `exit 0`.  `set +e` switches errexit off for the whole
-          # step: every command runs, its rc and stderr are appended to
-          # diagnostics.txt, and the step exits 0 after the push no matter
-          # what.  diagnostics.txt is committed and pushed with everything
-          # else, so the next sandbox fetch shows exactly which command (if
-          # any) failed on the runner.
+          # Runs INSIDE the checkout on purpose: run 4 proved that
+          # 'git push origin' from the checkout authenticates fine, while
+          # every scratch-repo push (token URL, lifted token, helper)
+          # failed rc=128 on this runner.  An orphan branch isolates the
+          # history; only the three artifact directories are carried over
+          # (per directory, so a missing one can't abort the rest);
+          # this run's fresh job.log / reports / diagnostics.txt are
+          # staged on top.  The runner executes steps with
+          # 'bash -eo pipefail', so 'set +e' makes every line non-fatal
+          # and the step always exits 0 after reporting.
+          #
+          # Reporting: this fork has issues DISABLED and the CI log
+          # endpoints are unreachable from the porting sandbox, so a rich
+          # step annotation (status + push stderr + verifier summary +
+          # job.log tail) is the retrieval channel, plus the branch push
+          # itself.
           set +e
           {
           echo "=== diagnostics step started $(date -u +%H:%M:%S) ==="
           WS="$GITHUB_WORKSPACE"
-          DIAG=/tmp/a075f-diag
-          rm -rf "$DIAG"
-          mkdir -p "$DIAG"
-          cd "$DIAG" || echo "FATAL: cannot cd into scratch dir"
-          git init -q -b main
+          cd "$WS" || { echo "FATAL: cannot cd"; }
           git config user.name  "a075f-port-bot"
           git config user.email "a075f-port-bot@users.noreply.github.com"
           echo "diagnostics captured $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> diagnostics.txt
           echo "run: $GITHUB_RUN_ID" >> diagnostics.txt
-          echo "git: $(git --version 2>&1)" >> diagnostics.txt
-          if cp -f "$WS/job.log" ./job.log 2>>diagnostics.txt; then
-            echo "job.log: copied ($(wc -c < job.log 2>/dev/null) bytes)" >> diagnostics.txt
+          if git checkout -q --orphan "a075f-diag-$$" 2>>diagnostics.txt; then
+            echo "orphan branch: ok" >> diagnostics.txt
           else
-            echo "NOTE: no job.log at $WS" >> diagnostics.txt
+            echo "orphan branch: FAILED" >> diagnostics.txt
           fi
-          if [ -d "$WS/reports" ]; then
-            if cp -rf "$WS/reports" ./reports 2>>diagnostics.txt; then
-              echo "reports: copied" >> diagnostics.txt
-            else
-              echo "NOTE: reports copy failed" >> diagnostics.txt
-            fi
-          else
-            echo "NOTE: no reports dir at $WS" >> diagnostics.txt
-          fi
-          # previously published artifacts are carried over untouched
-          #
-          # Credentials: on this runner the step-level GITHUB_TOKEN is NOT
-          # usable for writes (token-url push failed rc=128, gh api 401 on
-          # runs 9-10).  The one proven-working push (first diagnostic
-          # commit) went through the checkout's origin URL, which
-          # actions/checkout's persist-credentials embeds the token in.
-          # Reuse that URL for the push and lift its token for gh.
-          ORIG_URL=$(git -C "$WS" config --get remote.origin.url 2>/dev/null || true)
-          if [ -n "$ORIG_URL" ]; then
-            TOK=$(printf '%s' "$ORIG_URL" | sed -nE 's#^https://x-access-token:([^@]+)@.*#\1#p')
-            if [ -n "$TOK" ]; then
-              export GITHUB_TOKEN="$TOK"
-              export GH_TOKEN="$TOK"
-            fi
-            AUTH="$ORIG_URL"
-            echo "credentials: checkout origin url (token $([ -n "$TOK" ] && echo embedded || echo absent))" >> diagnostics.txt
-          else
-            AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
-            echo "credentials: token url (no checkout origin url found)" >> diagnostics.txt
-          fi
-          if git clone -q --depth 1 --branch "${RESULTS_BRANCH}" "${AUTH}" prev 2>>diagnostics.txt; then
+          if git fetch -q origin "${RESULTS_BRANCH}" 2>>diagnostics.txt && git cat-file -e FETCH_HEAD 2>/dev/null; then
             for d in firmware artifacts kernelsu; do
-              if [ -d "prev/$d" ]; then
-                if cp -rf "prev/$d" "./$d" 2>>diagnostics.txt; then
+              if git cat-file -e "FETCH_HEAD:$d" 2>/dev/null; then
+                if git restore --source=FETCH_HEAD --staged --worktree -- "$d" 2>>diagnostics.txt; then
                   echo "carry-over: $d" >> diagnostics.txt
                 else
-                  echo "NOTE: carry-over of $d failed" >> diagnostics.txt
+                  echo "carry-over: $d FAILED" >> diagnostics.txt
                 fi
               else
                 echo "carry-over: $d (absent on previous branch)" >> diagnostics.txt
               fi
             done
-            rm -rf prev
           else
             echo "NOTE: previous ${RESULTS_BRANCH} unavailable; fresh diagnostics only" >> diagnostics.txt
           fi
-          {
-            echo "scratch tree:"
-            find . -path ./.git -prune -o -print 2>/dev/null | sort | head -50
-          } >> diagnostics.txt
-          git add -A 2>>diagnostics.txt
-          if git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))" 2>>diagnostics.txt; then
+          if [ -f job.log ]; then git add -f job.log 2>>diagnostics.txt; fi
+          if [ -d reports ]; then git add -f reports/ 2>>diagnostics.txt; fi
+          git add -f diagnostics.txt 2>>diagnostics.txt
+          if git diff --cached --quiet; then
+            echo "commit: nothing to commit (identical to previous push?)" >> diagnostics.txt
+          elif git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))" 2>>diagnostics.txt; then
             echo "commit: ok" >> diagnostics.txt
           else
-            echo "commit: rc=$? (possibly nothing to commit)" >> diagnostics.txt
+            echo "commit: FAILED" >> diagnostics.txt
           fi
-          if git push -q -f "${AUTH}" "HEAD:${RESULTS_BRANCH}" 2>>diagnostics.txt; then
-            echo "push: ok (token url)" >> diagnostics.txt
+          if git push -q -f origin "HEAD:${RESULTS_BRANCH}" 2>>diagnostics.txt; then
+            echo "push: ok (checkout origin)" >> diagnostics.txt
           else
-            echo "PUSH(token url) FAILED: rc=$?" >> diagnostics.txt
-            # Fallback: push through the checkout's own credential helper
-            # (the mechanism the proven first successful push used).
-            HELPER=$(git -C "$WS" config --get credential.helper 2>/dev/null || true)
-            if [ -n "$HELPER" ]; then
-              git config credential.helper "$HELPER"
-            fi
-            git remote add -f origin "https://github.com/${REPO}.git"
-            if git push -q -f origin "HEAD:${RESULTS_BRANCH}" 2>>diagnostics.txt; then
-              echo "push: ok (checkout credential helper)" >> diagnostics.txt
-            else
-              echo "PUSH(helper) FAILED: rc=$? helper=${HELPER:-none}" >> diagnostics.txt
-            fi
+            echo "PUSH FAILED" >> diagnostics.txt
           fi
           git log -1 --format="head: %h %s" 2>/dev/null >> diagnostics.txt
-          # ---- reporting channel ------------------------------------------
-          # The porting sandbox cannot read CI logs; GitHub issues and check
-          # annotations are its retrieval paths.  Post the full picture
-          # (diagnostics.txt + verifier report + job.log tail) as an issue
-          # comment (creating the issue on first use) and leave a compact
-          # annotation on the step.
-          DIAG_BODY=$( {
-            echo "Run: [${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${REPO}/actions/runs/${GITHUB_RUN_ID}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo ""
-            echo "## diagnostics.txt"
-            echo '```'
-            cat diagnostics.txt 2>/dev/null
-            echo '```'
-            echo ""
-            echo "## verifier report"
-            echo '```'
-            cat reports/a075f/verification.md 2>/dev/null
-            echo '```'
-            echo ""
-            echo "## job.log (last 120 lines)"
-            echo '```'
-            tail -n 120 job.log 2>/dev/null
-            echo '```'
-          } )
-          ISSUE_NUM=$(gh api "repos/${REPO}/issues?state=open&per_page=100" \
-            --jq "[.[] | select(.title == \"a075f CI diagnostics\")] | .[0].number // empty" \
-            2>>diagnostics.txt || true)
-          if [ -n "$ISSUE_NUM" ]; then
-            if gh api -X POST "repos/${REPO}/issues/${ISSUE_NUM}/comments" -f body="$DIAG_BODY" 2>>diagnostics.txt; then
-              echo "issue: commented on #${ISSUE_NUM}" >> diagnostics.txt
-            else
-              echo "issue: comment on #${ISSUE_NUM} FAILED" >> diagnostics.txt
-            fi
-          else
-            NEW_ISSUE=$(gh api -X POST "repos/${REPO}/issues" -f title="a075f CI diagnostics" -f body="$DIAG_BODY" --jq .number 2>>diagnostics.txt || true)
-            if [ -n "$NEW_ISSUE" ]; then
-              echo "issue: created #${NEW_ISSUE}" >> diagnostics.txt
-            else
-              echo "issue: create FAILED" >> diagnostics.txt
-            fi
-          fi
           ANN=$( {
             echo "run ${GITHUB_RUN_ID}:"
-            grep -E "push: ok|PUSH.*FAILED|commit:|issue:|credentials:" diagnostics.txt 2>/dev/null | sed 's/^/  status: /'
+            grep -E "push: ok|PUSH.*FAILED|commit:|orphan|carry-over:|NOTE:" diagnostics.txt 2>/dev/null | sed 's/^/  status: /'
             grep -E "fatal:|error:|rejected|403|401" diagnostics.txt 2>/dev/null | head -6 | sed 's/^/  err: /'
+            echo "  --- verifier ---"
+            grep -E "^checks:|\*\*FAIL\*\*" reports/a075f/verification.md 2>/dev/null | sed 's/^/  /' | head -40
+            echo "  --- job.log tail ---"
+            tail -n 20 job.log 2>/dev/null | sed 's/^/  /'
           } | sed -E 's#x-access-token:[^@ ]+@#x-access-token:***@#g')
           echo "::error file=.github/workflows/port-a075f.yml,line=1,title=a075f diagnostics::$(echo "$ANN" | tr '\n' '|')"
           echo "::group::a075f diagnostics full status"
@@ -1001,4 +922,3 @@ jobs:
           echo "=== diagnostics step done $(date -u +%H:%M:%S) ==="
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit 0
-
