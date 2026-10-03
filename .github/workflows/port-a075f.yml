@@ -837,20 +837,30 @@ jobs:
         if: failure()
         run: |
           set -uo pipefail
+          {
+          # The CI log endpoints are unreachable from the porting sandbox, so
+          # this branch is the only diagnosis channel.  An orphan branch
+          # avoids every shallow-history checkout hazard; the previous
+          # results tree is restored first so published artifacts are never
+          # wiped by a failed run.
           git config user.name  "a075f-port-bot"
           git config user.email "a075f-port-bot@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin "${RESULTS_BRANCH}" >/dev/null 2>&1; then
-            git fetch -q origin "${RESULTS_BRANCH}"
-            git checkout -q -B "${RESULTS_BRANCH}" FETCH_HEAD
-          else
-            git checkout -q -b "${RESULTS_BRANCH}"
+          echo "=== diagnostics step started $(date -u +%H:%M:%S) ==="
+          git checkout -q --orphan "a075f-diag-$$"
+          if git fetch -q origin "${RESULTS_BRANCH}" 2>/dev/null \
+             && git cat-file -e FETCH_HEAD 2>/dev/null; then
+            git restore --source=FETCH_HEAD --staged --worktree -- . 2>/dev/null || true
           fi
           git add -f job.log 2>/dev/null || true
+          git add -f reports/ 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "no diagnostics to commit"
-            exit 0
+          else
+            git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            git push -q -f origin "HEAD:${RESULTS_BRANCH}" || echo "::warning::diagnostics push failed"
+            git log -1 --format='%h %s' || true
           fi
-          git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-          git push -q origin "HEAD:${RESULTS_BRANCH}" || true
-          echo "diagnostics committed to ${RESULTS_BRANCH}"
+          echo "=== diagnostics step done ==="
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit 0
 
