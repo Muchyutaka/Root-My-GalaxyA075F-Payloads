@@ -839,30 +839,33 @@ jobs:
           set -uo pipefail
           {
           # The CI log endpoints are unreachable from the porting sandbox, so
-          # this branch is the only diagnosis channel.  An orphan branch
-          # avoids every shallow-history checkout hazard; the previous
-          # results tree is restored first so published artifacts are never
-          # wiped by a failed run.
+          # this branch is the only diagnosis channel.  A fresh scratch repo
+          # (not the shallow checkout) removes every history/checkout hazard.
+          echo "=== diagnostics step started $(date -u +%H:%M:%S) ==="
+          WS="$GITHUB_WORKSPACE"
+          DIAG=/tmp/a075f-diag
+          rm -rf "$DIAG" && mkdir -p "$DIAG" && cd "$DIAG"
+          git init -q -b main
           git config user.name  "a075f-port-bot"
           git config user.email "a075f-port-bot@users.noreply.github.com"
-          echo "=== diagnostics step started $(date -u +%H:%M:%S) ==="
-          git checkout -q --orphan "a075f-diag-$$"
-          if git fetch -q origin "${RESULTS_BRANCH}" 2>/dev/null \
-             && git cat-file -e FETCH_HEAD 2>/dev/null; then
-            # carry over previously published artifacts (never the fresh
-            # job.log / reports from this run - those are the diagnostics)
-            git restore --source=FETCH_HEAD --staged --worktree \
-              -- firmware artifacts kernelsu 2>/dev/null || true
-          fi
-          git add -f job.log 2>/dev/null || true
-          git add -f reports/ 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "no diagnostics to commit"
+          # the fresh diagnostics of THIS run come first ...
+          cp -f "$WS/job.log" ./job.log 2>/dev/null || echo "NOTE: no job.log"
+          [ -d "$WS/reports" ] && cp -rf "$WS/reports" ./reports
+          # ... previously published artifacts are carried over untouched.
+          AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+          if git clone -q --depth 1 --branch "${RESULTS_BRANCH}" "${AUTH}" prev 2>/dev/null; then
+            for d in firmware artifacts kernelsu; do
+              [ -d "prev/$d" ] && cp -rf "prev/$d" "./$d"
+            done
+            rm -rf prev
           else
-            git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-            git push -q -f origin "HEAD:${RESULTS_BRANCH}" || echo "::warning::diagnostics push failed"
-            git log -1 --format='%h %s' || true
+            echo "NOTE: previous results branch absent - fresh diagnostics only"
           fi
+          git add -A
+          git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push -q -f "${AUTH}" "HEAD:${RESULTS_BRANCH}" \
+            || echo "::warning::diagnostics push failed"
+          git log -1 --format='%h %s' || true
           echo "=== diagnostics step done ==="
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit 0
