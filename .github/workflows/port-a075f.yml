@@ -782,3 +782,4 @@ jobs:
           git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
           git push -q origin "HEAD:${RESULTS_BRANCH}" || true
           echo "diagnostics committed to ${RESULTS_BRANCH}"
+
