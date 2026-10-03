@@ -624,7 +624,7 @@ jobs:
             for t in clang clang++ ld.lld ld.gold llvm-ar llvm-nm llvm-objcopy \
                      llvm-objdump llvm-strip llvm-readelf; do
               p=$(command -v "$t" || true)
-              [ -n "$p" ] && ln -sf "$p" "${BINDIR}/$t"
+              if [ -n "$p" ]; then ln -sf "$p" "${BINDIR}/$t"; fi
             done
           fi
           echo "${BINDIR}" >> "$GITHUB_PATH"
@@ -850,12 +850,12 @@ jobs:
           git config user.email "a075f-port-bot@users.noreply.github.com"
           # the fresh diagnostics of THIS run come first ...
           cp -f "$WS/job.log" ./job.log 2>/dev/null || echo "NOTE: no job.log"
-          [ -d "$WS/reports" ] && cp -rf "$WS/reports" ./reports
+          if [ -d "$WS/reports" ]; then cp -rf "$WS/reports" ./reports; fi
           # ... previously published artifacts are carried over untouched.
           AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
           if git clone -q --depth 1 --branch "${RESULTS_BRANCH}" "${AUTH}" prev 2>/dev/null; then
             for d in firmware artifacts kernelsu; do
-              [ -d "prev/$d" ] && cp -rf "prev/$d" "./$d"
+              if [ -d "prev/$d" ]; then cp -rf "prev/$d" "./$d"; fi
             done
             rm -rf prev
           else
