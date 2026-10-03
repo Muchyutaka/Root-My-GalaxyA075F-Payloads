@@ -833,40 +833,88 @@ jobs:
       # and the Azure blob behind them) are unreachable from the porting
       # sandbox, so a failed run would otherwise be undiagnosable from here.
       # Commit the captured log to the results branch instead.
+      # The CI log endpoints (results-receiver.actions.githubusercontent.com
+      # and the Azure blob behind them) are unreachable from the porting
+      # sandbox, so a failed run would otherwise be undiagnosable from here.
+      # Commit the captured log to the results branch instead.
       - name: Capture diagnostics on failure
         if: failure()
         run: |
-          set -uo pipefail
+          # Fresh scratch repo (not the shallow checkout) removes every
+          # history/checkout hazard.  The runner executes step scripts with
+          # `bash -eo pipefail`, i.e. errexit is ALWAYS active here, and a
+          # failed `{...} | tee` pipeline aborts the script before the
+          # trailing `exit 0`.  `set +e` switches errexit off for the whole
+          # step: every command runs, its rc and stderr are appended to
+          # diagnostics.txt, and the step exits 0 after the push no matter
+          # what.  diagnostics.txt is committed and pushed with everything
+          # else, so the next sandbox fetch shows exactly which command (if
+          # any) failed on the runner.
+          set +e
           {
-          # The CI log endpoints are unreachable from the porting sandbox, so
-          # this branch is the only diagnosis channel.  A fresh scratch repo
-          # (not the shallow checkout) removes every history/checkout hazard.
           echo "=== diagnostics step started $(date -u +%H:%M:%S) ==="
           WS="$GITHUB_WORKSPACE"
           DIAG=/tmp/a075f-diag
-          rm -rf "$DIAG" && mkdir -p "$DIAG" && cd "$DIAG"
+          rm -rf "$DIAG"
+          mkdir -p "$DIAG"
+          cd "$DIAG" || echo "FATAL: cannot cd into scratch dir"
           git init -q -b main
           git config user.name  "a075f-port-bot"
           git config user.email "a075f-port-bot@users.noreply.github.com"
-          # the fresh diagnostics of THIS run come first ...
-          cp -f "$WS/job.log" ./job.log 2>/dev/null || echo "NOTE: no job.log"
-          if [ -d "$WS/reports" ]; then cp -rf "$WS/reports" ./reports; fi
-          # ... previously published artifacts are carried over untouched.
+          echo "diagnostics captured $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> diagnostics.txt
+          echo "run: $GITHUB_RUN_ID" >> diagnostics.txt
+          echo "git: $(git --version 2>&1)" >> diagnostics.txt
+          if cp -f "$WS/job.log" ./job.log 2>>diagnostics.txt; then
+            echo "job.log: copied ($(wc -c < job.log 2>/dev/null) bytes)" >> diagnostics.txt
+          else
+            echo "NOTE: no job.log at $WS" >> diagnostics.txt
+          fi
+          if [ -d "$WS/reports" ]; then
+            if cp -rf "$WS/reports" ./reports 2>>diagnostics.txt; then
+              echo "reports: copied" >> diagnostics.txt
+            else
+              echo "NOTE: reports copy failed" >> diagnostics.txt
+            fi
+          else
+            echo "NOTE: no reports dir at $WS" >> diagnostics.txt
+          fi
+          # previously published artifacts are carried over untouched
           AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
-          if git clone -q --depth 1 --branch "${RESULTS_BRANCH}" "${AUTH}" prev 2>/dev/null; then
+          if git clone -q --depth 1 --branch "${RESULTS_BRANCH}" "${AUTH}" prev 2>>diagnostics.txt; then
             for d in firmware artifacts kernelsu; do
-              if [ -d "prev/$d" ]; then cp -rf "prev/$d" "./$d"; fi
+              if [ -d "prev/$d" ]; then
+                if cp -rf "prev/$d" "./$d" 2>>diagnostics.txt; then
+                  echo "carry-over: $d" >> diagnostics.txt
+                else
+                  echo "NOTE: carry-over of $d failed" >> diagnostics.txt
+                fi
+              else
+                echo "carry-over: $d (absent on previous branch)" >> diagnostics.txt
+              fi
             done
             rm -rf prev
           else
-            echo "NOTE: previous results branch absent - fresh diagnostics only"
+            echo "NOTE: previous ${RESULTS_BRANCH} unavailable; fresh diagnostics only" >> diagnostics.txt
           fi
-          git add -A
-          git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-          git push -q -f "${AUTH}" "HEAD:${RESULTS_BRANCH}" \
-            || echo "::warning::diagnostics push failed"
-          git log -1 --format='%h %s' || true
-          echo "=== diagnostics step done ==="
+          {
+            echo "scratch tree:"
+            find . -path ./.git -prune -o -print 2>/dev/null | sort | head -50
+          } >> diagnostics.txt
+          git add -A 2>>diagnostics.txt
+          if git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))" 2>>diagnostics.txt; then
+            echo "commit: ok" >> diagnostics.txt
+          else
+            echo "commit: rc=$? (possibly nothing to commit)" >> diagnostics.txt
+          fi
+          if git push -q -f "${AUTH}" "HEAD:${RESULTS_BRANCH}" 2>>diagnostics.txt; then
+            echo "push: ok" >> diagnostics.txt
+          else
+            echo "PUSH FAILED: rc=$?" >> diagnostics.txt
+          fi
+          git log -1 --format="head: %h %s" 2>/dev/null >> diagnostics.txt
+          echo "--- diagnostics.txt ---"
+          cat diagnostics.txt 2>/dev/null
+          echo "=== diagnostics step done $(date -u +%H:%M:%S) ==="
           } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
           exit 0
 
