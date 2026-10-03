@@ -1230,9 +1230,9 @@
         "sha256": "310d1e93139572d4fe040bde8e224d59139d09944c7e0186cff6d64aae3da8c3"
       },
       "kernelsu": {
-        "url": "https://raw.githubusercontent.com/PyeProof/Root-My-Galaxy-S938NKSUCDZIF/main/kernelsu/ksud-generic-kdp",
-        "size": 5475352,
-        "sha256": "f4121ed34eeb4656802f24a4d3d0f7b9eb07304f89c57ce16112027d590a2885",
+        "url": "https://raw.githubusercontent.com/PyeProof/Root-My-Galaxy-S938NKSUCDZIF/main/kernelsu/ksud-pa3q-S938NKSUCDZIF-kdp",
+        "size": 5088200,
+        "sha256": "43d2822accb67125710f322b398873411d74129a718de7cb72328a6d1f2968c9",
         "version": "3.3.0"
       }
     },
