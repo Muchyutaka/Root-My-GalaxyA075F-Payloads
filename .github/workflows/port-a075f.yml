@@ -117,7 +117,17 @@ jobs:
           WS="$GITHUB_WORKSPACE"
           FW="$WS/fw"
           mkdir -p "$FW"
-          curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/1" -o "$FW/release.json"
+          # Runners share IPs, so the unauthenticated API quota (60/h) is a
+          # shared resource: retry hard, and prefer the job token (5000/h)
+          # when it is accepted.  The authenticated attempt failing (401)
+          # simply falls through to the unauthenticated one.
+          TOK="${GITHUB_TOKEN:-}"
+          if [ -n "$TOK" ]; then AUTHHDR=(-H "Authorization: Bearer $TOK"); else AUTHHDR=(); fi
+          if ! curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "${AUTHHDR[@]}" \
+              "https://api.github.com/repos/${REPO}/releases/tags/1" -o "$FW/release.json" 2>>"$WS/job.log"; then
+            curl -fsSL --retry 8 --retry-delay 15 --retry-all-errors \
+              "https://api.github.com/repos/${REPO}/releases/tags/1" -o "$FW/release.json"
+          fi
           python3 - "$FW" <<'EOF'
           import json, os, sys
           fw = sys.argv[1]
@@ -149,7 +159,7 @@ jobs:
           while IFS=$'\t' read -r id name size; do
             echo "downloading ${name}"
             curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
-              -H "Accept: application/octet-stream" \
+              -H "Accept: application/octet-stream" "${AUTHHDR[@]}" \
               -o "$FW/${name}" \
               "https://api.github.com/repos/${REPO}/releases/assets/${id}"
             got=$(stat -c %s "$FW/${name}")
