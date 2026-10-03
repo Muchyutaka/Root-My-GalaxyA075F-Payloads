@@ -891,16 +891,23 @@ def _run(a):
                     needle, hdr = full[:96], 0
                 else:
                     needle, hdr = full[10:110], 10
+                # Full-blob equality; for gzip the 10-byte header carries an
+                # mtime that legitimately differs, so compare post-header.
                 off = raw.find(needle)
-                if off < hdr:
-                    continue
-                start = off - hdr
-                body_ok = raw[off:off + len(needle)] == needle
-                hdr_ok = (mode == "plain"
-                          or raw[start:start + 3] == b"\x1f\x8b\x08")
-                if body_ok and hdr_ok:
-                    found = (start, start + len(full), mode, full)
-                    break
+                while off >= hdr:
+                    start = off - hdr
+                    hdr_ok = (mode == "plain"
+                              or raw[start:start + 3] == b"\x1f\x8b\x08")
+                    if mode == "plain":
+                        body_ok = raw[start:start + len(full)] == full
+                    else:
+                        body_ok = (off + len(full) - hdr <= len(raw)
+                                   and raw[off:off + len(full) - hdr]
+                                   == full[hdr:])
+                    if hdr_ok and body_ok:
+                        found = (start, start + len(full), mode, full)
+                        break
+                    off = raw.find(needle, off + 1)
             if found:
                 off, ed, mode, cfg = found
                 check("config.ikconfig", True,
