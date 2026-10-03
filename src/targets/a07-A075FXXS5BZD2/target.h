@@ -272,9 +272,16 @@
 /* struct page (6.12: page->slab_cache is gone; slab metadata lives in
  * struct slab embedded at the page start, slab_cache at +0x08). */
 #define SIZEOF_PAGE 0x40
-#define PAGE_COMPOUND_HEAD_OFF 0x08
+/* 6.12 struct page: compound_head is the first field of the tail-page
+ * variant of the first (anonymous) union (union starts at offset 0, so
+ * compound_head overlaps _mapcount - "bit zero is set" distinguishes
+ * tail pages); page_type is the first field of the second union, which
+ * follows the 5-word (40-byte) first union.  Derived from the exact
+ * A075FXXS5BZD2 BTF (previous values 0x08/0x30 are the 5.10-device
+ * carry-over). */
+#define PAGE_COMPOUND_HEAD_OFF 0x00
 #define PAGE_SLAB_CACHE_OFF 0x08
-#define PAGE_PAGE_TYPE_OFF 0x30
+#define PAGE_PAGE_TYPE_OFF 0x28
 #define STRUCT_PAGE_SIZE SIZEOF_PAGE
 #define STRUCT_PAGE_COMPOUND_HEAD_OFF PAGE_COMPOUND_HEAD_OFF
 #define STRUCT_SLAB_CACHE_OFF PAGE_SLAB_CACHE_OFF

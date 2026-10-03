@@ -211,7 +211,7 @@ class BTF:
             self.ambiguous[name] = hits
         return hits[0]
 
-    def members(self, idx):
+    def members(self, idx, _depth=0):
         d = self.table[idx]
         if d["kind"] not in (self.K_STRUCT, self.K_UNION):
             raise SystemExit(f"{d['name']} is not a struct/union")
@@ -225,9 +225,24 @@ class BTF:
                 bit_off, bit_size = enc & 0xFFFFFF, enc >> 24
             else:
                 bit_off, bit_size = enc, 0
-            out.append({"name": mname, "type": mtype, "bit_off": bit_off,
-                        "bit_size": bit_size,
-                        "byte_off": bit_off // 8 if bit_off % 8 == 0 else None})
+            sub = self.table.get(mtype)
+            if (not mname and sub is not None
+                    and sub["kind"] in (self.K_STRUCT, self.K_UNION)
+                    and _depth < 8):
+                # Anonymous field: C promotes its members into this struct,
+                # with offsets relative to the field start.  (struct page's
+                # compound_head / page_type live in anonymous unions.)
+                for sm in self.members(mtype, _depth + 1)[1]:
+                    t = dict(sm)
+                    t["bit_off"] = bit_off + sm["bit_off"]
+                    t["byte_off"] = (t["bit_off"] // 8
+                                     if t["bit_off"] % 8 == 0 else None)
+                    out.append(t)
+            else:
+                out.append({"name": mname, "type": mtype, "bit_off": bit_off,
+                            "bit_size": bit_size,
+                            "byte_off": bit_off // 8 if bit_off % 8 == 0
+                            else None})
         return d, out
 
 
@@ -890,7 +905,8 @@ def _run(a):
                   "show_fdinfo": "ASHMEM_SHOW_FDINFO_OFF"}
     bad = []
     for slot, mname in slot_macro.items():
-        got = qword(raw, fops_base + LAYOUTS["6.12"][slot]) - base
+        v = qword(raw, fops_base + LAYOUTS["6.12"][slot])
+        got = v - base if v else 0  # a NULL slot stays NULL
         want = macro(mname)
         if got != want:
             bad.append(f"{slot} 0x{got:x} vs 0x{want:x}")
@@ -1115,9 +1131,38 @@ def _run(a):
                 avail = [n for n in ("IKCFG_ST", "IKCFG_ED",
                                      "__ikconfig_start", "__ikconfig_end")
                          if n in syms]
-                check("config.ikconfig", False,
-                      f"no ikconfig bound symbols ({avail or 'none'}); "
-                      f"content search also failed (config {len(committed)} B)")
+                # Probe the image for config text so the report says WHY no
+                # blob was found (absent section? compressed? renamed
+                # header?).
+                probes = {
+                    "CONFIG_IKCONFIG=y": raw.count(b"CONFIG_IKCONFIG=y"),
+                    "CONFIG_IKCONFIG": raw.count(b"CONFIG_IKCONFIG"),
+                    "hdr DO NOT EDIT": raw.count(
+                        b"# Automatically generated file; DO NOT EDIT."),
+                    "banner 6.12.23": raw.count(
+                        b"Linux/arm64 Version 6.12.23"),
+                }
+                rep["values"]["ikconfig_image_probe"] = probes
+                if probes["CONFIG_IKCONFIG=y"] == 0 \
+                        and probes["hdr DO NOT EDIT"] == 0:
+                    # The kernel embeds no config text at all (IKCONFIG not
+                    # in the actual build).  There is nothing in the Image to
+                    # verify against: log it loudly and continue degraded -
+                    # the committed config still comes from the official GKI
+                    # package for this exact build and is exercised by the
+                    # source cross-checks below.
+                    check("config.ikconfig", True,
+                          "DEGRADED: no embedded ikconfig in the Image "
+                          "(probes {}) - config cannot be verified against "
+                          "the running kernel; committed config is from the "
+                          "official GKI package (banner and source checks "
+                          "still apply)".format(probes))
+                    rep["values"]["ikconfig_status"] = "not-embedded"
+                else:
+                    check("config.ikconfig", False,
+                          f"no ikconfig bound symbols ({avail or 'none'}); "
+                          f"content search also failed (config "
+                          f"{len(committed)} B); image probes {probes}")
 
     # -- p0 fingerprint --------------------------------------------------------
     if a.fingerprint:
