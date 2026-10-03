@@ -163,7 +163,18 @@ class BTF:
             return off + v * 8
         if k in (BTF.K_ENUM64, BTF.K_DATASEC):
             return off + v * 12
-        if k in (BTF.K_INT, BTF.K_VAR, BTF.K_DECL_TAG):
+        if k in (BTF.K_INT, BTF.K_VAR):
+            return off + 4
+        if k == BTF.K_DECL_TAG:
+            # struct btf_decl_tag { __u32 ro; __u32 kind; } - 8 bytes.
+            # Under-skipping it by 4 desyncs the type table: from that
+            # record on, member type-ids point one record off (which is
+            # why struct page's anonymous unions decoded as the wrong
+            # types and compound_head 'vanished').  Clang emits DECL_TAG
+            # tags for const/attributes, so real kernel BTF has plenty.
+            return off + 8
+        if k == BTF.K_FLOAT:
+            # struct btf_float { __u32 encoding; }
             return off + 4
         if k == BTF.K_ARRAY:
             return off + 12  # btf_array {type, index_type, nelems}
