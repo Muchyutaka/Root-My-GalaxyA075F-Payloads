@@ -882,7 +882,26 @@ jobs:
             echo "NOTE: no reports dir at $WS" >> diagnostics.txt
           fi
           # previously published artifacts are carried over untouched
-          AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+          #
+          # Credentials: on this runner the step-level GITHUB_TOKEN is NOT
+          # usable for writes (token-url push failed rc=128, gh api 401 on
+          # runs 9-10).  The one proven-working push (first diagnostic
+          # commit) went through the checkout's origin URL, which
+          # actions/checkout's persist-credentials embeds the token in.
+          # Reuse that URL for the push and lift its token for gh.
+          ORIG_URL=$(git -C "$WS" config --get remote.origin.url 2>/dev/null || true)
+          if [ -n "$ORIG_URL" ]; then
+            TOK=$(printf '%s' "$ORIG_URL" | sed -nE 's#^https://x-access-token:([^@]+)@.*#\1#p')
+            if [ -n "$TOK" ]; then
+              export GITHUB_TOKEN="$TOK"
+              export GH_TOKEN="$TOK"
+            fi
+            AUTH="$ORIG_URL"
+            echo "credentials: checkout origin url (token $([ -n "$TOK" ] && echo embedded || echo absent))" >> diagnostics.txt
+          else
+            AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+            echo "credentials: token url (no checkout origin url found)" >> diagnostics.txt
+          fi
           if git clone -q --depth 1 --branch "${RESULTS_BRANCH}" "${AUTH}" prev 2>>diagnostics.txt; then
             for d in firmware artifacts kernelsu; do
               if [ -d "prev/$d" ]; then
@@ -970,9 +989,9 @@ jobs:
           fi
           ANN=$( {
             echo "run ${GITHUB_RUN_ID}:"
-            grep -E "push: ok|PUSH.*FAILED|commit:|issue:" diagnostics.txt 2>/dev/null | sed 's/^/  status: /'
+            grep -E "push: ok|PUSH.*FAILED|commit:|issue:|credentials:" diagnostics.txt 2>/dev/null | sed 's/^/  status: /'
             grep -E "fatal:|error:|rejected|403|401" diagnostics.txt 2>/dev/null | head -6 | sed 's/^/  err: /'
-          } )
+          } | sed -E 's#x-access-token:[^@ ]+@#x-access-token:***@#g')
           echo "::error file=.github/workflows/port-a075f.yml,line=1,title=a075f diagnostics::$(echo "$ANN" | tr '\n' '|')"
           echo "::group::a075f diagnostics full status"
           echo "$ANN"
