@@ -329,29 +329,40 @@ def BTF_parse_calibrated(blob):
     cleanly aligned and the caller must flag the result as suspect."""
     best = None
     best_score = None
-    combo_stats = []
+    walks = []
     for fp, dp in ((4, 8), (0, 8), (4, 4), (0, 4)):
         b = BTF(blob, float_payload=fp, decltag_payload=dp)
         unkn = sum(1 for d in b.table.values() if d["kind"] == 0)
         bogus = getattr(b, "bogus_names", 0)
+        walks.append((b, unkn, bogus))
+    # A desynced walk inserts phantom records (usually UNKNOWNs) and
+    # reads desynced headers (usually producing out-of-range names), so
+    # the MINIMAL phantom/bogus counts across the four walks mark the
+    # true alignment.  (Absolute counts are encoder-dependent: pahole-
+    # generated BTF can legitimately contain zero UNKNOWN types.)
+    min_unkn = min(u for _, u, _ in walks)
+    min_bogus = min(bg for _, _, bg in walks)
+    best = None
+    best_score = None
+    for b, unkn, bogus in walks:
         complete = b.parse_error is None
         score = (1 if complete else 0,
-                 1 if unkn == 1 else 0,
-                 1 if bogus == 0 else 0,
+                 1 if unkn == min_unkn else 0,
+                 1 if bogus == min_bogus else 0,
                  len(b.table))
-        combo_stats.append((fp, dp, len(b.table), unkn, bogus,
-                            b.parse_error))
         if best_score is None or score > best_score:
             best_score = score
             best = b
-    best.combo_stats = combo_stats
+    best.combo_stats = [
+        (b.float_payload, b.decltag_payload, len(b.table), unkn, bogus,
+         b.parse_error) for b, unkn, bogus in walks]
     clean = best.parse_error is None and \
-        sum(1 for d in best.table.values() if d["kind"] == 0) == 1 and \
-        getattr(best, "bogus_names", 0) == 0
-    for fp, dp in ((4, 8), (0, 8), (4, 4), (0, 4)):
-        if clean and (best.float_payload, best.decltag_payload) == (fp, dp):
-            best.payload_choice = (fp, dp)
-            return best, (fp, dp)
+        sum(1 for d in best.table.values() if d["kind"] == 0) == min_unkn and \
+        getattr(best, "bogus_names", 0) == min_bogus
+    for b, unkn, bogus in walks:
+        if clean and b is best:
+            best.payload_choice = (b.float_payload, b.decltag_payload)
+            return best, best.payload_choice
     best.payload_choice = None
     return best, None
 
