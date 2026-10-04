@@ -1230,7 +1230,7 @@
         "sha256": "328514c90fe8cbc0d43225abcaef7a1cdb211a124dd4dc8c88078ea0080c8470"
       },
       "kernelsu": {
-        "url": "https://raw.githubusercontent.com/PyeProof/Root-My-Galaxy-Payloads/main/kernelsu/ksud-pa3q-S938NKSUCDZIF-kdp",
+        "url": "https://raw.githubusercontent.com/ProofPage/Root-My-Galaxy-Payloads/main/kernelsu/ksud-pa3q-S938NKSUCDZIF-kdp",
         "size": 5088200,
         "sha256": "43d2822accb67125710f322b398873411d74129a718de7cb72328a6d1f2968c9",
         "version": "3.3.0"
@@ -1253,7 +1253,7 @@
         "sha256": "328514c90fe8cbc0d43225abcaef7a1cdb211a124dd4dc8c88078ea0080c8470"
       },
       "kernelsu": {
-        "url": "https://raw.githubusercontent.com/PyeProof/Root-My-Galaxy-Payloads/main/kernelsu/ksud-next-pa3q-S938NKSUCDZIF-kdp",
+        "url": "https://raw.githubusercontent.com/ProofPage/Root-My-Galaxy-Payloads/main/kernelsu/ksud-next-pa3q-S938NKSUCDZIF-kdp",
         "size": 4230840,
         "sha256": "e5a9331431944becd40787668263fd0b4d84a2ff39649962ec840ce5e9ae1dde",
         "version": "3.4.0"
