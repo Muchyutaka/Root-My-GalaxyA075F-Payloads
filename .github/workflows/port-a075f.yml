@@ -853,6 +853,11 @@ jobs:
       - name: Capture diagnostics on failure
         if: failure()
         run: |
+          # The runner runs steps with 'set -e -o pipefail': this step
+          # MUST never die mid-flight or the results push (the only log
+          # channel out of the sandbox) is lost.  Turn -e off for the
+          # whole step and handle errors explicitly.
+          set +e
           # Runs INSIDE the checkout on purpose: run 4 proved that
           # 'git push origin' from the checkout authenticates fine, while
           # every scratch-repo push (token URL, lifted token, helper)
@@ -928,7 +933,7 @@ jobs:
                (apt-get download "linux-tools-$(uname -r)" || apt-get download linux-tools-generic) &&
                dpkg -x "$(ls /tmp/linux-tools-*.deb 2>/dev/null | head -1)" /tmp/ltd &&
                echo "extracted: $(find /tmp/ltd -name bpftool -type f | head -1)") >>diagnostics.txt 2>&1
-              LTB=$(find /tmp/ltd -name bpftool -type f 2>/dev/null | head -1)
+              LTB=$( { find /tmp/ltd -name bpftool -type f 2>/dev/null | head -1; } || true)
             fi
             if [ -n "$LTB" ]; then
               echo "using $LTB" >> diagnostics.txt
