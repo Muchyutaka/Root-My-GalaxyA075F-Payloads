@@ -711,7 +711,13 @@ jobs:
           wc -l Module.symvers
           grep -m 5 -E 'prepare_creds|alt_cb_patch_nops|_printk' Module.symvers || true
           make -j"$(nproc)" M="${KSU_DIR}" modules
-          KO=$(find . -name kernelsu.ko -print -quit)
+          # drivers/kernelsu is a SYMLINK into KernelSU/kernel; plain find
+          # does not follow it, so look at the real directory instead.
+          if [ -f "${KSU_DIR}/kernelsu.ko" ]; then
+            KO="drivers/kernelsu/kernelsu.ko"
+          else
+            KO=$(find -L . -name kernelsu.ko -print -quit)
+          fi
           test -n "${KO}"
           echo "built ${KO}"
           modinfo "${KO}" | sed -n '1,14p'
@@ -724,7 +730,9 @@ jobs:
           {
           set -e
           set -euo pipefail
-          KO=$(find tree -name kernelsu.ko -print -quit)
+          # drivers/kernelsu is a symlink; find -L is required to descend
+          # into it (the module's real home is KernelSU/kernel/).
+          KO=$(find -L tree -name kernelsu.ko -print -quit)
           test -n "${KO}"
           V=$(modinfo -F vermagic "${KO}")
           echo "vermagic: ${V}"
