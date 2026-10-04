@@ -16,12 +16,12 @@ It intentionally does not contain Android application source code.
 | Payload | Compatible models | Kernel version | Status |
 | --- | --- | --- | --- |
 | `galaxy-s25-series-2026-06-07` | Galaxy S25, S25+, S25 Edge, and S25 Ultra regional models | `6.6.98` | Device-tested |
-| `pa3q-S938NKSUCDZIF-ksu330` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
-| `pa3q-S938NKSUCDZIF-ksu325` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
-| `pa3q-S938NKSUCDZIF-ksun340` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
-| `pa3q-S938NKSUCDZIF-ksun330` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
-| `pa3q-S938NKSUCDZIF-rsksu420` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
-| `pa3q-S938NKSUCDZIF-rsksu420-rc2` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
+| `pa3q-S938NKSUCDZIF-ksu330` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
+| `pa3q-S938NKSUCDZIF-ksu325` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
+| `pa3q-S938NKSUCDZIF-ksun340` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
+| `pa3q-S938NKSUCDZIF-ksun330` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
+| `pa3q-S938NKSUCDZIF-rsksu420` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
+| `pa3q-S938NKSUCDZIF-rsksu420-rc2` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
 | `e3q-S928USQS6DZF2` | Galaxy S24 Ultra `SM-S928U1` | `6.1.145` | Device-tested |
 | `e3q-S9280ZCS6DZF2` | Galaxy S24 Ultra China `SM-S9280` | `6.1.145` | Device-tested |
 | `e2s-S926BXXUEDZDR` | Galaxy S24+ `SM-S926B` | `6.1.157` | Device-tested |
