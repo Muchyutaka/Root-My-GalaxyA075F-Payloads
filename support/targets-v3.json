@@ -1215,8 +1215,8 @@
       }
     },
     {
-      "payloadId": "pa3q-S938NKSUCDZIF-ksu330",
-      "displayName": "Galaxy S25 Ultra SM-S938N | Kernel 6.6.127 | KernelSU 3.3.0 (experimental)",
+      "payloadId": "pa3q-S938NKSUCDZIF-ksu325",
+      "displayName": "Galaxy S25 Ultra SM-S938N | Kernel 6.6.127 | KernelSU 3.2.5 (experimental)",
       "models": [
         "SM-S938N"
       ],
@@ -1231,9 +1231,9 @@
       },
       "kernelsu": {
         "url": "https://raw.githubusercontent.com/ProofPage/Root-My-Galaxy-Payloads/main/kernelsu/ksud-pa3q-S938NKSUCDZIF-kdp",
-        "size": 5088200,
-        "sha256": "982d0a664c1e5114d1fbb89b526bd53ef94c448d979aa109942bfc2cdffeebe8",
-        "version": "3.3.0"
+        "size": 4866848,
+        "sha256": "f2b686222a35b64fe31743ca5e437c5c9dc940330b310dc1fd714cde04a5d559",
+        "version": "3.2.5"
       }
     },
     {
