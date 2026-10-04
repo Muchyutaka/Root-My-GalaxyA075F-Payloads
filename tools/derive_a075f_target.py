@@ -110,7 +110,12 @@ class BTF:
         K_VOLATILE, K_CONST, K_RESTRICT, K_FUNC, K_FUNC_PROTO, K_VAR, K_DATASEC, \
         K_FLOAT, K_DECL_TAG, K_TYPE_TAG, K_ENUM64 = range(20)
 
-    def __init__(self, blob):
+    def __init__(self, blob, float_payload=4, decltag_payload=8):
+        # Payload sizes for the two kinds whose encoding has drifted
+        # between encoder versions (btf_float: spec 4; btf_decl_tag:
+        # spec 8).  Calibrated per blob by BTF_parse_calibrated().
+        self.float_payload = float_payload
+        self.decltag_payload = decltag_payload
         (magic, version, flags, hdr_len, type_off, type_len, str_off, str_len) = struct.unpack_from(
             "<HBBIIIII", blob, 0
         )
@@ -126,6 +131,7 @@ class BTF:
         off, idx = 0, 0
         n = len(self.types)
         self.parse_error = None
+        self.bogus_names = 0
         while off < n:
             try:
                 self._start[idx] = off
@@ -141,9 +147,13 @@ class BTF:
             except (struct.error, ValueError, IndexError) as e:
                 # Mid-section fault: keep everything parsed so far (the core
                 # kernel types are low-ID and are usually intact), record
-                # where the walk died, and stop.  A hard SystemExit here
-                # lost the whole blob over one bad tail record.
-                self.parse_error = f"type {idx} (off {off}/{n}): {e}"
+                # where the walk died (with raw byte context) and stop.
+                # A hard SystemExit here lost the whole blob over one bad
+                # tail record.
+                ctx = (self.types[max(0, off - 12):off].hex() + " | "
+                       + self.types[off:off + 12].hex())
+                self.parse_error = (f"type {idx} (off {off}/{n}): {e}; "
+                                    f"prev|at={ctx}")
                 break
         if off != n and not self.parse_error:
             # Walked the whole section but did not land on the end: the
@@ -154,17 +164,21 @@ class BTF:
         self._size_memo = {}
 
     def _name(self, off):
+        # An out-of-range or unterminated name is a data/encoder quirk,
+        # not a walk fault: the rest of the record (kind, members,
+        # offsets) is still trustworthy, so record it and continue with
+        # an empty name instead of aborting the whole blob.
         (no,) = struct.unpack_from("<I", self.types, off)
         if no >= len(self.strings):
-            raise ValueError(f"name_off {no} outside strings section "
-                             f"(len {len(self.strings)})")
+            self.bogus_names = getattr(self, "bogus_names", 0) + 1
+            return ""
         end = self.strings.find(b"\0", no)
         if end < 0:
-            raise ValueError(f"unterminated name at name_off {no}")
+            self.bogus_names = getattr(self, "bogus_names", 0) + 1
+            return ""
         return self.strings[no:end].decode("utf-8", "replace")
 
-    @staticmethod
-    def _skip_payload(d, off):
+    def _skip_payload(self, d, off):
         """off = first byte past {name_off, info, ut}; return next type start."""
         k, v = d["kind"], d["vlen"]
         if k in (BTF.K_STRUCT, BTF.K_UNION):
@@ -176,16 +190,15 @@ class BTF:
         if k in (BTF.K_INT, BTF.K_VAR):
             return off + 4
         if k == BTF.K_DECL_TAG:
-            # struct btf_decl_tag { __u32 ro; __u32 kind; } - 8 bytes.
-            # Under-skipping it by 4 desyncs the type table: from that
-            # record on, member type-ids point one record off (which is
-            # why struct page's anonymous unions decoded as the wrong
-            # types and compound_head 'vanished').  Clang emits DECL_TAG
-            # tags for const/attributes, so real kernel BTF has plenty.
-            return off + 8
+            # struct btf_decl_tag { __u32 ro; __u32 kind; } - spec 8,
+            # older encoders 4.  Wrong size desyncs the table (member
+            # type-ids then point at the wrong records).  Calibrated by
+            # BTF_parse_calibrated().
+            return off + self.decltag_payload
         if k == BTF.K_FLOAT:
-            # struct btf_float { __u32 encoding; }
-            return off + 4
+            # struct btf_float { __u32 encoding; } - spec 4, some
+            # encoders emit no payload.  Calibrated.
+            return off + self.float_payload
         if k == BTF.K_ARRAY:
             return off + 12  # btf_array {type, index_type, nelems}
         if k == BTF.K_FUNC_PROTO:
@@ -240,8 +253,11 @@ class BTF:
         out = []
         for i in range(d["vlen"]):
             mno, mtype, enc = struct.unpack_from("<III", self.types, off + i * 12)
-            end = self.strings.index(b"\0", mno)
-            mname = self.strings[mno:end].decode("utf-8", "replace")
+            if mno >= len(self.strings):
+                mname = ""
+            else:
+                end = self.strings.index(b"\0", mno)
+                mname = self.strings[mno:end].decode("utf-8", "replace")
             if d["kflag"]:
                 bit_off, bit_size = enc & 0xFFFFFF, enc >> 24
             else:
@@ -277,8 +293,11 @@ class BTF:
         out = []
         for i in range(d["vlen"]):
             mno, mtype, enc = struct.unpack_from("<III", self.types, off + i * 12)
-            end = self.strings.index(b"\0", mno)
-            mname = self.strings[mno:end].decode("utf-8", "replace")
+            if mno >= len(self.strings):
+                mname = ""
+            else:
+                end = self.strings.index(b"\0", mno)
+                mname = self.strings[mno:end].decode("utf-8", "replace")
             if d["kflag"]:
                 bit_off, bit_size = enc & 0xFFFFFF, enc >> 24
             else:
@@ -286,6 +305,51 @@ class BTF:
             out.append({"name": mname, "type": mtype, "bit_off": bit_off,
                         "bit_size": bit_size})
         return out
+
+
+def BTF_parse_calibrated(blob):
+    """Parse a BTF blob, auto-calibrating the two encoder-version-sensitive
+    payload sizes (btf_float: spec 4, some encoders 0; btf_decl_tag: spec
+    8, older encoders 4).
+
+    A wrong payload size desyncs the type walk.  The desync is nasty
+    because it can re-lock onto a later record boundary, producing a
+    walk that completes 'cleanly' (lands on the section end, no record
+    fault) yet still carries phantom records and swallows a real one -
+    so every type id after the anomaly points one record off and member
+    type-ids decode against the wrong records (struct page's anonymous
+    unions then 'contain' unrelated types and compound_head vanishes).
+    Completeness alone therefore does NOT prove alignment.
+
+    Discriminators, in order: no record fault; exactly one UNKNOWN type
+    (a well-formed BTF has a single void type, id 0 - phantoms add more);
+    no out-of-range name reads (a desynced header almost always reads a
+    size/type-id where a name offset belongs); then the largest table.
+    Returns (btf, chosen_sizes|None) - None means no combination was
+    cleanly aligned and the caller must flag the result as suspect."""
+    best = None
+    best_score = None
+    for fp, dp in ((4, 8), (0, 8), (4, 4), (0, 4)):
+        b = BTF(blob, float_payload=fp, decltag_payload=dp)
+        unkn = sum(1 for d in b.table.values() if d["kind"] == 0)
+        bogus = getattr(b, "bogus_names", 0)
+        complete = b.parse_error is None
+        score = (1 if complete else 0,
+                 1 if unkn == 1 else 0,
+                 1 if bogus == 0 else 0,
+                 len(b.table))
+        if best_score is None or score > best_score:
+            best_score = score
+            best = b
+    clean = best.parse_error is None and \
+        sum(1 for d in best.table.values() if d["kind"] == 0) == 1 and \
+        getattr(best, "bogus_names", 0) == 0
+    for fp, dp in ((4, 8), (0, 8), (4, 4), (0, 4)):
+        if clean and (best.float_payload, best.decltag_payload) == (fp, dp):
+            best.payload_choice = (fp, dp)
+            return best, (fp, dp)
+    best.payload_choice = None
+    return best, None
 
 
 def find_btf(raw: bytes):
@@ -550,22 +614,31 @@ def _run(a):
         perrs = []
         for blob, rng in cands:
             try:
-                parses.append((BTF(blob), rng))
+                b, choice = BTF_parse_calibrated(blob)
             except SystemExit as e:
                 perrs.append(f"0x{rng[0]:x}: {e}")
-        for b, rng in parses:
+                continue
+            parses.append((b, choice, rng))
+        btf_choice = None
+        for b, choice, rng in parses:
             if b.by_name("task_struct", (BTF.K_STRUCT, BTF.K_UNION)) is not None:
-                btf, btf_range = b, rng
+                btf, btf_range, btf_choice = b, rng, choice
                 break
         if btf is None and parses:
-            btf, btf_range = parses[0]
+            btf, btf_range, btf_choice = parses[0]
         sizes = ", ".join(f"0x{s:x}-0x{e:x}" for _, (s, e) in cands)
         detail = f"{len(cands)} candidate blob(s) [{sizes}]"
         if btf:
             detail += (f", chose Image[0x{btf_range[0]:x}, 0x{btf_range[1]:x}), "
                        f"{len(btf.table)} types")
+            if btf_choice:
+                detail += (f", payload(float,decltag)={btf_choice}")
+            else:
+                detail += ", payload SIZES UNCALIBRATED"
+            if getattr(btf, "bogus_names", 0):
+                detail += f", {btf.bogus_names} unrecoverable name(s)"
             if btf.parse_error:
-                detail += f" (partial parse: {btf.parse_error})"
+                detail += f" (partial parse: {btf.parse_error[:300]})"
         else:
             detail += ", none parsed"
             if perrs:

@@ -909,6 +909,54 @@ jobs:
           else
             echo "NOTE: tree/include/linux/mm_types.h absent" >> diagnostics.txt
           fi
+          # Independent BTF ground truth: bpftool parses the same blob with
+          # the libbpf implementation.  Comparing its struct-page member
+          # type-ids against the verifier's raw-member dump pins down any
+          # table misalignment in my parser (and which payload sizes the
+          # vendor encoder actually uses).
+          {
+            echo "--- bpftool BTF cross-check ---"
+            if ! command -v bpftool >/dev/null 2>&1; then
+              (sudo apt-get update -qq && sudo apt-get install -y -qq bpftool) >>diagnostics.txt 2>&1
+            fi
+            if command -v bpftool >/dev/null 2>&1 && [ -f fw/kernel.raw ]; then
+              python3 - <<'PYEOF' >>diagnostics.txt 2>&1
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location(
+    "derive", "tools/derive_a075f_target.py")
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+raw = open("fw/kernel.raw", "rb").read()
+cands = d.find_btf(raw)
+if not cands:
+    print("no BTF candidates in fw/kernel.raw")
+    sys.exit(0)
+blob, rng = cands[0]
+open("/tmp/a075f_btf.bin", "wb").write(blob)
+b, choice = d.BTF_parse_calibrated(blob)
+print(f"verifier walk: {len(b.table)} types, "
+      f"payload(float,decltag)={choice}, parse_error={b.parse_error}")
+print(f"blob[0x{rng[0]:x},0x{rng[1]:x}) written to /tmp/a075f_btf.bin")
+PYEOF
+              if [ -s /tmp/a075f_btf.bin ]; then
+                bpftool btf dump file /tmp/a075f_btf.bin > /tmp/a075f_btf_dump.txt 2>>diagnostics.txt \
+                  && echo "bpftool dump: $(wc -l < /tmp/a075f_btf_dump.txt) lines" \
+                  || echo "bpftool dump FAILED"
+                if [ -s /tmp/a075f_btf_dump.txt ]; then
+                  # struct page records with their member type-ids
+                  grep -n "STRUCT 'struct page' " /tmp/a075f_btf_dump.txt | head -3
+                  awk "/STRUCT 'struct page' /{c=12} c>0{print; c--}" /tmp/a075f_btf_dump.txt | head -30
+                  # then the anonymous-union/struct type records those refs point to
+                  TIDS=$(awk "/STRUCT 'struct page' /{c=12; next} c>0{for(i=1;i<=NF;i++) if(\$i ~ /^type_id=/){print substr(\$i,9)} c--}" /tmp/a075f_btf_dump.txt | sort -u | tr '\n' ' ')
+                  for t in $TIDS; do
+                    awk -F':' -v w="$t" '$1==w' /tmp/a075f_btf_dump.txt | head -1
+                  done | head -20
+                fi
+              fi
+            else
+              echo "NOTE: bpftool unavailable or fw/kernel.raw missing"
+            fi
+          }
           if [ -f job.log ]; then git add -f job.log 2>>diagnostics.txt; fi
           if [ -d reports ]; then git add -f reports/ 2>>diagnostics.txt; fi
           git add -f diagnostics.txt 2>>diagnostics.txt
