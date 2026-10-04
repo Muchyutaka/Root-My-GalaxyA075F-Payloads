@@ -1,6 +1,6 @@
 # SM-S928B / S928BXXS6DZI1 port record
 
-This profile was derived from the user-supplied `boot.img.lz4` and BL firmware archive. The archive is a BL package and does not contain the AP partition, so its build fingerprint and Android property metadata cannot be verified from these two files. The model/build from the BL filename and kernel banner agree on `SM-S928B` / `S928BXXS6DZI1`.
+This profile was derived from the user-supplied AP and BL firmware archives. The AP archive contains `boot.img.lz4`; its SHA-256 matches the separately supplied boot image exactly. The model/build from the AP/BL filenames and kernel banner agree on `SM-S928B` / `S928BXXS6DZI1`.
 
 ## Firmware evidence
 
@@ -40,4 +40,4 @@ The `random_table` boot ID pointer remains at `0x023762f0` and points to `sysctl
 
 The app exploit payload was compiled with Android NDK r28.2, API 35, the repository's S928 stable-race flags, and the DZI1 target header. It is padded to the repository's fixed S928 stable payload size of 104,128 bytes (SHA-256 `8e6fe4235ff4d975fdbbf28f985cfd037a9defa0babbe2f7eb7663bec64f5e78`). See `artifacts/e3q-S928BXXS6DZI1/cve-2026-43499-app.so` and `src/targets/e3q-S928BXXS6DZI1/`.
 
-This is a firmware-derived experimental profile, not device-tested. The BL archive is not sufficient to build or validate an exact-release KernelSU module/daemon; no DZI1 KernelSU service binary is claimed or included. Do not select it as a complete app-feed payload until a matching daemon pair is built and the chain is tested on an SM-S928B running this exact release.
+The firmware-derived app profile and KernelSU-Next 3.4.0 pair were built for the exact DZI1 release by GitHub Actions run [#16](https://github.com/ProofPage/Root-My-Galaxy-Payloads/actions/runs/37183880240). The module build verified exact-release vermagic and the pair check verified the daemon/module version agreement. The run warned that no device-tested module was available for import comparison. This profile remains **not device-tested**; its feed display is marked `(test)`. Verify it on an SM-S928B running this exact release before treating it as a confirmed working payload.
