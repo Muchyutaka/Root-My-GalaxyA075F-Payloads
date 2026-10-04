@@ -15,7 +15,7 @@ It intentionally does not contain Android application source code.
 
 | Payload | Compatible models | Kernel version | Status |
 | --- | --- | --- | --- |
-| `pa3q-S938NKSUCDZIF` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Experimental: profile derived from supplied firmware; not device-tested |
+| `pa3q-S938NKSUCDZIF` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
 | `galaxy-s25-series-2026-06-07` | Galaxy S25, S25+, S25 Edge, and S25 Ultra regional models | `6.6.98` | Device-tested |
 | `e3q-S928USQS6DZF2` | Galaxy S24 Ultra `SM-S928U1` | `6.1.145` | Device-tested |
 | `e3q-S9280ZCS6DZF2` | Galaxy S24 Ultra China `SM-S9280` | `6.1.145` | Device-tested |
