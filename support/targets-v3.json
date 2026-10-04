@@ -369,9 +369,9 @@
         "size": 104128
       },
       "kernelsu": {
-        "url": "https://raw.githubusercontent.com/ProofPage/Root-My-Galaxy-Payloads/codex/e3q-s928b-dzi1-ksun340/kernelsu/ksud-next-e3q-S928BXXS6DZI1-kdp-v3.4.0",
+        "url": "https://raw.githubusercontent.com/ProofPage/Root-My-Galaxy-Payloads/main/kernelsu/ksud-next-e3q-S928BXXS6DZI1-kdp-v3.4.0",
         "size": 4250872,
-        "sha256": "32b17497c53e2a751d4d2dc40295faf713a26ae2f77c1c7d74b3699436bbe09b",
+        "sha256": "cd465a7eaa41ae3e3f1b76641237d38c0c057fa5686af16dba9e513ca4f4ff73",
         "version": "3.4.0"
       }
     },
