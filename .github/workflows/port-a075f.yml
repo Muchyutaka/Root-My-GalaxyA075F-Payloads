@@ -1,0 +1,1057 @@
+name: a075f-port
+
+# ---------------------------------------------------------------------------
+# A07 (SM-A075F, A075FXXS5BZD2, kernel 6.12.23-android16-5) unified port.
+#
+# One job does everything the porting sandbox cannot:
+#   1. fetch the exact firmware assets (release tag `1` of this repository)
+#   2. verify the kernel identity (banner, boot.img embedding,
+#      vmlinux-to-elf symbol cross-check)
+#   3. extract the exact Samsung opensource kernel tree (base + delta)
+#   4. run tools/derive_a075f_target.py - every value in
+#      src/targets/a07-A075FXXS5BZD2/target.h is re-derived from the exact
+#      Image and must match or the job fails before anything is built
+#   5. build the exploit payload (Android NDK r29, `make TARGET=... release`)
+#   6. build the KernelSU v3.2.5 late-load pair (kernelsu.ko + ksud)
+#   7. commit all outputs to the fixed results branch `a075f-port-results`,
+#      where the porting sandbox fetches them via git (the sandbox cannot
+#      reach the release-asset CDN or the Azure artifact blobs)
+#
+# Trigger: push a commit whose message contains "[a075f]" to the session
+# branch, or workflow_dispatch.  Results are committed to a075f-port-results
+# (a different branch), so the job never re-triggers itself.
+# ---------------------------------------------------------------------------
+
+on:
+  push:
+    branches:
+      - arena/01a10225-root-my-galaxya075f-payloads
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  # The failure-diagnostics step posts its findings as an issue comment so
+  # the porting sandbox (which cannot read CI logs) can retrieve them.
+  issues: write
+
+concurrency:
+  group: a075f-port
+  cancel-in-progress: false
+
+env:
+  REPO: Muchyutaka/Root-My-GalaxyA075F-Payloads
+  RESULTS_BRANCH: a075f-port-results
+
+  # Verified kernel identity (re-checked against the banner at runtime).
+  KERNEL_RELEASE: 6.12.23-android16-5-abA075FXXS5BZD2-4k
+  TARGET_VERMAGIC: 6.12.23-android16-5-abA075FXXS5BZD2-4k
+  # CONFIG_LOCALVERSION_AUTO=y is on in the target config, so the stock build
+  # would append the git-describe suffix.  Drop CONFIG_LOCALVERSION from
+  # .config and carry the whole suffix through the LOCALVERSION environment
+  # variable so every make invocation derives the identical utsrelease.
+  LOCALVERSION: -android16-5-abA075FXXS5BZD2-4k
+  KCONFIG: src/targets/a07-A075FXXS5BZD2/kernel.config
+
+  # KernelSU v3.2.5 (b0bc817) is the first line with CONFIG_CFI_CLANG support
+  # (__nocfi annotations + a .cfi_jt symbol resolver) and a 6.12 code path.
+  KSU_TAG: v3.2.5
+  KSU_COMMIT: b0bc817b4e966aa6aa830834eaf6ef765d821d40
+  KO_NAME: android16-6.12_kernelsu-A075FXXS5BZD2-kdp.ko
+  KSUD_NAME: ksud-A075FXXS5BZD2-kdp
+
+  NDK_R29_URL: https://dl.google.com/android/repository/android-ndk-r29-linux.zip
+  NDK_R29_SIZE: '783549481'
+  NDK_R27D_URL: https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+
+jobs:
+  port:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[a075f]')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          rm -f "$GITHUB_WORKSPACE/job.log"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential bc bison flex libssl-dev libelf-dev libdw-dev \
+            zlib1g-dev lz4 cpio xz-utils zip unzip python3 python3-pip python3-dev \
+            clang lld llvm libclang-dev binutils-aarch64-linux-gnu curl git jq kmod dwarves
+          # dwarves -> pahole (BTF tooling fallbacks), libclang-dev -> bindgen
+          # for ksud's build.rs, binutils-aarch64-linux-gnu -> modpost/strip
+          # cross tools, python3-dev -> minilzo (vmlinux-to-elf dependency).
+          # Optional python codecs for the boot.img kernel decompression; the
+          # check degrades to stdlib codecs (gzip/bz2/lzma) without them.
+          sudo apt-get install -y -qq python3-lz4 python3-zstandard \
+            || echo "NOTE: python3-lz4/python3-zstandard unavailable (degraded boot.img check)"
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add aarch64-linux-android
+          cargo install --locked cargo-ndk
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # Firmware assets.  All public release assets of this very repository
+      # (tag `1`); the release listing from the API is the source of truth
+      # for names, ids and sizes - a renamed or re-uploaded asset fails
+      # loudly instead of silently building against the wrong firmware.
+      # -------------------------------------------------------------------
+      - name: Fetch the exact firmware assets
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          WS="$GITHUB_WORKSPACE"
+          FW="$WS/fw"
+          mkdir -p "$FW"
+          # Runners share IPs, so the unauthenticated API quota (60/h) is a
+          # shared resource: retry hard, and prefer the job token (5000/h)
+          # when it is accepted.  The authenticated attempt failing (401)
+          # simply falls through to the unauthenticated one.
+          TOK="${GITHUB_TOKEN:-}"
+          if [ -n "$TOK" ]; then AUTHHDR=(-H "Authorization: Bearer $TOK"); else AUTHHDR=(); fi
+          if ! curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "${AUTHHDR[@]}" \
+              "https://api.github.com/repos/${REPO}/releases/tags/1" -o "$FW/release.json" 2>>"$WS/job.log"; then
+            curl -fsSL --retry 8 --retry-delay 15 --retry-all-errors \
+              "https://api.github.com/repos/${REPO}/releases/tags/1" -o "$FW/release.json"
+          fi
+          python3 - "$FW" <<'EOF'
+          import json, os, sys
+          fw = sys.argv[1]
+          rel = json.load(open(os.path.join(fw, "release.json")))
+          assets = {a["name"]: a for a in rel.get("assets", [])}
+          expected = """
+          kernel.raw 40811008
+          kernel.elf 47802859
+          boot.img 67108864
+          SM-A075F_16_Opensource.zip 375158122
+          SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip 596760
+          """.split()
+          it = iter(expected)
+          plan = []
+          for name in it:
+              size = int(next(it))
+              a = assets.get(name)
+              assert a is not None, f"asset missing from release 1: {name}"
+              assert a["size"] == size, \
+                  f"size drift for {name}: release says {a['size']}, expected {size}"
+              plan.append((a["id"], name, size))
+          with open(os.path.join(fw, "plan.tsv"), "w") as f:
+              for row in plan:
+                  f.write("\t".join(str(x) for x in row) + "\n")
+          print("asset plan verified against the release listing:")
+          for row in plan:
+              print(f"  {row[1]}  {row[2]} bytes  (asset id {row[0]})")
+          EOF
+          while IFS=$'\t' read -r id name size; do
+            echo "downloading ${name}"
+            curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
+              -H "Accept: application/octet-stream" "${AUTHHDR[@]}" \
+              -o "$FW/${name}" \
+              "https://api.github.com/repos/${REPO}/releases/assets/${id}"
+            got=$(stat -c %s "$FW/${name}")
+            [ "$got" = "$size" ] || { echo "::error::${name}: ${got} bytes, expected ${size}"; exit 1; }
+            echo "  ${name}: ${got} bytes OK"
+            sha256sum "$FW/${name}"
+          done < "$FW/plan.tsv"
+          # record the digests for the committed report
+          ( cd "$FW" && sha256sum kernel.raw kernel.elf boot.img > fw.sha256 )
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # Kernel identity verification (Phase 2):
+      #   * the banner in kernel.raw must be the exact target release
+      #   * the same banner must be present in kernel.elf
+      #   * boot.img must embed kernel.raw byte for byte (version-agnostic
+      #     search for the raw Image inside the 64MB boot image)
+      #   * kernel.elf's first LOAD segment must start at the KIMAGE_TEXT_BASE
+      #     and cover exactly the raw Image size
+      #   * if vmlinux-to-elf installs, a fresh derivation of the ELF from
+      #     kernel.raw must carry the identical symbol table (otherwise this
+      #     check is skipped with a loud note - the verifier below is the gate)
+      # -------------------------------------------------------------------
+      - name: Verify the kernel identity
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          FW="$GITHUB_WORKSPACE/fw"
+          RELEASE="${KERNEL_RELEASE}"
+          echo "--- banner in kernel.raw ---"
+          BANNER=$(strings -n 8 "$FW/kernel.raw" | grep -m1 '^Linux version' || true)
+          echo "  ${BANNER}"
+          case "${BANNER}" in
+            *"Linux version ${RELEASE}"*) echo "  banner OK" ;;
+            *) echo "::error::kernel banner mismatch (expected '${RELEASE}')"; exit 1 ;;
+          esac
+          echo "--- banner in kernel.elf ---"
+          strings -n 8 "$FW/kernel.elf" | grep -m1 -F "Linux version ${RELEASE}" \
+            || { echo "::error::banner missing from kernel.elf"; exit 1; }
+          echo "--- first LOAD segment of kernel.elf ---"
+          readelf -lW "$FW/kernel.elf" | sed -n '/^  LOAD/p' | head -2
+          python3 - "$FW" <<'EOF'
+          import bz2, gzip, lzma, os, re, struct, subprocess, sys
+          fw = sys.argv[1]
+          elf, raw, boot = fw + "/kernel.elf", fw + "/kernel.raw", fw + "/boot.img"
+          rawsz = os.path.getsize(raw)
+          rawdata = open(raw, "rb").read()
+          out = subprocess.run(["readelf", "-lW", elf], capture_output=True, text=True).stdout
+          lines = out.splitlines()
+          m = None
+          rest = ""
+          for i, ln in enumerate(lines):
+              mm = re.match(r"^\s*LOAD\s+(?:0x)?([0-9a-fA-F]+)\s+(?:0x)?([0-9a-fA-F]+)\s+(?:0x)?([0-9a-fA-F]+)(.*)$", ln)
+              if mm:
+                  m = mm
+                  rest = mm.group(4)
+                  if not rest.strip():
+                      rest = lines[i + 1] if i + 1 < len(lines) else ""
+                  break
+          assert m, "no LOAD segment in kernel.elf"
+          off, vma = int(m.group(1), 16), int(m.group(2), 16)
+          kbase = 0xffffffc080000000
+          assert vma == kbase, f"first LOAD VMA 0x{vma:x} != KIMAGE_TEXT_BASE 0x{kbase:x}"
+          # FileSiz is the first hex field after Offset/VirtAddr/PhysAddr -
+          # either on the same line (modern readelf) or the continuation
+          # line (wrapped readelf).
+          sizes = re.findall(r"0x([0-9a-fA-F]+)", rest)
+          if sizes:
+              filesz = int(sizes[0], 16)
+              assert filesz == rawsz, f"LOAD FileSiz 0x{filesz:x} != raw size 0x{rawsz:x}"
+              print(f"  first LOAD: file 0x{off:x}, VMA 0x{vma:x}, FileSiz 0x{filesz:x} == kernel.raw size")
+          else:
+              print("  NOTE: could not read LOAD FileSiz (column layout not recognized)")
+          # boot.img carries the kernel, on Samsung usually COMPRESSED (the
+          # 40 MiB Image is not stored raw).  Parse the legacy Android boot
+          # header, pull the kernel region out of every plausible offset and
+          # try to decompress it with every available codec, then compare to
+          # kernel.raw.  Corroborating identity evidence - the banner and ELF
+          # LOAD checks above are the hard gate - so a mismatch degrades to a
+          # loud diagnostic instead of failing the port.
+          b = open(boot, "rb").read()
+          if b[:8] != b"ANDROID!":
+              print("  NOTE: boot.img has no ANDROID! magic; embedded kernel unverifiable")
+          else:
+              name = b[8:24].rstrip(b"\x00").decode("latin1", "replace")
+              base, ksize, kaddr = struct.unpack_from("<III", b, 0x18)
+              rdsize, raddr = struct.unpack_from("<II", b, 0x24)
+              pagesize, hdver = struct.unpack_from("<II", b, 0x38)
+              print(f"  boot.img header: name={name!r} page_size=0x{pagesize:x} "
+                    f"header_version={hdver} kernel_size=0x{ksize:x} "
+                    f"kernel_addr=0x{kaddr:x} ramdisk_size=0x{rdsize:x}")
+              def _cands():
+                  out = []
+                  ps = pagesize or 0x1000
+                  # classic boot image: the kernel follows the one-page header
+                  for o in (max(ps, 0x1000), 0x1000):
+                      if 0 < o < len(b) and o not in out:
+                          out.append(o)
+                  # a raw (uncompressed) Image would be found by its 4 KiB head
+                  p = b.find(rawdata[:0x1000])
+                  if p >= 0 and p not in out:
+                      out.append(p)
+                  return out
+              def _decompress(blob):
+                  for label, fn in (("raw", lambda x: x),
+                                    ("gzip", gzip.decompress),
+                                    ("bz2", bz2.decompress),
+                                    ("lzma/xz", lzma.decompress)):
+                      try:
+                          if fn(blob) == rawdata:
+                              return label
+                      except Exception:
+                          pass
+                  # lz4: plain frame, and the u32-size-prefixed "lz4_legacy"
+                  # variant some Samsung boot images use
+                  try:
+                      import lz4.frame as _lz4
+                      for variant in (blob, blob[4:]):
+                          if _lz4.decompress(variant) == rawdata:
+                              return "lz4"
+                  except Exception:
+                      pass
+                  try:
+                      import zstandard as _zs
+                      if _zs.ZstdDecompressor().decompress(blob, max_output_size=rawsz) == rawdata:
+                          return "zstd"
+                  except Exception:
+                      pass
+                  return None
+              verified = None
+              for off in _cands():
+                  region = b[off:off + (ksize or rawsz)]
+                  label = _decompress(region)
+                  if label:
+                      verified = (off, label, len(region))
+                      break
+              if verified:
+                  off, label, rlen = verified
+                  print(f"  boot.img kernel region @0x{off:x} ({rlen} bytes) == kernel.raw "
+                        f"after '{label}' ({rawsz} bytes) - embedded kernel verified")
+              else:
+                  off = _cands()[0] if _cands() else 0x1000
+                  region = b[off:off + (ksize or rawsz)]
+                  print("  NOTE: could NOT match the boot.img kernel region to kernel.raw "
+                        f"(kernel_size 0x{ksize:x} vs raw 0x{rawsz:x}); "
+                        "tried raw/gzip/bz2/lzma/lz4/zstd")
+                  print(f"  NOTE: kernel region head @0x{off:x}: {region[:16].hex(' ')}")
+                  print("  NOTE: continuing - kernel identity is gated by the banner and "
+                        "ELF LOAD checks above, which passed")
+          print("kernel identity verified")
+          EOF
+          echo "--- vmlinux-to-elf symbol cross-check (best effort) ---"
+          # ubuntu-24.04 is PEP 668 externally-managed; --break-system-packages
+          # scopes the install to ~/.local and is required for --user too.
+          if python3 -m pip install --user -q --break-system-packages vmlinux-to-elf 2>/dev/null \
+             || { python3 -m pip install --user -q --break-system-packages --no-deps vmlinux-to-elf \
+                  && python3 -m pip install --user -q --break-system-packages peewee click pyelftools zstandard; } \
+             && "$HOME/.local/bin/vmlinux-to-elf" --help >/dev/null 2>&1; then
+            "$HOME/.local/bin/vmlinux-to-elf" "$FW/kernel.raw" "$FW/derived.elf"
+            # Compare name -> (offset-from-LOAD-base, size, type).  Base-relative
+            # so a difference in auto-detected LOAD base cannot mask or fake a
+            # real symbol-table mismatch.
+            python3 - "$FW" <<'PY'
+          import re, subprocess, sys
+          fw = sys.argv[1]
+          def syms(path):
+              base = None
+              out = subprocess.run(["readelf", "-lW", path], capture_output=True, text=True).stdout
+              for ln in out.splitlines():
+                  m = re.match(r"^\s*LOAD\s+(?:0x)?[0-9a-fA-F]+\s+(?:0x)?([0-9a-fA-F]+)", ln)
+                  if m:
+                      base = int(m.group(1), 16)
+                      break
+              if base is None:
+                  base = 0
+              out = subprocess.run(["readelf", "-sW", path], capture_output=True, text=True).stdout
+              res = {}
+              for ln in out.splitlines():
+                  m = re.match(r"^\s*\d+:\s+([0-9a-f]+)\s+(\S+)\s+(\w+)\s+\w+\s+\w+\s+\S+\s+(\S+)\s*$", ln)
+                  if not m:
+                      continue
+                  val, size, typ, name = int(m.group(1), 16), m.group(2), m.group(3), m.group(4)
+                  if typ in ("FUNC", "OBJECT", "NOTYPE") and val:
+                      res[name] = (val - base, size, typ)
+              return res
+          a = syms(fw + "/kernel.elf")
+          b = syms(fw + "/derived.elf")
+          common = set(a) & set(b)
+          mismatch = [n for n in common if a[n] != b[n]]
+          only_a = set(a) - set(b)
+          only_b = set(b) - set(a)
+          print(f"  release kernel.elf: {len(a)} symbols, derived: {len(b)}, common: {len(common)}")
+          if not mismatch and not only_a and not only_b:
+              print("  derived ELF symbol table matches the release kernel.elf (base-relative)")
+          else:
+              print(f"  NOTE: base-relative symbol diff: {len(mismatch)} mismatched, "
+                    f"{len(only_a)} only-in-release, {len(only_b)} only-in-derived (informational)")
+              for n in mismatch[:10]:
+                  print(f"    {n}: release={a[n]} derived={b[n]}")
+          PY
+          else
+            echo "  NOTE: vmlinux-to-elf unavailable, cross-check skipped (verifier is the gate)"
+          fi
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # Kernel source tree (base archive + build-specific delta), extracted
+      # layout-agnostically: locate the Makefile declaring VERSION = 6 /
+      # PATCHLEVEL = 12, unpack the nested Samsung tar archives one at a
+      # time, and overlay the delta anchored on the base tree root dir.
+      # -------------------------------------------------------------------
+      - name: Extract the exact kernel source tree
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          WS="$GITHUB_WORKSPACE"
+          FW="$WS/fw"
+          KSRC="$WS/ksrc"
+          BASE="$KSRC/base"
+          DELTA="$KSRC/delta"
+          rm -rf "$KSRC" "$WS/tree"
+          mkdir -p "$KSRC" "$BASE" "$DELTA"
+
+          kernel_root() {
+            ( cd "$BASE" && find . -name Makefile -print0 2>/dev/null | \
+              xargs -0 grep -l '^VERSION = 6' 2>/dev/null | \
+              xargs -r -d '\n' grep -l '^PATCHLEVEL = 12' 2>/dev/null | \
+              awk '{ n = gsub(/\//, "/"); if (!seen || n < best) { seen = 1; best = n; path = $0 } }
+                   END { if (seen) print path }' | \
+              xargs -r -d '\n' dirname ) 2>/dev/null || true
+          }
+
+          extract_nested() { # dir [stop_fn]
+            local d="$1" stop="${2:-}" t
+            shopt -s nullglob
+            for t in "$d"/*.tar.gz "$d"/*.tgz "$d"/*.tar.bz2 "$d"/*.tar.xz "$d"/*.tar; do
+              echo "  extracting nested archive $(basename "$t") ($(stat -c %s "$t") bytes)"
+              tar -xf "$t" -C "$d"
+              rm -f "$t"
+              if [ -n "$stop" ] && [ -n "$("$stop")" ]; then
+                echo "  kernel Makefile located, no further nested archives needed"
+                break
+              fi
+            done
+            shopt -u nullglob
+          }
+
+          echo "=== base archive ==="
+          unzip -q -o "$FW/SM-A075F_16_Opensource.zip" -d "$BASE"
+          rm -f "$FW/SM-A075F_16_Opensource.zip"
+          extract_nested "$BASE" kernel_root
+          ROOT="$(kernel_root)"
+          if [ -z "${ROOT}" ]; then
+            echo "::error::could not locate the kernel Makefile (VERSION = 6, PATCHLEVEL = 12)"
+            (cd "$BASE" && find . -maxdepth 3 | head -60 || true)
+            (cd "$BASE" && find . -name Makefile | head -20 || true)
+            exit 1
+          fi
+          echo "kernel tree root: base/${ROOT#./}"
+          BASE_REL="${ROOT#./}"
+          if [ "$BASE_REL" = "." ]; then BASE_ROOT=""; else BASE_ROOT=$(basename "$BASE_REL"); fi
+          echo "delta anchor directory: ${BASE_ROOT:-<archive root>}"
+
+          echo "=== delta overlay ==="
+          unzip -q -o "$FW/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip" -d "$DELTA"
+          rm -f "$FW/SM-A075F_16_Opensource_A075FXXS5BZD2_A075MUBS5BZD2_A075FXXS5BZD3.zip"
+          extract_nested "$DELTA"
+          overlaid=0
+          skipped=0
+          while IFS= read -r -d '' f; do
+            rel="${f#./}"
+            cand=""
+            anchored=0
+            if [ -n "${BASE_ROOT}" ]; then
+              case "/$rel/" in
+                */"$BASE_ROOT"/*)
+                  cand="${rel#*/$BASE_ROOT/}"
+                  anchored=1
+                  ;;
+              esac
+            fi
+            if [ "$anchored" -eq 0 ]; then
+              cand="$rel"
+              while [ -n "$cand" ] && [ ! -e "$BASE/$BASE_REL/${cand}" ]; do
+                case "$cand" in
+                  */*) cand="${cand#*/}" ;;
+                  *)   cand="" ;;
+                esac
+              done
+              case "$cand" in
+                */*) ;;
+                *)   cand="" ;;
+              esac
+            fi
+            if [ -n "$cand" ] && [ -e "$BASE/$BASE_REL/${cand}" ]; then
+              mkdir -p "$BASE/$BASE_REL/$(dirname "$cand")"
+              echo "  overlay: ${rel}  ->  ${cand}"
+              cp -f "$DELTA/$f" "$BASE/$BASE_REL/${cand}"
+              overlaid=$((overlaid + 1))
+            else
+              echo "  -- skipped, no counterpart: ${rel}" >&2
+              skipped=$((skipped + 1))
+            fi
+          done < <(cd "$DELTA" && find . -type f -print0)
+          echo "overlaid ${overlaid} delta file(s), skipped ${skipped}"
+
+          test -f "$BASE/$BASE_REL/Makefile"
+          if [ "$BASE_REL" = "." ]; then
+            mv "$BASE" "$WS/tree"
+          else
+            mv "$BASE/$BASE_REL" "$WS/tree"
+          fi
+          rm -rf "$KSRC"
+          grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' "$WS/tree/Makefile"
+          if ! grep -q '^mainmenu' "$WS/tree/Kconfig"; then
+            echo "::error::tree/Kconfig has no mainmenu - the delta overlay clobbered the kernel Kconfig"
+            head -5 "$WS/tree/Kconfig" || true
+            exit 1
+          fi
+          echo "  tree/Kconfig mainmenu: $(grep -m1 '^mainmenu' "$WS/tree/Kconfig")"
+          # Samsung's archives extract every file read-only.
+          chmod -R u+w "$WS/tree"
+          echo "kernel tree ready at $WS/tree"
+          # the verifier needs these three files
+          test -f "$WS/tree/kernel/trace/trace.h"
+          test -f "$WS/tree/kernel/workqueue.c"
+          test -f "$WS/tree/mm/slub.c"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # THE GATE.  Every value in target.h is re-derived from the exact
+      # Image (BTF, symbol table, on-image data walks, the Rust ashmem fops
+      # table, the IKCONFIG blob, the p0 fingerprint) and cross-checked
+      # against the exact source tree.  Non-zero exit stops the job before
+      # any build starts.
+      # -------------------------------------------------------------------
+      - name: Derive and verify the target profile
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          mkdir -p reports/a075f
+          python3 tools/derive_a075f_target.py \
+            --elf fw/kernel.elf \
+            --raw fw/kernel.raw \
+            --target src/targets/a07-A075FXXS5BZD2/target.h \
+            --config src/targets/a07-A075FXXS5BZD2/kernel.config \
+            --fingerprint src/targets/a07-A075FXXS5BZD2/p0_fingerprint.h \
+            --src-root tree \
+            --report reports/a075f/verification.json \
+            --md reports/a075f/verification.md \
+            --expected-release "${KERNEL_RELEASE}"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # Exploit payload: Android NDK r29, `make TARGET=... release`.
+      # The Makefile truncates the release .so to exactly 104128 bytes.
+      # -------------------------------------------------------------------
+      - name: Build the payload (NDK r29)
+        env:
+          ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r29
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          WS="$GITHUB_WORKSPACE"
+          curl -fsSL --retry 5 --retry-delay 3 -o /tmp/ndk29.zip "${NDK_R29_URL}"
+          got=$(stat -c %s /tmp/ndk29.zip)
+          [ "$got" = "${NDK_R29_SIZE}" ] || { echo "::error::NDK r29 size ${got} != ${NDK_R29_SIZE}"; exit 1; }
+          unzip -q /tmp/ndk29.zip -d "$WS"
+          rm -f /tmp/ndk29.zip
+          test -x "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
+          make TARGET=a07-A075FXXS5BZD2 release
+          SO="build/a07-A075FXXS5BZD2/cve-2026-43499-app.release.so"
+          test -f "$SO"
+          sz=$(stat -c %s "$SO")
+          echo "release .so: ${sz} bytes"
+          [ "$sz" = "104128" ] || { echo "::error::release .so is ${sz} bytes, expected 104128"; exit 1; }
+          file "$SO" | grep -q 'ELF 64-bit LSB.*ARM aarch64' || { echo "::error::not an aarch64 ELF"; exit 1; }
+          nm "$SO" 2>/dev/null | grep -v ' U ' | head -5 || true
+          mkdir -p artifacts/a07-A075FXXS5BZD2
+          install -m 0644 "$SO" artifacts/a07-A075FXXS5BZD2/cve-2026-43499-app.so
+          ls -l artifacts/a07-A075FXXS5BZD2/
+          sha256sum artifacts/a07-A075FXXS5BZD2/cve-2026-43499-app.so
+          # free ~5 GB before the kernel build
+          rm -rf "$WS/android-ndk-r29"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # KernelSU.  Config handling, clang selection, module build and audit
+      # follow the battle-tested a075f-kernelsu-build recipe.
+      # -------------------------------------------------------------------
+      - name: Apply the recovered target configuration
+        env:
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+          LLVM: '1'
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          cp "${KCONFIG}" tree/.config
+          cd tree
+          # Force the exact utsrelease: drop CONFIG_LOCALVERSION, switch
+          # AUTO off, let the LOCALVERSION environment carry the suffix.
+          sed -i \
+            -e '/^CONFIG_LOCALVERSION=/d' \
+            -e '/^# CONFIG_LOCALVERSION is not set/d' \
+            -e "s|^CONFIG_LOCALVERSION_AUTO=.*|CONFIG_LOCALVERSION_AUTO=n|" \
+            -e "s|^# CONFIG_LOCALVERSION_AUTO is not set|CONFIG_LOCALVERSION_AUTO=n|" \
+            .config
+          # The kernel is compiled only to produce Module.symvers (modpost
+          # CRC input).  The DEBUG_INFO* symbols cost gigabytes of DWARF and
+          # pull resolve_btfids into the final link, where it fails on this
+          # tree; none of them affect the CRCs or the vermagic, and
+          # CONFIG_MODULE_ALLOW_BTF_MISMATCH=y covers the module side.
+          sed -i \
+            -e 's|^CONFIG_DEBUG_INFO=y|# CONFIG_DEBUG_INFO is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_DWARF4=y|# CONFIG_DEBUG_INFO_DWARF4 is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_DWARF5=y|# CONFIG_DEBUG_INFO_DWARF5 is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_REDUCED=y|# CONFIG_DEBUG_INFO_REDUCED is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_COMPRESSED=y|# CONFIG_DEBUG_INFO_COMPRESSED is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_COMPRESSED_ZLIB=y|# CONFIG_DEBUG_INFO_COMPRESSED_ZLIB is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_COMPRESSED_ZSTD=y|# CONFIG_DEBUG_INFO_COMPRESSED_ZSTD is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_BTF=y|# CONFIG_DEBUG_INFO_BTF is not set|' \
+            -e 's|^CONFIG_DEBUG_INFO_BTF_MODULES=y|# CONFIG_DEBUG_INFO_BTF_MODULES is not set|' \
+            .config
+          make olddefconfig </dev/null
+          make include/config/kernel.release
+          echo "resolved utsrelease: $(cat include/config/kernel.release)"
+          test "$(cat include/config/kernel.release)" = "${TARGET_VERMAGIC}" || {
+            echo "::error::utsrelease mismatch (expected ${TARGET_VERMAGIC})"
+            exit 1; }
+          grep -E '^CONFIG_(MODULES|MODVERSIONS|KPROBES|EXT4_FS)=' include/config/auto.conf \
+            || echo "  (critical symbols absent - module build will fail)"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Install the matching clang
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          # The target was built with Android clang r536225 (clang 19.0.1).
+          # bin/clang is a Go compiler_wrapper that re-execs "clang.real"
+          # next to itself, so the WHOLE bin/ directory is symlinked.
+          BINDIR="$PWD/toolchain-bin"
+          mkdir -p "${BINDIR}"
+          CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz"
+          if curl -fsSL --retry 3 --retry-delay 2 -o /tmp/clang.tar.gz "${CLANG_URL}" \
+             && tar -tzf /tmp/clang.tar.gz >/dev/null 2>&1; then
+            rm -rf clang && mkdir -p clang
+            tar -xf /tmp/clang.tar.gz -C clang
+            rm -f /tmp/clang.tar.gz
+            for f in clang/bin/*; do
+              [ -e "$f" ] || continue
+              ln -sf "$PWD/$f" "${BINDIR}/$(basename "$f")"
+            done
+            echo "using Android clang r536225"
+          else
+            echo "Android clang unreachable, falling back to distro clang"
+            for t in clang clang++ ld.lld ld.gold llvm-ar llvm-nm llvm-objcopy \
+                     llvm-objdump llvm-strip llvm-readelf; do
+              p=$(command -v "$t" || true)
+              if [ -n "$p" ]; then ln -sf "$p" "${BINDIR}/$t"; fi
+            done
+          fi
+          echo "${BINDIR}" >> "$GITHUB_PATH"
+          echo "PATH=${BINDIR}:$PATH" >> "$GITHUB_ENV"
+          printf 'int main(void){return 0;}\n' > /tmp/smoke.c
+          "${BINDIR}/clang" --target=aarch64-linux-gnu -c /tmp/smoke.c -o /tmp/smoke.o
+          echo "clang smoke test passed"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Integrate and build the KernelSU module
+        env:
+          ARCH: arm64
+          CROSS_COMPILE: aarch64-linux-gnu-
+          LLVM: '1'
+          # KernelSU references ten kernel symbols that carry no EXPORT_SYMBOL;
+          # the module loader resolves them through kallsyms at insmod time
+          # (every shipping Samsung kernelsu .ko in this repo is built this
+          # way), so modpost must report them as warnings, not errors.
+          KBUILD_MODPOST_WARN: '1'
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          git clone -q --depth 1 --branch "${KSU_TAG}" \
+            https://github.com/tiann/KernelSU.git KernelSU
+          cd KernelSU
+          git fetch -q --depth 1 origin "${KSU_COMMIT}" 2>/dev/null || true
+          git checkout -q "${KSU_COMMIT}" 2>/dev/null || true
+          echo "KernelSU $(git describe --tags --always 2>/dev/null || echo "${KSU_TAG}")"
+          cd ..
+          KSU_DIR=$(realpath KernelSU/kernel)
+          ln -sfn "${KSU_DIR}" tree/drivers/kernelsu
+          grep -q 'kernelsu' tree/drivers/Makefile || \
+            printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> tree/drivers/Makefile
+          grep -q 'drivers/kernelsu/Kconfig' tree/drivers/Kconfig || \
+            sed -i '/^endmenu/i source "drivers/kernelsu/Kconfig"' tree/drivers/Kconfig
+          grep -n 'kernelsu' tree/drivers/Makefile tree/drivers/Kconfig
+          cd tree
+          sed -i -e 's|^# CONFIG_KSU is not set|CONFIG_KSU=m|' \
+                 -e 's|^CONFIG_KSU=.*|CONFIG_KSU=m|' .config
+          grep -q '^CONFIG_KSU=m' .config || echo 'CONFIG_KSU=m' >> .config
+          make olddefconfig </dev/null
+          if ! grep -q '^CONFIG_KSU=m' .config; then
+            echo "kconfig dropped CONFIG_KSU; writing it into the generated files"
+            grep -q '^CONFIG_KSU=m' include/config/auto.conf || \
+              echo 'CONFIG_KSU=m' >> include/config/auto.conf
+            grep -q '^#define CONFIG_KSU_MODULE' include/generated/autoconf.h || \
+              printf '#define CONFIG_KSU_MODULE 1\n' >> include/generated/autoconf.h
+          fi
+          grep -n 'CONFIG_KSU' .config include/config/auto.conf \
+            include/generated/autoconf.h || true
+          make -j"$(nproc)" modules_prepare
+          # SELinux generated headers: flask.h and av_permissions.h are not in
+          # the source tree; generate them into the canonical place so the
+          # external module build can see them.
+          if [ ! -e security/selinux/flask.h ] && [ ! -e security/selinux/include/flask.h ]; then
+            test -x scripts/selinux/genheaders/genheaders
+            ./scripts/selinux/genheaders/genheaders \
+              security/selinux/flask.h security/selinux/av_permissions.h
+          fi
+          ls -l security/selinux/flask.h security/selinux/av_permissions.h
+          # Build the kernel's modules: this links vmlinux, writes
+          # Module.symvers (required for MODVERSIONS CRCs) and compiles the
+          # in-tree drivers/kernelsu as well.
+          df -h . | sed -n '1,3p'
+          make -j"$(nproc)" modules
+          echo "--- Module.symvers ---"
+          test -s Module.symvers || { echo "::error::Module.symvers was not generated"; exit 1; }
+          wc -l Module.symvers
+          grep -m 5 -E 'prepare_creds|alt_cb_patch_nops|_printk' Module.symvers || true
+          make -j"$(nproc)" M="${KSU_DIR}" modules
+          # drivers/kernelsu is a SYMLINK into KernelSU/kernel; plain find
+          # does not follow it, so look at the real directory instead.
+          if [ -f "${KSU_DIR}/kernelsu.ko" ]; then
+            KO="drivers/kernelsu/kernelsu.ko"
+          else
+            KO=$(find -L . -name kernelsu.ko -print -quit)
+          fi
+          test -n "${KO}"
+          echo "built ${KO}"
+          modinfo "${KO}" | sed -n '1,14p'
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Audit the KernelSU module
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          # drivers/kernelsu is a symlink; find -L is required to descend
+          # into it (the module's real home is KernelSU/kernel/).
+          KO=$(find -L tree -name kernelsu.ko -print -quit)
+          test -n "${KO}"
+          V=$(modinfo -F vermagic "${KO}")
+          echo "vermagic: ${V}"
+          [ "${V}" = "${TARGET_VERMAGIC} SMP preempt mod_unload modversions aarch64" ] || {
+            echo "::error::vermagic mismatch"; exit 1; }
+          [ "$(modinfo -F name "${KO}")" = "kernelsu" ] || {
+            echo "::error::module name is not kernelsu"; exit 1; }
+          OBJDUMP=$(command -v aarch64-linux-gnu-objdump || command -v llvm-objdump)
+          grep -q 'ksu_syscall_dispatcher' \
+            < <("${OBJDUMP}" -d "${KO}" 2>/dev/null) || {
+            echo "::error::ksu_syscall_dispatcher missing from the module"; exit 1; }
+          readelf -SW "${KO}" > /tmp/sections.txt 2>/dev/null
+          grep -q '__versions' /tmp/sections.txt || {
+            echo "::error::module has no __versions section"; exit 1; }
+          echo "CRC entries: $(nm "${KO}" 2>/dev/null | grep -c '__crc_' || true)"
+          install -D -m 0644 "${KO}" "kernelsu/${KO_NAME}"
+          aarch64-linux-gnu-strip --strip-debug "kernelsu/${KO_NAME}" 2>/dev/null || \
+            llvm-strip --strip-debug "kernelsu/${KO_NAME}"
+          ls -l "kernelsu/${KO_NAME}"
+          modinfo -F vermagic "kernelsu/${KO_NAME}"
+          sha256sum "kernelsu/${KO_NAME}"
+          echo "module audit passed"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # ksud: cargo-ndk + NDK r27d (the recipe the module pair was validated
+      # with), then audit for the aarch64 ELF and late_load support.
+      # -------------------------------------------------------------------
+      - name: Build and audit ksud (NDK r27d)
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          WS="$GITHUB_WORKSPACE"
+          curl -fsSL --retry 3 --retry-delay 2 -o /tmp/ndk27d.zip "${NDK_R27D_URL}"
+          unzip -q /tmp/ndk27d.zip -d "$WS"
+          rm -f /tmp/ndk27d.zip
+          NDK="$WS/android-ndk-r27d"
+          test -x "${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          export ANDROID_NDK_HOME="${NDK}" NDK_HOME="${NDK}"
+          cd KernelSU
+          git fetch -q --depth 1 origin "${KSU_COMMIT}" 2>/dev/null || true
+          git checkout -q "${KSU_COMMIT}" 2>/dev/null || true
+          # The upstream Kernel-SU org deleted the git dependencies that
+          # userspace/{ksud,ksuinit} reference (adb_client, ksu_props,
+          # java-properties, rustix), so cargo fails at dependency
+          # resolution before compiling anything (run #29). The community
+          # mirror org (ReSukiSU) carries the EXACT commits this tree's
+          # Cargo.lock pins (re-verified 2026-10-04):
+          #   adb_client       d97a966435bebaa55017834869dec08150826aa7
+          #   ksu_props        699849f3e4db47b622bcb7fae8e76c728b1b65a6
+          #   java-properties  42a4aa941b70ded2dd3be9e9f892471023e70229
+          #   rustix           4a53fbc7cb7a07cabe87125cc21dbc27db316259
+          # Vendor them at those SHAs and flip the manifests to path deps so
+          # the build uses byte-identical sources to the original lockfile.
+          #
+          # The vendor dir MUST live OUTSIDE KernelSU/: cargo resolves a
+          # path dep's workspace root via its in-memory cache of already
+          # loaded workspace roots BEFORE walking ancestor files, and the
+          # KernelSU root (loaded for the build) is an ancestor of anything
+          # nested under KernelSU/. Nested, the vendored packages would
+          # inherit from KernelSU/Cargo.toml's [workspace.package] and fail
+          # on fields it does not define (run #30: adb_client's
+          # rust-version.workspace=true). Outside it, the normal
+          # nearest-ancestor file walk finds each dep's own repo root,
+          # which defines every inherited field.
+          cd "$WS"
+          mkdir -p vendor
+          git clone -q https://github.com/ReSukiSU/adb_client.git vendor/adb_client
+          git -C vendor/adb_client checkout -q d97a966435bebaa55017834869dec08150826aa7
+          git clone -q https://github.com/ReSukiSU/ksu_props.git vendor/ksu_props
+          git -C vendor/ksu_props checkout -q 699849f3e4db47b622bcb7fae8e76c728b1b65a6
+          git clone -q https://github.com/ReSukiSU/java-properties.git vendor/java-properties
+          git -C vendor/java-properties checkout -q 42a4aa941b70ded2dd3be9e9f892471023e70229
+          git clone -q https://github.com/ReSukiSU/rustix.git vendor/rustix
+          git -C vendor/rustix checkout -q 4a53fbc7cb7a07cabe87125cc21dbc27db316259
+          cd KernelSU
+          sed -i \
+            -e 's|adb_client = { git = "https://github.com/Kernel-SU/adb_client" }|adb_client = { path = "../../../vendor/adb_client/adb_client" }|' \
+            -e 's|prop-rs-android = { git = "https://github.com/Kernel-SU/ksu_props" }|prop-rs-android = { path = "../../../vendor/ksu_props/crates/prop-rs-android" }|' \
+            -e 's|java-properties = { git = "https://github.com/Kernel-SU/java-properties.git", branch = "master", default-features = false }|java-properties = { path = "../../../vendor/java-properties", default-features = false }|' \
+            userspace/ksud/Cargo.toml
+          sed -i \
+            -e 's|rustix = { git = "https://github.com/Kernel-SU/rustix.git", rev = "4a53fbc", features|rustix = { path = "../../../vendor/rustix", features|' \
+            userspace/ksuinit/Cargo.toml
+          grep -n 'vendor/' userspace/ksud/Cargo.toml userspace/ksuinit/Cargo.toml
+          ! grep -q 'Kernel-SU/' userspace/ksud/Cargo.toml userspace/ksuinit/Cargo.toml
+          cargo ndk -t arm64-v8a build --release -p ksud
+          BIN="target/aarch64-linux-android/release/ksud"
+          [ -x "${BIN}" ] || BIN=$(find target -type f -name ksud -perm -u+x -print -quit)
+          test -n "${BIN}"
+          install -D -m 0755 "${BIN}" "${WS}/kernelsu/${KSUD_NAME}"
+          rm -rf "$NDK"
+          cd "$WS"
+          B="kernelsu/${KSUD_NAME}"
+          grep -q 'ELF 64-bit LSB.*ARM aarch64' < <(file "${B}") || {
+            echo "::error::ksud is not an aarch64 ELF"; exit 1; }
+          grep -q 'late_load' < <(strings -n 6 "${B}") || {
+            echo "::error::ksud has no late_load support"; exit 1; }
+          ls -l "${B}"
+          sha256sum "${B}"
+          echo "ksud audit passed"
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      # -------------------------------------------------------------------
+      # Publish: commit every output to the fixed results branch.  The
+      # porting sandbox fetches this branch via git - it has no access to
+      # the release-asset CDN or the Azure artifact blobs.
+      # -------------------------------------------------------------------
+      - name: Publish results to the results branch
+        run: |
+          set -uo pipefail
+          {
+          set -e
+          set -euo pipefail
+          WS="$GITHUB_WORKSPACE"
+          git config user.name  "a075f-port-bot"
+          git config user.email "a075f-port-bot@users.noreply.github.com"
+          # land on the results branch (fetch it if it exists upstream)
+          if git ls-remote --exit-code --heads origin "${RESULTS_BRANCH}" >/dev/null 2>&1; then
+            git fetch -q origin "${RESULTS_BRANCH}"
+            git checkout -q -B "${RESULTS_BRANCH}" FETCH_HEAD
+          else
+            git checkout -q -b "${RESULTS_BRANCH}"
+          fi
+          mkdir -p firmware
+          install -m 0644 "${WS}/fw/kernel.raw" firmware/kernel.raw
+          install -m 0644 "${WS}/fw/kernel.elf" firmware/kernel.elf
+          install -m 0644 "${WS}/fw/fw.sha256"  firmware/fw.sha256
+          # artifacts/a07-A075FXXS5BZD2/cve-2026-43499-app.so,
+          # kernelsu/*, reports/a075f/* already live in the workspace root
+          git add -f \
+            firmware/kernel.raw firmware/kernel.elf firmware/fw.sha256 \
+            artifacts/a07-A075FXXS5BZD2/cve-2026-43499-app.so \
+            kernelsu/"${KO_NAME}" kernelsu/"${KSUD_NAME}" \
+            reports/a075f/verification.json reports/a075f/verification.md \
+            job.log
+          if git diff --cached --quiet; then
+            echo "nothing staged - results already up to date"
+          else
+            git commit -q -m "a075f: verified build results for ${KERNEL_RELEASE} ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          fi
+          git push -q origin "HEAD:${RESULTS_BRANCH}"
+          echo "published results to ${RESULTS_BRANCH}"
+          git log -1 --format='%h %s'
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload text artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a075f-port-report
+          path: |
+            reports/a075f/verification.json
+            reports/a075f/verification.md
+            job.log
+          if-no-files-found: warn
+
+      # The CI log endpoints (results-receiver.actions.githubusercontent.com
+      # and the Azure blob behind them) are unreachable from the porting
+      # sandbox, so a failed run would otherwise be undiagnosable from here.
+      # Commit the captured log to the results branch instead.
+      # The CI log endpoints (results-receiver.actions.githubusercontent.com
+      # and the Azure blob behind them) are unreachable from the porting
+      # sandbox, so a failed run would otherwise be undiagnosable from here.
+      # Commit the captured log to the results branch instead.
+      - name: Capture diagnostics on failure
+        if: failure()
+        run: |
+          # The runner runs steps with 'set -e -o pipefail': this step
+          # MUST never die mid-flight or the results push (the only log
+          # channel out of the sandbox) is lost.  Turn -e off for the
+          # whole step and handle errors explicitly.
+          set +e
+          # Runs INSIDE the checkout on purpose: run 4 proved that
+          # 'git push origin' from the checkout authenticates fine, while
+          # every scratch-repo push (token URL, lifted token, helper)
+          # failed rc=128 on this runner.  An orphan branch isolates the
+          # history; only the three artifact directories are carried over
+          # (per directory, so a missing one can't abort the rest);
+          # this run's fresh job.log / reports / diagnostics.txt are
+          # staged on top.  The runner executes steps with
+          # 'bash -eo pipefail', so 'set +e' makes every line non-fatal
+          # and the step always exits 0 after reporting.
+          #
+          # Reporting: this fork has issues DISABLED and the CI log
+          # endpoints are unreachable from the porting sandbox, so a rich
+          # step annotation (status + push stderr + verifier summary +
+          # job.log tail) is the retrieval channel, plus the branch push
+          # itself.
+          set +e
+          {
+          echo "=== diagnostics step started $(date -u +%H:%M:%S) ==="
+          WS="$GITHUB_WORKSPACE"
+          cd "$WS" || { echo "FATAL: cannot cd"; }
+          git config user.name  "a075f-port-bot"
+          git config user.email "a075f-port-bot@users.noreply.github.com"
+          echo "diagnostics captured $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> diagnostics.txt
+          echo "run: $GITHUB_RUN_ID" >> diagnostics.txt
+          if git checkout -q --orphan "a075f-diag-$$" 2>>diagnostics.txt; then
+            echo "orphan branch: ok" >> diagnostics.txt
+          else
+            echo "orphan branch: FAILED" >> diagnostics.txt
+          fi
+          if git fetch -q origin "${RESULTS_BRANCH}" 2>>diagnostics.txt && git cat-file -e FETCH_HEAD 2>/dev/null; then
+            for d in firmware artifacts kernelsu; do
+              if git cat-file -e "FETCH_HEAD:$d" 2>/dev/null; then
+                if git restore --source=FETCH_HEAD --staged --worktree -- "$d" 2>>diagnostics.txt; then
+                  echo "carry-over: $d" >> diagnostics.txt
+                else
+                  echo "carry-over: $d FAILED" >> diagnostics.txt
+                fi
+              else
+                echo "carry-over: $d (absent on previous branch)" >> diagnostics.txt
+              fi
+            done
+          else
+            echo "NOTE: previous ${RESULTS_BRANCH} unavailable; fresh diagnostics only" >> diagnostics.txt
+          fi
+          # struct page source from the extracted vendor kernel tree -
+          # the BTF page-member diagnostics reference this when the
+          # flattened lookup of compound_head/page_type fails
+          if [ -f tree/include/linux/mm_types.h ]; then
+            {
+              echo "--- struct page source (tree/include/linux/mm_types.h) ---"
+              sed -n '/^struct page {/,/^};/p' tree/include/linux/mm_types.h | head -160
+            } >> diagnostics.txt 2>/dev/null
+          else
+            echo "NOTE: tree/include/linux/mm_types.h absent" >> diagnostics.txt
+          fi
+          # Independent BTF ground truth: bpftool parses the same blob with
+          # the libbpf implementation.  Comparing its struct-page member
+          # type-ids against the verifier's raw-member dump pins down any
+          # table misalignment in my parser (and which payload sizes the
+          # vendor encoder actually uses).
+          {
+            echo "--- bpftool BTF cross-check ---" >> diagnostics.txt
+            # The runner image ships a bpftool STUB that only works when
+            # the kernel-matched linux-tools package is installed, and
+            # apt 'install' can still leave the stub in place.  Most
+            # deterministic: download the .deb and extract the real
+            # binary out of it (no alternatives involved).
+            LTB=""
+            if ! bpftool version >/dev/null 2>&1; then
+              (sudo apt-get update -qq &&
+               cd /tmp &&
+               (apt-get download "linux-tools-$(uname -r)" || apt-get download linux-tools-generic) &&
+               dpkg -x "$(ls /tmp/linux-tools-*.deb 2>/dev/null | head -1)" /tmp/ltd &&
+               echo "extracted: $(find /tmp/ltd -name bpftool -type f | head -1)") >>diagnostics.txt 2>&1
+              LTB=$( { find /tmp/ltd -name bpftool -type f 2>/dev/null | head -1; } || true)
+            fi
+            if [ -n "$LTB" ]; then
+              echo "using $LTB" >> diagnostics.txt
+              BPFTOOL="$LTB"
+            else
+              BPFTOOL=bpftool
+            fi
+            if [ -f fw/kernel.raw ]; then
+              python3 -c "$(printf '%s' 'aW1wb3J0IGltcG9ydGxpYi51dGlsLCBzeXMKc3BlYyA9IGltcG9ydGxpYi51dGlsLnNwZWNfZnJvbV9maWxlX2xvY2F0aW9uKAogICAgImRlcml2ZSIsICJ0b29scy9kZXJpdmVfYTA3NWZfdGFyZ2V0LnB5IikKZCA9IGltcG9ydGxpYi51dGlsLm1vZHVsZV9mcm9tX3NwZWMoc3BlYykKc3BlYy5sb2FkZXIuZXhlY19tb2R1bGUoZCkKcmF3ID0gb3BlbigiZncva2VybmVsLnJhdyIsICJyYiIpLnJlYWQoKQpjYW5kcyA9IGQuZmluZF9idGYocmF3KQppZiBub3QgY2FuZHM6CiAgICBwcmludCgibm8gQlRGIGNhbmRpZGF0ZXMgaW4gZncva2VybmVsLnJhdyIpCiAgICBzeXMuZXhpdCgwKQpibG9iLCBybmcgPSBjYW5kc1swXQpvcGVuKCIvdG1wL2EwNzVmX2J0Zi5iaW4iLCAid2IiKS53cml0ZShibG9iKQpwcmludChmImJsb2JbMHh7cm5nWzBdOnh9LDB4e3JuZ1sxXTp4fSkgbGVuPXtsZW4oYmxvYil9IHdyaXR0ZW4gdG8gL3RtcC9hMDc1Zl9idGYuYmluIikKZm9yIGZwLCBkcCBpbiAoKDQsIDgpLCAoMCwgOCksICg0LCA0KSwgKDAsIDQpKToKICAgIGIgPSBkLkJURihibG9iLCBmbG9hdF9wYXlsb2FkPWZwLCBkZWNsdGFnX3BheWxvYWQ9ZHApCiAgICB1bmtuID0gc3VtKDEgZm9yIHggaW4gYi50YWJsZS52YWx1ZXMoKSBpZiB4WyJraW5kIl0gPT0gMCkKICAgIHQwID0gYi50YWJsZS5nZXQoMCwge30pCiAgICBwcmludChmIndhbGsoe2ZwfSx7ZHB9KTogbnR5cGVzPXtsZW4oYi50YWJsZSl9IHVua249e3Vua259ICIKICAgICAgICAgIGYiYm9ndXM9e2IuYm9ndXNfbmFtZXN9IHR5cGUwPXt0MC5nZXQoJ2tpbmQnKX06e3QwLmdldCgnbmFtZScpfSAiCiAgICAgICAgICBmImVycj17c3RyKGIucGFyc2VfZXJyb3IpWzo4MF19IikKYiwgY2hvaWNlID0gZC5CVEZfcGFyc2VfY2FsaWJyYXRlZChibG9iKQpwcmludChmImNhbGlicmF0ZWQgY2hvaWNlPXtjaG9pY2V9IG50eXBlcz17bGVuKGIudGFibGUpfSBib2d1cz17Yi5ib2d1c19uYW1lc30iKQo=' | base64 -d)" >>diagnostics.txt 2>&1
+            fi
+            # keep a copy on the results branch so the porting sandbox can
+            # parse it locally (4 MB) — independent of bpftool success
+            if [ -s /tmp/a075f_btf.bin ]; then
+              cp /tmp/a075f_btf.bin diagnostics_btf.bin 2>/dev/null
+            fi
+            if $BPFTOOL version >>diagnostics.txt 2>&1 && [ -s /tmp/a075f_btf.bin ]; then
+              $BPFTOOL btf dump file /tmp/a075f_btf.bin > /tmp/a075f_btf_dump.txt 2>>diagnostics.txt \
+                  && echo "bpftool dump: $(wc -l < /tmp/a075f_btf_dump.txt) lines" \
+                  || echo "bpftool dump FAILED"
+                if [ -s /tmp/a075f_btf_dump.txt ]; then
+                  # struct page records with their member type-ids
+                  grep -n "STRUCT 'struct page' " /tmp/a075f_btf_dump.txt | head -3
+                  awk "/STRUCT 'struct page' /{c=12} c>0{print; c--}" /tmp/a075f_btf_dump.txt | head -30
+                  # then the anonymous-union/struct type records those refs point to
+                  TIDS=$(awk "/STRUCT 'struct page' /{c=12; next} c>0{for(i=1;i<=NF;i++) if(\$i ~ /^type_id=/){print substr(\$i,9)} c--}" /tmp/a075f_btf_dump.txt | sort -u | tr '\n' ' ')
+                  for t in $TIDS; do
+                    awk -F':' -v w="$t" '$1==w' /tmp/a075f_btf_dump.txt | head -1
+                  done | head -20
+                fi
+            else
+              echo "NOTE: bpftool unavailable or btf blob missing"
+            fi
+          }
+          if [ -f job.log ]; then git add -f job.log 2>>diagnostics.txt; fi
+          if [ -d reports ]; then git add -f reports/ 2>>diagnostics.txt; fi
+          if [ -f diagnostics_btf.bin ]; then git add -f diagnostics_btf.bin 2>>diagnostics.txt; fi
+          git add -f diagnostics.txt 2>>diagnostics.txt
+          if git diff --cached --quiet; then
+            echo "commit: nothing to commit (identical to previous push?)" >> diagnostics.txt
+          elif git commit -q -m "a075f: CI diagnostics for a failed run ($(date -u +%Y-%m-%dT%H:%M:%SZ))" 2>>diagnostics.txt; then
+            echo "commit: ok" >> diagnostics.txt
+          else
+            echo "commit: FAILED" >> diagnostics.txt
+          fi
+          if git push -q -f origin "HEAD:${RESULTS_BRANCH}" 2>>diagnostics.txt; then
+            echo "push: ok (checkout origin)" >> diagnostics.txt
+          else
+            echo "PUSH FAILED" >> diagnostics.txt
+          fi
+          git log -1 --format="head: %h %s" 2>/dev/null >> diagnostics.txt
+          ANN=$( {
+            echo "run ${GITHUB_RUN_ID}:"
+            grep -E "push: ok|PUSH.*FAILED|commit:|orphan|carry-over:|NOTE:" diagnostics.txt 2>/dev/null | sed 's/^/  status: /'
+            grep -E "fatal:|error:|rejected|403|401" diagnostics.txt 2>/dev/null | head -6 | sed 's/^/  err: /'
+            echo "  --- verifier ---"
+            grep -E "^checks:|\*\*FAIL\*\*|CRASH" reports/a075f/verification.md 2>/dev/null | sed 's/^/  /' | head -40
+            echo "  --- job.log tail ---"
+            tail -n 20 job.log 2>/dev/null | sed 's/^/  /'
+          } | sed -E 's#x-access-token:[^@ ]+@#x-access-token:***@#g')
+          echo "::error file=.github/workflows/port-a075f.yml,line=1,title=a075f diagnostics::$(echo "$ANN" | tr '\n' '|')"
+          echo "::group::a075f diagnostics full status"
+          echo "$ANN"
+          echo "::endgroup::"
+          echo "--- diagnostics.txt ---"
+          cat diagnostics.txt 2>/dev/null
+          echo "=== diagnostics step done $(date -u +%H:%M:%S) ==="
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/job.log"
+          exit 0

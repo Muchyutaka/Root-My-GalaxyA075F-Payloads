@@ -1,0 +1,187 @@
+diagnostics captured 2026-10-04T05:14:44Z
+run: 37178217983
+orphan branch: ok
+carry-over: firmware (absent on previous branch)
+carry-over: artifacts
+carry-over: kernelsu
+--- struct page source (tree/include/linux/mm_types.h) ---
+struct page {
+	unsigned long flags;		/* Atomic flags, some possibly
+					 * updated asynchronously */
+	/*
+	 * Five words (20/40 bytes) are available in this union.
+	 * WARNING: bit 0 of the first word is used for PageTail(). That
+	 * means the other users of this union MUST NOT use the bit to
+	 * avoid collision and false-positive PageTail().
+	 */
+	union {
+		struct {	/* Page cache and anonymous pages */
+			/**
+			 * @lru: Pageout list, eg. active_list protected by
+			 * lruvec->lru_lock.  Sometimes used as a generic list
+			 * by the page owner.
+			 */
+			union {
+				struct list_head lru;
+
+				/* Or, for the Unevictable "LRU list" slot */
+				struct {
+					/* Always even, to negate PageTail */
+					void *__filler;
+					/* Count page's or folio's mlocks */
+					unsigned int mlock_count;
+				};
+
+				/* Or, free page */
+				struct list_head buddy_list;
+				struct list_head pcp_list;
+			};
+			/* See page-flags.h for PAGE_MAPPING_FLAGS */
+			struct address_space *mapping;
+			union {
+				pgoff_t index;		/* Our offset within mapping. */
+				unsigned long share;	/* share count for fsdax */
+			};
+			/**
+			 * @private: Mapping-private opaque data.
+			 * Usually used for buffer_heads if PagePrivate.
+			 * Used for swp_entry_t if swapcache flag set.
+			 * Indicates order in the buddy system if PageBuddy.
+			 */
+			unsigned long private;
+		};
+		struct {	/* page_pool used by netstack */
+			/**
+			 * @pp_magic: magic value to avoid recycling non
+			 * page_pool allocated pages.
+			 */
+			unsigned long pp_magic;
+			struct page_pool *pp;
+			unsigned long _pp_mapping_pad;
+			unsigned long dma_addr;
+			atomic_long_t pp_ref_count;
+		};
+		struct {	/* Tail pages of compound page */
+			unsigned long compound_head;	/* Bit zero is set */
+		};
+		struct {	/* ZONE_DEVICE pages */
+			/** @pgmap: Points to the hosting device page map. */
+			struct dev_pagemap *pgmap;
+			void *zone_device_data;
+			/*
+			 * ZONE_DEVICE private pages are counted as being
+			 * mapped so the next 3 words hold the mapping, index,
+			 * and private fields from the source anonymous or
+			 * page cache page while the page is migrated to device
+			 * private memory.
+			 * ZONE_DEVICE MEMORY_DEVICE_FS_DAX pages also
+			 * use the mapping, index, and private fields when
+			 * pmem backed DAX files are mapped.
+			 */
+		};
+
+		/** @rcu_head: You can use this to free a page by RCU. */
+		struct rcu_head rcu_head;
+	};
+
+	union {		/* This union is 4 bytes in size. */
+		/*
+		 * For head pages of typed folios, the value stored here
+		 * allows for determining what this page is used for. The
+		 * tail pages of typed folios will not store a type
+		 * (page_type == _mapcount == -1).
+		 *
+		 * See page-flags.h for a list of page types which are currently
+		 * stored here.
+		 *
+		 * Owners of typed folios may reuse the lower 16 bit of the
+		 * head page page_type field after setting the page type,
+		 * but must reset these 16 bit to -1 before clearing the
+		 * page type.
+		 */
+		unsigned int page_type;
+
+		/*
+		 * For pages that are part of non-typed folios for which mappings
+		 * are tracked via the RMAP, encodes the number of times this page
+		 * is directly referenced by a page table.
+		 *
+		 * Note that the mapcount is always initialized to -1, so that
+		 * transitions both from it and to it can be tracked, using
+		 * atomic_inc_and_test() and atomic_add_negative(-1).
+		 */
+		atomic_t _mapcount;
+	};
+
+	/* Usage count. *DO NOT USE DIRECTLY*. See page_ref.h */
+	atomic_t _refcount;
+
+#ifdef CONFIG_MEMCG
+	unsigned long memcg_data;
+#elif defined(CONFIG_SLAB_OBJ_EXT)
+	unsigned long _unused_slab_obj_exts;
+#endif
+
+	/*
+	 * On machines where all RAM is mapped into kernel address space,
+	 * we can simply calculate the virtual address. On machines with
+	 * highmem some memory is mapped into kernel virtual memory
+	 * dynamically, so we need a place to store that address.
+	 * Note that this field could be 16 bits on x86 ... ;)
+	 *
+	 * Architectures with slow multiplication can define
+	 * WANT_PAGE_VIRTUAL in asm/page.h
+	 */
+#if defined(WANT_PAGE_VIRTUAL)
+	void *virtual;			/* Kernel virtual address (NULL if
+					   not kmapped, ie. highmem) */
+#endif /* WANT_PAGE_VIRTUAL */
+
+#ifdef LAST_CPUPID_NOT_IN_PAGE_FLAGS
+	int _last_cpupid;
+#endif
+
+#ifdef CONFIG_KMSAN
+	/*
+	 * KMSAN metadata for this page:
+	 *  - shadow page: every bit indicates whether the corresponding
+	 *    bit of the original page is initialized (0) or not (1);
+	 *  - origin page: every 4 bytes contain an id of the stack trace
+	 *    where the uninitialized value was created.
+	 */
+	struct page *kmsan_shadow;
+	struct page *kmsan_origin;
+#endif
+} _struct_page_alignment;
+
+/*
+ * struct encoded_page - a nonexistent type marking this pointer
+ *
+ * An 'encoded_page' pointer is a pointer to a regular 'struct page', but
+ * with the low bits of the pointer indicating extra context-dependent
+ * information. Only used in mmu_gather handling, and this acts as a type
+ * system check on that use.
+ *
+ * We only really have two guaranteed bits in general, although you could
+ * play with 'struct page' alignment (see CONFIG_HAVE_ALIGNED_STRUCT_PAGE)
+ * for more.
+--- bpftool BTF cross-check ---
+Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+Get:2 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-tools-6.17.0-1022-azure amd64 6.17.0-1022.22 [1632 B]
+Fetched 1632 B in 0s (18.1 kB/s)
+extracted: 
+blob[0x1990120,0x20333c9) len=6959785 written to /tmp/a075f_btf.bin
+walk(4,8): ntypes=165682 unkn=2 bogus=1 type0=0: err=None
+walk(0,8): ntypes=165682 unkn=1 bogus=0 type0=0: err=None
+walk(4,4): ntypes=165682 unkn=2 bogus=1 type0=0: err=None
+walk(0,4): ntypes=165682 unkn=1 bogus=0 type0=0: err=None
+calibrated choice=(0, 8) ntypes=165682 bogus=0
+WARNING: bpftool not found for kernel 6.17.0-1022
+
+  You may need to install the following packages for this specific kernel:
+    linux-tools-6.17.0-1022-azure
+    linux-cloud-tools-6.17.0-1022-azure
+
+  You may also want to install one of the following packages to keep up to date:
+    linux-tools-azure
+    linux-cloud-tools-azure
