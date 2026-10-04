@@ -917,19 +917,35 @@ jobs:
           {
             echo "--- bpftool BTF cross-check ---" >> diagnostics.txt
             # The runner image ships a bpftool STUB that only works when
-            # the kernel-matched linux-tools-<uname -r> package is
-            # installed; gate on 'bpftool version' actually working.
+            # the kernel-matched linux-tools package is installed, and
+            # apt 'install' can still leave the stub in place.  Most
+            # deterministic: download the .deb and extract the real
+            # binary out of it (no alternatives involved).
+            LTB=""
             if ! bpftool version >/dev/null 2>&1; then
               (sudo apt-get update -qq &&
-               (sudo apt-get install -y -qq "linux-tools-$(uname -r)" ||
-                sudo apt-get install -y -qq linux-tools-generic ||
-                sudo apt-get install -y -qq bpftool)) >>diagnostics.txt 2>&1
-              hash -r
+               cd /tmp &&
+               (apt-get download "linux-tools-$(uname -r)" || apt-get download linux-tools-generic) &&
+               dpkg -x "$(ls /tmp/linux-tools-*.deb 2>/dev/null | head -1)" /tmp/ltd &&
+               echo "extracted: $(find /tmp/ltd -name bpftool -type f | head -1)") >>diagnostics.txt 2>&1
+              LTB=$(find /tmp/ltd -name bpftool -type f 2>/dev/null | head -1)
             fi
-            if bpftool version >>diagnostics.txt 2>&1 && [ -f fw/kernel.raw ]; then
+            if [ -n "$LTB" ]; then
+              echo "using $LTB" >> diagnostics.txt
+              BPFTOOL="$LTB"
+            else
+              BPFTOOL=bpftool
+            fi
+            if [ -f fw/kernel.raw ]; then
               python3 -c "$(printf '%s' 'aW1wb3J0IGltcG9ydGxpYi51dGlsLCBzeXMKc3BlYyA9IGltcG9ydGxpYi51dGlsLnNwZWNfZnJvbV9maWxlX2xvY2F0aW9uKAogICAgImRlcml2ZSIsICJ0b29scy9kZXJpdmVfYTA3NWZfdGFyZ2V0LnB5IikKZCA9IGltcG9ydGxpYi51dGlsLm1vZHVsZV9mcm9tX3NwZWMoc3BlYykKc3BlYy5sb2FkZXIuZXhlY19tb2R1bGUoZCkKcmF3ID0gb3BlbigiZncva2VybmVsLnJhdyIsICJyYiIpLnJlYWQoKQpjYW5kcyA9IGQuZmluZF9idGYocmF3KQppZiBub3QgY2FuZHM6CiAgICBwcmludCgibm8gQlRGIGNhbmRpZGF0ZXMgaW4gZncva2VybmVsLnJhdyIpCiAgICBzeXMuZXhpdCgwKQpibG9iLCBybmcgPSBjYW5kc1swXQpvcGVuKCIvdG1wL2EwNzVmX2J0Zi5iaW4iLCAid2IiKS53cml0ZShibG9iKQpwcmludChmImJsb2JbMHh7cm5nWzBdOnh9LDB4e3JuZ1sxXTp4fSkgbGVuPXtsZW4oYmxvYil9IHdyaXR0ZW4gdG8gL3RtcC9hMDc1Zl9idGYuYmluIikKZm9yIGZwLCBkcCBpbiAoKDQsIDgpLCAoMCwgOCksICg0LCA0KSwgKDAsIDQpKToKICAgIGIgPSBkLkJURihibG9iLCBmbG9hdF9wYXlsb2FkPWZwLCBkZWNsdGFnX3BheWxvYWQ9ZHApCiAgICB1bmtuID0gc3VtKDEgZm9yIHggaW4gYi50YWJsZS52YWx1ZXMoKSBpZiB4WyJraW5kIl0gPT0gMCkKICAgIHQwID0gYi50YWJsZS5nZXQoMCwge30pCiAgICBwcmludChmIndhbGsoe2ZwfSx7ZHB9KTogbnR5cGVzPXtsZW4oYi50YWJsZSl9IHVua249e3Vua259ICIKICAgICAgICAgIGYiYm9ndXM9e2IuYm9ndXNfbmFtZXN9IHR5cGUwPXt0MC5nZXQoJ2tpbmQnKX06e3QwLmdldCgnbmFtZScpfSAiCiAgICAgICAgICBmImVycj17c3RyKGIucGFyc2VfZXJyb3IpWzo4MF19IikKYiwgY2hvaWNlID0gZC5CVEZfcGFyc2VfY2FsaWJyYXRlZChibG9iKQpwcmludChmImNhbGlicmF0ZWQgY2hvaWNlPXtjaG9pY2V9IG50eXBlcz17bGVuKGIudGFibGUpfSBib2d1cz17Yi5ib2d1c19uYW1lc30iKQo=' | base64 -d)" >>diagnostics.txt 2>&1
-              if [ -s /tmp/a075f_btf.bin ]; then
-                bpftool btf dump file /tmp/a075f_btf.bin > /tmp/a075f_btf_dump.txt 2>>diagnostics.txt \
+            fi
+            # keep a copy on the results branch so the porting sandbox can
+            # parse it locally (4 MB) — independent of bpftool success
+            if [ -s /tmp/a075f_btf.bin ]; then
+              cp /tmp/a075f_btf.bin diagnostics_btf.bin 2>/dev/null
+            fi
+            if $BPFTOOL version >>diagnostics.txt 2>&1 && [ -s /tmp/a075f_btf.bin ]; then
+              $BPFTOOL btf dump file /tmp/a075f_btf.bin > /tmp/a075f_btf_dump.txt 2>>diagnostics.txt \
                   && echo "bpftool dump: $(wc -l < /tmp/a075f_btf_dump.txt) lines" \
                   || echo "bpftool dump FAILED"
                 if [ -s /tmp/a075f_btf_dump.txt ]; then
@@ -944,11 +960,12 @@ jobs:
                 fi
               fi
             else
-              echo "NOTE: bpftool unavailable or fw/kernel.raw missing"
+              echo "NOTE: bpftool unavailable or btf blob missing"
             fi
           }
           if [ -f job.log ]; then git add -f job.log 2>>diagnostics.txt; fi
           if [ -d reports ]; then git add -f reports/ 2>>diagnostics.txt; fi
+          if [ -f diagnostics_btf.bin ]; then git add -f diagnostics_btf.bin 2>>diagnostics.txt; fi
           git add -f diagnostics.txt 2>>diagnostics.txt
           if git diff --cached --quiet; then
             echo "commit: nothing to commit (identical to previous push?)" >> diagnostics.txt
