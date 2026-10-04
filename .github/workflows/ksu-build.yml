@@ -822,6 +822,13 @@ jobs:
       - name: Checkout payloads
         uses: actions/checkout@v7
 
+      - name: Sync the branch before adding binary payloads
+        run: |
+          # A second build for the same device and flavour replaces the same daemon and module files.
+          # Rebase before downloading/staging those binaries: rebasing a commit that already contains
+          # them cannot merge the old and new payload bytes, even though the publisher is serialized.
+          git pull --rebase --autostash
+
       - name: Collect the pair
         uses: actions/download-artifact@v7
         with:
@@ -904,7 +911,6 @@ jobs:
           git add $files
           git commit -q -m "build(payloads): publish the ${{ env.FLAVOR }} pair for ${{ inputs.target_id }}" \
             -m "Built from ${{ env.KSU_REF }} by the ${{ github.workflow }} workflow."
-          git pull --rebase --autostash
           git push
 
   # ---------------------------------------------------------------------------------------------
