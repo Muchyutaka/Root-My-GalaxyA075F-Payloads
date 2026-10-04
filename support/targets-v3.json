@@ -1232,7 +1232,7 @@
       "kernelsu": {
         "url": "https://raw.githubusercontent.com/ProofPage/Root-My-Galaxy-Payloads/main/kernelsu/ksud-pa3q-S938NKSUCDZIF-kdp",
         "size": 5088200,
-        "sha256": "43d2822accb67125710f322b398873411d74129a718de7cb72328a6d1f2968c9",
+        "sha256": "982d0a664c1e5114d1fbb89b526bd53ef94c448d979aa109942bfc2cdffeebe8",
         "version": "3.3.0"
       }
     },
