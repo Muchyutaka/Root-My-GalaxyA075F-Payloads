@@ -18,7 +18,7 @@ It intentionally does not contain Android application source code.
 | `galaxy-s25-series-2026-06-07` | Galaxy S25, S25+, S25 Edge, and S25 Ultra regional models | `6.6.98` | Device-tested |
 | `pa3q-S938NKSUCDZIF-ksu330` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
 | `pa3q-S938NKSUCDZIF-ksu325` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
-| `pa3q-S938NKSUCDZIF-ksun340` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
+| `pa3q-S938NKSUCDZIF-ksun340` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` · KernelSU-Next `3.4.0` | Device-tested (DirtyFrag daemon and service staging) |
 | `pa3q-S938NKSUCDZIF-ksun330` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
 | `pa3q-S938NKSUCDZIF-rsksu420` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
 | `pa3q-S938NKSUCDZIF-rsksu420-rc2` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
@@ -67,9 +67,12 @@ cached feed revision.
 
 The SM-S938N flavor builds listed above match kernel family `android15-6.6`
 and the supplied `6.6.127-android15-8-p33f4ffe-abogkiS938NKSUCDZIF-4k`
-release. CI-built artifacts are retained separately by version. The six
-KernelSU, KernelSU-Next, and ReSukiSU variants have not each been verified on
-the physical phone.
+release. CI-built artifacts are retained separately by version. The
+KernelSU-Next `3.4.0` daemon was tested on the physical SM-S938N using DirtyFrag
+(CVE-2026-43284); the run confirmed KernelSU was active and the service file
+was staged for the next boot. This verifies the daemon and service-staging
+path; the other five KernelSU flavor/version variants remain unverified on the
+physical phone.
 
 ## Build
 
