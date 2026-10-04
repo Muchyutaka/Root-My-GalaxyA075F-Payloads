@@ -161,6 +161,33 @@ class BTF:
             # BTF quirk or a truncated section).  Keep the partial table
             # if it has substance; the report will say.
             self.parse_error = f"length mismatch: walked {off}, have {n}"
+        # --- 1-based type-id correction (vendor BTF quirk) --------------
+        # Standard BTF begins its type section with the UNKNOWN (void)
+        # type (id 0); stored type references are then plain table
+        # indices.  This vendor's encoder omits that record: the first
+        # record in the stream is a real type (an INT), so its type ids
+        # run 1..N and every stored reference is one HIGHER than the
+        # record's stream position.  Direct named-member lookups still
+        # work (offsets need no indirection), but every indirection -
+        # pointer pointees, anonymous-union flattening, sizeof through
+        # typedefs - resolves one record off: struct page's 0x30 member
+        # "resolves" to struct page itself, compound_head vanishes from
+        # the flattened view, and list_head.next "points" at
+        # trace_event_class.  Prepending a synthetic UNKNOWN type
+        # restores the standard layout so stored references index the
+        # table directly again.  (Verified against list_head,
+        # hlist_node, atomic_t, void* and the page family in the exact
+        # A075FXXS5BZD2 blob: every anchor resolves correctly only with
+        # this correction.)
+        if self.table and self.table[0]["kind"] != BTF.K_UNKN:
+            self.one_based = True
+            shifted = {i + 1: rec for i, rec in self.table.items()}
+            shifted[0] = {"kind": BTF.K_UNKN, "vlen": 0, "kflag": 0,
+                          "ut": 0, "name": ""}
+            self.table = shifted
+            self._start = {i + 1: o for i, o in self._start.items()}
+        else:
+            self.one_based = False
         self._size_memo = {}
 
     def _name(self, off):
@@ -190,10 +217,10 @@ class BTF:
         if k in (BTF.K_INT, BTF.K_VAR):
             return off + 4
         if k == BTF.K_DECL_TAG:
-            # struct btf_decl_tag { __u32 ro; __u32 kind; } - spec 8,
-            # older encoders 4.  Wrong size desyncs the table (member
-            # type-ids then point at the wrong records).  Calibrated by
-            # BTF_parse_calibrated().
+            # struct btf_decl_tag { __s32 component_idx; } - v6.12 spec
+            # is 4 bytes (older drafts carried a second word).  Wrong
+            # size desyncs the table (member type-ids then point at the
+            # wrong records).  Calibrated by BTF_parse_calibrated().
             return off + self.decltag_payload
         if k == BTF.K_FLOAT:
             # struct btf_float { __u32 encoding; } - spec 4, some
@@ -655,6 +682,10 @@ def _run(a):
                         btf, "combo_stats", []):
                     detail += (f" | ({fp},{dp}): n={nt} unkn={un} "
                                f"bogus={bg} err={str(err)[:40]}")
+            if getattr(btf, "one_based", False):
+                detail += (", 1-based type ids (encoder omits UNKNOWN type "
+                           "0; synthetic UNKNOWN prepended, refs index "
+                           "directly)")
             if getattr(btf, "bogus_names", 0):
                 detail += f", {btf.bogus_names} unrecoverable name(s)"
             if btf.parse_error:
