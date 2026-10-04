@@ -917,10 +917,15 @@ jobs:
           {
             echo "--- bpftool BTF cross-check ---"
             if ! command -v bpftool >/dev/null 2>&1; then
-              (sudo apt-get update -qq && sudo apt-get install -y -qq bpftool) >>diagnostics.txt 2>&1
+              # Ubuntu's 'bpftool' package is a stub; the real binary
+              # ships in the kernel-matched linux-tools-<uname -r> pkg
+              (sudo apt-get update -qq &&
+               (sudo apt-get install -y -qq "linux-tools-$(uname -r)" ||
+                sudo apt-get install -y -qq linux-tools-generic)) >>diagnostics.txt 2>&1
+              hash -r
             fi
             if command -v bpftool >/dev/null 2>&1 && [ -f fw/kernel.raw ]; then
-              python3 -c "$(printf '%s' 'aW1wb3J0IGltcG9ydGxpYi51dGlsLCBzeXMKc3BlYyA9IGltcG9ydGxpYi51dGlsLnNwZWNfZnJvbV9maWxlX2xvY2F0aW9uKAogICAgImRlcml2ZSIsICJ0b29scy9kZXJpdmVfYTA3NWZfdGFyZ2V0LnB5IikKZCA9IGltcG9ydGxpYi51dGlsLm1vZHVsZV9mcm9tX3NwZWMoc3BlYykKc3BlYy5sb2FkZXIuZXhlY19tb2R1bGUoZCkKcmF3ID0gb3BlbigiZncva2VybmVsLnJhdyIsICJyYiIpLnJlYWQoKQpjYW5kcyA9IGQuZmluZF9idGYocmF3KQppZiBub3QgY2FuZHM6CiAgICBwcmludCgibm8gQlRGIGNhbmRpZGF0ZXMgaW4gZncva2VybmVsLnJhdyIpCiAgICBzeXMuZXhpdCgwKQpibG9iLCBybmcgPSBjYW5kc1swXQpvcGVuKCIvdG1wL2EwNzVmX2J0Zi5iaW4iLCAid2IiKS53cml0ZShibG9iKQpiLCBjaG9pY2UgPSBkLkJURl9wYXJzZV9jYWxpYnJhdGVkKGJsb2IpCnByaW50KGYidmVyaWZpZXIgd2Fsazoge2xlbihiLnRhYmxlKX0gdHlwZXMsICIKICAgICAgZiJwYXlsb2FkKGZsb2F0LGRlY2x0YWcpPXtjaG9pY2V9LCBwYXJzZV9lcnJvcj17Yi5wYXJzZV9lcnJvcn0iKQpwcmludChmImJsb2JbMHh7cm5nWzBdOnh9LDB4e3JuZ1sxXTp4fSkgd3JpdHRlbiB0byAvdG1wL2EwNzVmX2J0Zi5iaW4iKQo=' | base64 -d)" >>diagnostics.txt 2>&1
+              python3 -c "$(printf '%s' 'aW1wb3J0IGltcG9ydGxpYi51dGlsLCBzeXMKc3BlYyA9IGltcG9ydGxpYi51dGlsLnNwZWNfZnJvbV9maWxlX2xvY2F0aW9uKAogICAgImRlcml2ZSIsICJ0b29scy9kZXJpdmVfYTA3NWZfdGFyZ2V0LnB5IikKZCA9IGltcG9ydGxpYi51dGlsLm1vZHVsZV9mcm9tX3NwZWMoc3BlYykKc3BlYy5sb2FkZXIuZXhlY19tb2R1bGUoZCkKcmF3ID0gb3BlbigiZncva2VybmVsLnJhdyIsICJyYiIpLnJlYWQoKQpjYW5kcyA9IGQuZmluZF9idGYocmF3KQppZiBub3QgY2FuZHM6CiAgICBwcmludCgibm8gQlRGIGNhbmRpZGF0ZXMgaW4gZncva2VybmVsLnJhdyIpCiAgICBzeXMuZXhpdCgwKQpibG9iLCBybmcgPSBjYW5kc1swXQpvcGVuKCIvdG1wL2EwNzVmX2J0Zi5iaW4iLCAid2IiKS53cml0ZShibG9iKQpwcmludChmImJsb2JbMHh7cm5nWzBdOnh9LDB4e3JuZ1sxXTp4fSkgbGVuPXtsZW4oYmxvYil9IHdyaXR0ZW4gdG8gL3RtcC9hMDc1Zl9idGYuYmluIikKZm9yIGZwLCBkcCBpbiAoKDQsIDgpLCAoMCwgOCksICg0LCA0KSwgKDAsIDQpKToKICAgIGIgPSBkLkJURihibG9iLCBmbG9hdF9wYXlsb2FkPWZwLCBkZWNsdGFnX3BheWxvYWQ9ZHApCiAgICB1bmtuID0gc3VtKDEgZm9yIHggaW4gYi50YWJsZS52YWx1ZXMoKSBpZiB4WyJraW5kIl0gPT0gMCkKICAgIHQwID0gYi50YWJsZS5nZXQoMCwge30pCiAgICBwcmludChmIndhbGsoe2ZwfSx7ZHB9KTogbnR5cGVzPXtsZW4oYi50YWJsZSl9IHVua249e3Vua259ICIKICAgICAgICAgIGYiYm9ndXM9e2IuYm9ndXNfbmFtZXN9IHR5cGUwPXt0MC5nZXQoJ2tpbmQnKX06e3QwLmdldCgnbmFtZScpfSAiCiAgICAgICAgICBmImVycj17c3RyKGIucGFyc2VfZXJyb3IpWzo4MF19IikKYiwgY2hvaWNlID0gZC5CVEZfcGFyc2VfY2FsaWJyYXRlZChibG9iKQpwcmludChmImNhbGlicmF0ZWQgY2hvaWNlPXtjaG9pY2V9IG50eXBlcz17bGVuKGIudGFibGUpfSBib2d1cz17Yi5ib2d1c19uYW1lc30iKQo=' | base64 -d)" >>diagnostics.txt 2>&1
               if [ -s /tmp/a075f_btf.bin ]; then
                 bpftool btf dump file /tmp/a075f_btf.bin > /tmp/a075f_btf_dump.txt 2>>diagnostics.txt \
                   && echo "bpftool dump: $(wc -l < /tmp/a075f_btf_dump.txt) lines" \

@@ -329,6 +329,7 @@ def BTF_parse_calibrated(blob):
     cleanly aligned and the caller must flag the result as suspect."""
     best = None
     best_score = None
+    combo_stats = []
     for fp, dp in ((4, 8), (0, 8), (4, 4), (0, 4)):
         b = BTF(blob, float_payload=fp, decltag_payload=dp)
         unkn = sum(1 for d in b.table.values() if d["kind"] == 0)
@@ -338,9 +339,12 @@ def BTF_parse_calibrated(blob):
                  1 if unkn == 1 else 0,
                  1 if bogus == 0 else 0,
                  len(b.table))
+        combo_stats.append((fp, dp, len(b.table), unkn, bogus,
+                            b.parse_error))
         if best_score is None or score > best_score:
             best_score = score
             best = b
+    best.combo_stats = combo_stats
     clean = best.parse_error is None and \
         sum(1 for d in best.table.values() if d["kind"] == 0) == 1 and \
         getattr(best, "bogus_names", 0) == 0
@@ -634,7 +638,12 @@ def _run(a):
             if btf_choice:
                 detail += (f", payload(float,decltag)={btf_choice}")
             else:
-                detail += ", payload SIZES UNCALIBRATED"
+                detail += (f", payload SIZES UNCALIBRATED "
+                           f"(walk {btf.float_payload},{btf.decltag_payload})")
+                for (fp, dp, nt, un, bg, err) in getattr(
+                        btf, "combo_stats", []):
+                    detail += (f" | ({fp},{dp}): n={nt} unkn={un} "
+                               f"bogus={bg} err={str(err)[:40]}")
             if getattr(btf, "bogus_names", 0):
                 detail += f", {btf.bogus_names} unrecoverable name(s)"
             if btf.parse_error:
