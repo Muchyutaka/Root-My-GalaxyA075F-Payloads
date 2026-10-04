@@ -963,7 +963,6 @@ jobs:
                     awk -F':' -v w="$t" '$1==w' /tmp/a075f_btf_dump.txt | head -1
                   done | head -20
                 fi
-              fi
             else
               echo "NOTE: bpftool unavailable or btf blob missing"
             fi
