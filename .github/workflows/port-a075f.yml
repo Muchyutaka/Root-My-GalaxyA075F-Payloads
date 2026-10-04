@@ -790,6 +790,18 @@ jobs:
           #   rustix           4a53fbc7cb7a07cabe87125cc21dbc27db316259
           # Vendor them at those SHAs and flip the manifests to path deps so
           # the build uses byte-identical sources to the original lockfile.
+          #
+          # The vendor dir MUST live OUTSIDE KernelSU/: cargo resolves a
+          # path dep's workspace root via its in-memory cache of already
+          # loaded workspace roots BEFORE walking ancestor files, and the
+          # KernelSU root (loaded for the build) is an ancestor of anything
+          # nested under KernelSU/. Nested, the vendored packages would
+          # inherit from KernelSU/Cargo.toml's [workspace.package] and fail
+          # on fields it does not define (run #30: adb_client's
+          # rust-version.workspace=true). Outside it, the normal
+          # nearest-ancestor file walk finds each dep's own repo root,
+          # which defines every inherited field.
+          cd "$WS"
           mkdir -p vendor
           git clone -q https://github.com/ReSukiSU/adb_client.git vendor/adb_client
           git -C vendor/adb_client checkout -q d97a966435bebaa55017834869dec08150826aa7
@@ -799,19 +811,20 @@ jobs:
           git -C vendor/java-properties checkout -q 42a4aa941b70ded2dd3be9e9f892471023e70229
           git clone -q https://github.com/ReSukiSU/rustix.git vendor/rustix
           git -C vendor/rustix checkout -q 4a53fbc7cb7a07cabe87125cc21dbc27db316259
+          cd KernelSU
           sed -i \
-            -e 's|adb_client = { git = "https://github.com/Kernel-SU/adb_client" }|adb_client = { path = "../../vendor/adb_client/adb_client" }|' \
-            -e 's|prop-rs-android = { git = "https://github.com/Kernel-SU/ksu_props" }|prop-rs-android = { path = "../../vendor/ksu_props/crates/prop-rs-android" }|' \
-            -e 's|java-properties = { git = "https://github.com/Kernel-SU/java-properties.git", branch = "master", default-features = false }|java-properties = { path = "../../vendor/java-properties", default-features = false }|' \
+            -e 's|adb_client = { git = "https://github.com/Kernel-SU/adb_client" }|adb_client = { path = "../../../vendor/adb_client/adb_client" }|' \
+            -e 's|prop-rs-android = { git = "https://github.com/Kernel-SU/ksu_props" }|prop-rs-android = { path = "../../../vendor/ksu_props/crates/prop-rs-android" }|' \
+            -e 's|java-properties = { git = "https://github.com/Kernel-SU/java-properties.git", branch = "master", default-features = false }|java-properties = { path = "../../../vendor/java-properties", default-features = false }|' \
             userspace/ksud/Cargo.toml
           sed -i \
-            -e 's|rustix = { git = "https://github.com/Kernel-SU/rustix.git", rev = "4a53fbc", features|rustix = { path = "../../vendor/rustix", features|' \
+            -e 's|rustix = { git = "https://github.com/Kernel-SU/rustix.git", rev = "4a53fbc", features|rustix = { path = "../../../vendor/rustix", features|' \
             userspace/ksuinit/Cargo.toml
           grep -n 'vendor/' userspace/ksud/Cargo.toml userspace/ksuinit/Cargo.toml
           ! grep -q 'Kernel-SU/' userspace/ksud/Cargo.toml userspace/ksuinit/Cargo.toml
           cargo ndk -t arm64-v8a build --release -p ksud
           BIN="target/aarch64-linux-android/release/ksud"
-          [ -x "${BIN}" ] || BIN=$(find . -type f -name ksud -perm -u+x -not -path "./vendor/*" -print -quit)
+          [ -x "${BIN}" ] || BIN=$(find target -type f -name ksud -perm -u+x -print -quit)
           test -n "${BIN}"
           install -D -m 0755 "${BIN}" "${WS}/kernelsu/${KSUD_NAME}"
           rm -rf "$NDK"
