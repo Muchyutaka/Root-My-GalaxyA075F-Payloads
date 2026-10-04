@@ -778,8 +778,40 @@ jobs:
           cd KernelSU
           git fetch -q --depth 1 origin "${KSU_COMMIT}" 2>/dev/null || true
           git checkout -q "${KSU_COMMIT}" 2>/dev/null || true
+          # The upstream Kernel-SU org deleted the git dependencies that
+          # userspace/{ksud,ksuinit} reference (adb_client, ksu_props,
+          # java-properties, rustix), so cargo fails at dependency
+          # resolution before compiling anything (run #29). The community
+          # mirror org (ReSukiSU) carries the EXACT commits this tree's
+          # Cargo.lock pins (re-verified 2026-10-04):
+          #   adb_client       d97a966435bebaa55017834869dec08150826aa7
+          #   ksu_props        699849f3e4db47b622bcb7fae8e76c728b1b65a6
+          #   java-properties  42a4aa941b70ded2dd3be9e9f892471023e70229
+          #   rustix           4a53fbc7cb7a07cabe87125cc21dbc27db316259
+          # Vendor them at those SHAs and flip the manifests to path deps so
+          # the build uses byte-identical sources to the original lockfile.
+          mkdir -p vendor
+          git clone -q https://github.com/ReSukiSU/adb_client.git vendor/adb_client
+          git -C vendor/adb_client checkout -q d97a966435bebaa55017834869dec08150826aa7
+          git clone -q https://github.com/ReSukiSU/ksu_props.git vendor/ksu_props
+          git -C vendor/ksu_props checkout -q 699849f3e4db47b622bcb7fae8e76c728b1b65a6
+          git clone -q https://github.com/ReSukiSU/java-properties.git vendor/java-properties
+          git -C vendor/java-properties checkout -q 42a4aa941b70ded2dd3be9e9f892471023e70229
+          git clone -q https://github.com/ReSukiSU/rustix.git vendor/rustix
+          git -C vendor/rustix checkout -q 4a53fbc7cb7a07cabe87125cc21dbc27db316259
+          sed -i \
+            -e 's|adb_client = { git = "https://github.com/Kernel-SU/adb_client" }|adb_client = { path = "../../vendor/adb_client/adb_client" }|' \
+            -e 's|prop-rs-android = { git = "https://github.com/Kernel-SU/ksu_props" }|prop-rs-android = { path = "../../vendor/ksu_props/crates/prop-rs-android" }|' \
+            -e 's|java-properties = { git = "https://github.com/Kernel-SU/java-properties.git", branch = "master", default-features = false }|java-properties = { path = "../../vendor/java-properties", default-features = false }|' \
+            userspace/ksud/Cargo.toml
+          sed -i \
+            -e 's|rustix = { git = "https://github.com/Kernel-SU/rustix.git", rev = "4a53fbc", features|rustix = { path = "../../vendor/rustix", features|' \
+            userspace/ksuinit/Cargo.toml
+          grep -n 'vendor/' userspace/ksud/Cargo.toml userspace/ksuinit/Cargo.toml
+          ! grep -q 'Kernel-SU/' userspace/ksud/Cargo.toml userspace/ksuinit/Cargo.toml
           cargo ndk -t arm64-v8a build --release -p ksud
-          BIN=$(find . -type f -name ksud -perm -u+x -print -quit)
+          BIN="target/aarch64-linux-android/release/ksud"
+          [ -x "${BIN}" ] || BIN=$(find . -type f -name ksud -perm -u+x -not -path "./vendor/*" -print -quit)
           test -n "${BIN}"
           install -D -m 0755 "${BIN}" "${WS}/kernelsu/${KSUD_NAME}"
           rm -rf "$NDK"
