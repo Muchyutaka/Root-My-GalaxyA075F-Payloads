@@ -16,7 +16,9 @@ It intentionally does not contain Android application source code.
 | Payload | Compatible models | Kernel version | Status |
 | --- | --- | --- | --- |
 | `galaxy-s25-series-2026-06-07` | Galaxy S25, S25+, S25 Edge, and S25 Ultra regional models | `6.6.98` | Device-tested |
-| `pa3q-S938NKSUCDZIF` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Device-tested |
+| `pa3q-S938NKSUCDZIF-ksu325` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
+| `pa3q-S938NKSUCDZIF-ksun340` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
+| `pa3q-S938NKSUCDZIF-rsksu420` | Galaxy S25 Ultra `SM-S938N` | `6.6.127` | Build verified; device test pending |
 | `e3q-S928USQS6DZF2` | Galaxy S24 Ultra `SM-S928U1` | `6.1.145` | Device-tested |
 | `e3q-S9280ZCS6DZF2` | Galaxy S24 Ultra China `SM-S9280` | `6.1.145` | Device-tested |
 | `e2s-S926BXXUEDZDR` | Galaxy S24+ `SM-S926B` | `6.1.157` | Device-tested |
@@ -45,6 +47,27 @@ Root My Galaxy resolves the payload repository's current commit first and
 fetches `support/targets-v3.json` and every artifact from that immutable
 commit. Per-artifact SHA-256 fields and manifest signatures are not part of
 schema version 3. `targets-v2.json` is retained for released 0.2.3 clients.
+
+### Add this repository in Root My Galaxy Next
+
+In **Settings → Payload sources**, add and enable:
+
+| Field | Value |
+| --- | --- |
+| Repository | `ProofPage/Root-My-Galaxy-Payloads` |
+| Branch | `main` |
+
+Save the source and refresh the payload list. Artifact URLs in this feed must
+resolve from the repository being read. Older copied entries can still contain
+the former `PyeProof/Root-My-Galaxy-Payloads` owner; those links are rewritten
+to this repository because the same artifact files are present here. A source
+with stale cross-repository artifact URLs may be rejected by the app with
+“This payload list is not allowed.”
+
+The SM-S938N flavor builds listed above match kernel family `android15-6.6`
+and the supplied `6.6.127-android15-8-p33f4ffe-abogkiS938NKSUCDZIF-4k`
+release. CI confirms the artifacts build and pair correctly; the v3.2.5,
+v3.4.0, and rc2 variants have not each been verified on the physical phone.
 
 ## Build
 
