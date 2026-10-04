@@ -38,7 +38,7 @@ VERMAGIC = re.compile(rb"vermagic=([^ \x00]+)")
 # looks for that exact asset name in its daemon's own bin directory (`format!("{kmi}_kernelsu.ko")`),
 # so the suffix here distinguishes the *published* files, not the embedded ones.
 MODULE = re.compile(
-    r"^(?P<kmi>android\d+-\d+\.\d+(?:\.\d+)?)_kernelsu(?P<suffix>-next|-rsksu)?-(?P<target>.+?)(?:-kdp)?\.ko$"
+    r"^(?P<kmi>android\d+-\d+\.\d+(?:\.\d+)?)_kernelsu(?P<suffix>-next|-rsksu)?-(?P<target>.+?)(?:-kdp)?(?:-v(?P<version>\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?))?\.ko$"
 )
 # The DDK publishes one image per KMI *family* - `android13-5.15`, `android15-6.6` - and never per
 # release, while a module may be named with either. `android13-5.15.189_kernelsu-dm2q-...` is a
@@ -48,7 +48,10 @@ MODULE = re.compile(
 # than as a tag this repository asked for by mistake.
 DDK_KMI = re.compile(r"^(?P<family>android\d+-\d+\.\d+)")
 # `ksud[-next|-rsksu]-<target>-kdp`.
-DAEMON = re.compile(r"^ksud(?P<suffix>-next|-rsksu)?-(?P<target>.+?)-kdp$")
+DAEMON = re.compile(
+    r"^ksud(?P<suffix>-next|-rsksu)?-(?P<target>.+?)-kdp"
+    r"(?:-v(?P<version>\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?))?$"
+)
 # The version a payload id carries: `pa3q-S938USQSCCZF9-ksu330`, `pa3q-...-ksun340`,
 # `pa3q-...-rsksu420`. The prefix names the flavour the same way the artifact suffix does, which is
 # what lets an id be read back into the pair it serves.
@@ -255,6 +258,10 @@ def plan(repo: str, feed: str = "support/targets-v3.json") -> dict:
             skipped.append({"payloadId": payload_id, "artifact": daemon_name, "reason": "daemon is not named for a target"})
             continue
 
+        if daemon.group("version") is not None:
+            skipped.append({"payloadId": payload_id, "artifact": daemon_name, "reason": "version-pinned release artifact"})
+            continue
+
         target = daemon.group("target")
         entries.append({"payloadId": payload_id, "target": target, "flavor": flavour, "daemon": daemon_name})
 
@@ -267,6 +274,8 @@ def plan(repo: str, feed: str = "support/targets-v3.json") -> dict:
         for name in sorted(os.listdir(artifacts)):
             module = MODULE.match(name)
             if not module or module.group("target") != target:
+                continue
+            if module.group("version") is not None:
                 continue
             if (module.group("suffix") or "") != suffix:
                 continue
@@ -444,11 +453,17 @@ def self_test(repo: str = ".", feed: str = "support/targets-v3.json") -> int:
         ("ksud-pa3q-S938USQSCCZF9-kdp", "", "pa3q-S938USQSCCZF9"),
         ("ksud-next-pa3q-S938USQSCCZF9-kdp", "-next", "pa3q-S938USQSCCZF9"),
         ("ksud-rsksu-pa3q-S938USQSCCZF9-kdp", "-rsksu", "pa3q-S938USQSCCZF9"),
+        ("ksud-next-pa3q-S938NKSUCDZIF-kdp-v3.3.0", "-next", "pa3q-S938NKSUCDZIF"),
     ):
         match = DAEMON.match(name)
         if not match or (match.group("suffix") or "") != suffix or match.group("target") != target:
             print(f"  {name}: not read as a daemon for {target}")
             failures += 1
+
+    pinned = MODULE.match("android15-6.6_kernelsu-pa3q-S938NKSUCDZIF-kdp-v3.2.5.ko")
+    if not pinned or pinned.group("version") != "3.2.5":
+        print("  the version-pinned device module is not recognized")
+        failures += 1
 
     # The daemon's own stamp, on the three shapes it can have. Read from bytes rather than from a file
     # because that is what the caller does: `daemon_version()` is given a binary and searches it.
@@ -536,7 +551,14 @@ def self_test(repo: str = ".", feed: str = "support/targets-v3.json") -> int:
             if not os.path.isfile(binary):
                 continue
             stamped = daemon_version(binary)
+            daemon = DAEMON.match(name)
+            pinned_version = daemon.group("version") if daemon else None
             if stamped is None:
+                # A historical profile can be pinned to an older build whose ksud predates the
+                # embedded version string. Its versioned immutable filename is the release record.
+                if pinned_version and pinned_version == str(version).lstrip("v"):
+                    agreed += 1
+                    continue
                 print(f"  {entry.get('payloadId')}: declares {version}, but its daemon carries no version")
                 failures += 1
             elif stamped.lstrip("v") != str(version).lstrip("v"):

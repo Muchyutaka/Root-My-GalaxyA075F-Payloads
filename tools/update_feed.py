@@ -455,18 +455,21 @@ def apply(
 
     result = json.loads(updated)
 
-    # Two entries for one model, kernel version and flavour both match a run, and only the first
-    # is used - so a duplicate is a feed that cannot say which pair it means.
+    # The app's manual picker can choose among releases for one model, kernel and flavour. Two rows
+    # for the same declared release are still ambiguous, so include the daemon version in the key.
     seen: dict[tuple, str] = {}
     for entry in result.get("payloads", []):
         key = (
             entry.get("flavor", "kernelsu"),
             tuple(entry.get("models", [])),
             tuple(entry.get("kernelVersions", [])),
+            (entry.get("kernelsu") or {}).get("version"),
         )
         other = seen.get(key)
         if other is not None:
-            raise SystemExit(f"{entry.get('payloadId')} and {other} would both match the same devices")
+            raise SystemExit(
+                f"{entry.get('payloadId')} and {other} duplicate the same device/flavour/release"
+            )
         seen[key] = entry.get("payloadId", "")
 
     # Every artifact the app will ask for has to be reachable, and a relayed value is the one

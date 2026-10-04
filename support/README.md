@@ -1,8 +1,10 @@
 # Support feed schema
 
-`targets-v3.json` keeps one entry for each shared exploit and KernelSU payload.
-Automatic selection matches the exact device model and three-part kernel
-version, such as `6.6.98`.
+`targets-v3.json` keeps one entry for each device, KernelSU flavour, and
+declared release. The app's target picker can show multiple release choices
+for one model, kernel version, and flavour. Automatic resolution uses the
+first matching entry, so the preferred release should appear first. Matching
+uses the exact device model and three-part kernel version, such as `6.6.98`.
 
 Each entry contains only:
 
@@ -26,10 +28,11 @@ An entry may also declare `flavor`: which project's KernelSU its `kernelsu` arti
 `kernelsu`, `kernelsu-next` or `resukisu`. The app compares it against the three projects it knows
 and offers that flavour's manager; an entry that declares none is the plain `kernelsu` one, which is
 what every entry written before flavours existed is. One device can be served by several flavours at
-once - the app shows them as a row of chips to choose between - so the two entries differ in this
-field and in the artifact they name, and nothing else. `tools/update_feed.py --create` writes one
-beside an entry that already serves the device, which is how a second flavour reaches a target that
-has only ever been served the first.
+once - the app shows them as a row of chips to choose between - and a flavour can offer multiple
+declared releases as separate rows. Such entries must declare different `kernelsu.version` values and
+point to distinct daemon files; `tools/update_feed.py` rejects duplicate device/flavour/release rows.
+`tools/update_feed.py --create` writes one beside an entry that already serves the device, which is
+how a second flavour reaches a target that has only ever been served the first.
 
 An entry may additionally set `requiresFreshP0Session` to `true` when slide
 discovery and exploitation must run in the same payload process. The app then
@@ -41,8 +44,8 @@ The app extracts the leading numeric version from `uname -r`. Kernel suffixes,
 Android build displays, fingerprints, and security-patch dates do not
 participate in matching.
 
-`targets-v2.json` remains unchanged for released 0.2.3 clients. New clients
-read only schema version 3.
+`targets-v2.json` retains its legacy schema for released 0.2.3 clients. New
+clients read only schema version 3.
 
 ## The generic tier
 
