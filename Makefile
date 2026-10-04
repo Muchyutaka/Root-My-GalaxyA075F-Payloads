@@ -65,6 +65,7 @@ APP_PUBLISH_RECIPES := \
   gts9-X710XXS6EZF1=all \
   e3q-S9280ZCS6DZF2=stable \
   e3q-S928BXXS6DZF2=stable \
+  e3q-S928BXXS6DZI1=stable \
   e3q-S928USQS6DZF2=stable \
   pa2q-S9360ZCSCCZG1=all \
   psq-S9370ZCS9CZG1=all \
