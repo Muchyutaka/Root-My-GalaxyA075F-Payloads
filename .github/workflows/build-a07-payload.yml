@@ -12,6 +12,15 @@ on:
         required: true
         type: string
         default: a07-payload-v1
+      ddk_release:
+        # Date suffix of the ghcr.io/ylarod/ddk-min:<kmi>-<release> image. This repository cannot
+        # verify the tag from its own data, so it is a dispatch input: ksu-build.yml's ddk-image
+        # job fails closed and lists the published tags when the image does not exist, and the
+        # dispatcher can re-run with a corrected date instead of editing three call sites.
+        description: DDK image date suffix for ghcr.io/ylarod/ddk-min (see ksu-build ddk-image job)
+        required: true
+        type: string
+        default: '20260828'
 
 permissions:
   actions: read
@@ -78,7 +87,7 @@ jobs:
       publish: false
       flavor: kernelsu
       ksu_ref: v3.3.0
-      ddk_release: '20260828'
+      ddk_release: ${{ inputs.ddk_release }}
       target_id: a07-SM-A075F
       target_release: ${{ needs.prepare.outputs.target_release }}
       pair_kmi: android16-6.12
@@ -92,7 +101,7 @@ jobs:
       publish: false
       flavor: kernelsu-next
       ksu_ref: v3.4.0
-      ddk_release: '20260828'
+      ddk_release: ${{ inputs.ddk_release }}
       target_id: a07-SM-A075F
       target_release: ${{ needs.prepare.outputs.target_release }}
       pair_kmi: android16-6.12
@@ -106,7 +115,7 @@ jobs:
       publish: false
       flavor: resukisu
       ksu_ref: v4.2.0-rc3
-      ddk_release: '20260828'
+      ddk_release: ${{ inputs.ddk_release }}
       target_id: a07-SM-A075F
       target_release: ${{ needs.prepare.outputs.target_release }}
       pair_kmi: android16-6.12

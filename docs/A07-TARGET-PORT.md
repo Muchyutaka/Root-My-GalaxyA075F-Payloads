@@ -45,6 +45,13 @@ build reuses the repo's target-specific KernelSU pair workflow for KernelSU v3.3
 v3.4.0, and ReSukiSU v4.2.0-rc3, builds the requested stable `.so` with JBR 21, SDK 37, NDK r28c,
 and CMake 3.22.1, and checks the manager APK package IDs before release.
 
+The build dispatch also takes `ddk_release` (default `20260828`), the date suffix of the
+`ghcr.io/ylarod/ddk-min:<kmi>-<release>` image used for all three pairs. Nothing in this repository
+can prove that tag exists, so it is not hardcoded: `ksu-build.yml`'s `ddk-image` job queries the
+`ghcr.io` manifest first, and on a non-200 it fails the run and lists the KMI families actually
+published for that date. If it fails, re-dispatch with a published date rather than editing the
+three call sites.
+
 The manifest's artifact URLs use the source repository branch because the app pins allowed raw
 GitHub URLs to the commit from which it read `targets-v3.json`. The build workflow commits the
 payload, target header, KSU modules/daemons, and feed to the branch on which it was dispatched, then
