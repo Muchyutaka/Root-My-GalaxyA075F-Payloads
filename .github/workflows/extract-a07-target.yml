@@ -1,0 +1,143 @@
+name: Extract SM-A075F target profile
+
+on:
+  workflow_dispatch:
+    inputs:
+      firmware_tag:
+        description: GitHub release containing the stripped SM-A075F firmware/source inputs
+        required: true
+        type: string
+        default: a07-firmware-v1
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    name: Audit A07 kernel, BTF, and Samsung source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout payload tooling
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install analysis tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            binutils dwarves llvm unzip xz-utils zstd lz4 device-tree-compiler file
+          python -m pip install --upgrade pip
+          python -m pip install vmlinux-to-elf
+          nm --version | head -1
+          readelf --version | head -1
+          pahole --version
+          vmlinux-to-elf --help | head -8
+
+      - name: Download the kernel ELF and raw recovery fallback
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ inputs.firmware_tag }}
+          fileName: 'kernel.*'
+          out-file-path: a07-release-assets
+          token: ${{ secrets.GITHUB_TOKEN }}
+          zipBall: false
+          tarBall: false
+          extract: false
+
+      - name: Download Samsung's A07 source archive
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ inputs.firmware_tag }}
+          fileName: 'SM-A075F_16_Opensource.zip'
+          out-file-path: a07-release-assets
+          token: ${{ secrets.GITHUB_TOKEN }}
+          zipBall: false
+          tarBall: false
+          extract: false
+
+      - name: Download kallsyms symbol names
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ inputs.firmware_tag }}
+          fileName: 'kallsyms.txt'
+          out-file-path: a07-release-assets
+          token: ${{ secrets.GITHUB_TOKEN }}
+          zipBall: false
+          tarBall: false
+          extract: false
+
+      - name: Download the kernel's BTF data
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ inputs.firmware_tag }}
+          fileName: 'vmlinux.btf'
+          out-file-path: a07-release-assets
+          token: ${{ secrets.GITHUB_TOKEN }}
+          zipBall: false
+          tarBall: false
+          extract: false
+
+      - name: Confirm required sanitized inputs exist
+        run: |
+          set -euo pipefail
+          for name in \
+            'SM-A075F_16_Opensource.zip' \
+            'kernel.elf' \
+            'kallsyms.txt' \
+            'vmlinux.btf'; do
+            count=$(find a07-release-assets -type f -name "$name" | wc -l)
+            if [ "$count" -ne 1 ]; then
+              echo "::error::Expected exactly one $name in release ${{ inputs.firmware_tag }}; found $count"
+              exit 1
+            fi
+          done
+          echo 'Firmware inputs are present; original images/source will not be uploaded as workflow artifacts.'
+
+      - name: Extract and cross-check target offsets
+        id: analyze
+        run: |
+          set +e
+          python3 tools/extract_a07_offsets.py \
+            --release-assets a07-release-assets \
+            --output-dir a07-target-output \
+            --profile src/targets/a07-SM-A075F/target-values.json \
+            --expected-kernel 6.12.38
+          result=$?
+          ready=false
+          if [ -f a07-target-output/status.json ]; then
+            ready=$(python3 -c 'import json; print("true" if json.load(open("a07-target-output/status.json")).get("ready") else "false")')
+          fi
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "extract_exit=$result" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload sanitized extraction report and verified header
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: a07-target-${{ github.run_id }}
+          path: |
+            a07-target-output/report.md
+            a07-target-output/status.json
+            a07-target-output/kernel-release.txt
+            a07-target-output/target-metadata.json
+            a07-target-output/symbol-offsets.json
+            a07-target-output/btf-layouts.json
+            a07-target-output/target.h
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Require a complete verified target profile
+        if: always() && steps.analyze.outputs.ready != 'true'
+        run: |
+          echo '::error::No production target.h was emitted. Review the a07-target artifact and provide only verified A07-specific values; do not copy SM-A175F offsets.'
+          exit 1
