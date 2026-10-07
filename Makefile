@@ -41,6 +41,16 @@ APP_RELEASE := $(OUTDIR)/cve-2026-43499-app.release.so
 APP_STABLE := $(OUTDIR)/cve-2026-43499-app.stable.so
 APP_RELEASE_SIZE := 104128
 
+# `stable` is also the requested A07 publish recipe, but its S928-only race strategy must not leak
+# into unrelated targets. Keep the special define scoped to the four S928 profiles; other targets get
+# the same fixed-size/stripped recipe without S928-specific runtime behavior.
+APP_S928_STABLE_TARGETS := \
+  e3q-S9280ZCS6DZF2 \
+  e3q-S928BXXS6DZF2 \
+  e3q-S928BXXS6DZI1 \
+  e3q-S928USQS6DZF2
+APP_STABLE_TARGET_CFLAGS := $(if $(filter $(TARGET),$(APP_S928_STABLE_TARGETS)),-DAPP_S928_STABLE_RACE=1,)
+
 # Which recipe a published artifact for this target comes from, written down per target.
 #
 # `artifacts/` is not one kind of file. Half of it is the fixed-size payload - the `release` recipe,
@@ -51,9 +61,9 @@ APP_RELEASE_SIZE := 104128
 # plain are named: their entries declare the plain build's size, and their devices have been running
 # it. Moving one of them is a rebuild of that device's payload and belongs in its own change.
 #
-# The three e3q-S928 targets are the third case and the reason this is a table rather than a flag:
-# `stable` is the fixed-size build with `APP_S928_STABLE_RACE=1`, which is what the S928 validation
-# records name.
+# The e3q-S928 targets are the third case: their `stable` recipe adds the S928-specific race
+# strategy. SM-A075F is also published from the fixed-size `stable` output, but does not receive that
+# S928-only define.
 #
 # The workflow publishes the file this names, so a build that publishes cannot disagree with this file
 # about what publishing means: `make -s TARGET=... info` answers it.
@@ -67,6 +77,7 @@ APP_PUBLISH_RECIPES := \
   e3q-S928BXXS6DZF2=stable \
   e3q-S928BXXS6DZI1=stable \
   e3q-S928USQS6DZF2=stable \
+  a07-SM-A075F=stable \
   pa2q-S9360ZCSCCZG1=all \
   psq-S9370ZCS9CZG1=all \
   q7q-F966BXXSBBZG3=all \
@@ -164,7 +175,7 @@ $(APP_RELEASE): $(APP_PRELOAD_SRCS) $(TARGET_HEADER) src/offset.h src/common.h s
 	truncate -s $(APP_RELEASE_SIZE) $@
 
 $(APP_STABLE): $(APP_PRELOAD_SRCS) $(TARGET_HEADER) src/offset.h src/common.h src/kernelsnitch/*.h | $(OUTDIR)
-	$(TARGET_CC) -DAPP_PAYLOAD=1 -DAPP_S928_STABLE_RACE=1 \
+	$(TARGET_CC) -DAPP_PAYLOAD=1 $(APP_TARGET_CFLAGS) $(APP_STABLE_TARGET_CFLAGS) \
 	  -fPIC -Oz -g0 -fvisibility=hidden -fno-semantic-interposition \
 	  -fstack-protector-strong \
 	  -fno-unwind-tables -fno-asynchronous-unwind-tables \
@@ -193,6 +204,7 @@ $(APP_STABLE): $(APP_PRELOAD_SRCS) $(TARGET_HEADER) src/offset.h src/common.h sr
 info:
 	@echo "TARGET=$(TARGET)"
 	@echo "APP_TARGET_CFLAGS=$(APP_TARGET_CFLAGS)"
+	@echo "APP_STABLE_TARGET_CFLAGS=$(APP_STABLE_TARGET_CFLAGS)"
 	@echo "APP_QUIET_WINDOW=$(if $(findstring src/preload.c,$(APP_PRELOAD_SRCS)),yes,no)"
 	@echo "APP_PUBLISH_RECIPE=$(APP_PUBLISH_RECIPE)"
 	@echo "APP_PUBLISH_ARTIFACT=$(APP_PUBLISH_ARTIFACT)"

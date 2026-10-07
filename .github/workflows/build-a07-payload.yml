@@ -1,0 +1,401 @@
+name: Build SM-A075F temporary-root payloads
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_run_id:
+        description: Successful run ID of Extract SM-A075F target profile
+        required: true
+        type: string
+      payload_release_tag:
+        description: GitHub release tag for the payloads, modules, daemons, and managers
+        required: true
+        type: string
+        default: a07-payload-v1
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: a07-payload-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Verify the extracted A07 profile
+    runs-on: ubuntu-24.04
+    outputs:
+      target_release: ${{ steps.profile.outputs.target_release }}
+    steps:
+      - name: Checkout payload repository
+        uses: actions/checkout@v7
+
+      - name: Download the extraction artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: a07-target-${{ inputs.target_run_id }}
+          run-id: ${{ inputs.target_run_id }}
+          repository: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: target-profile
+
+      - name: Reject incomplete, mismatched, or diagnostic-only profiles
+        id: profile
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import re
+
+          root = Path('target-profile')
+          status = json.loads((root / 'status.json').read_text())
+          metadata = json.loads((root / 'target-metadata.json').read_text())
+          header = root / 'target.h'
+          release = (root / 'kernel-release.txt').read_text().strip()
+          if status.get('ready') is not True:
+              raise SystemExit('extraction status is not ready')
+          if metadata.get('model') != 'SM-A075F' or metadata.get('kernelVersion') != '6.12.38':
+              raise SystemExit('target metadata must be SM-A075F / 6.12.38')
+          if metadata.get('kernelRelease') != release or not re.fullmatch(r'6\.12\.38(?:-[A-Za-z0-9._+-]+)?', release):
+              raise SystemExit(f'exact kernel release mismatch or invalid value: {release!r}')
+          if not header.is_file() or 'TARGET_A07_SM_A075F' not in header.read_text():
+              raise SystemExit('verified target.h is missing the A07 marker')
+          text = header.read_text()
+          if '#error' in text or 'TODO' in text or 'UNKNOWN' in text:
+              raise SystemExit('target.h contains a diagnostic/unresolved marker')
+          import os
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f'target_release={release}\n')
+          print(f'Verified SM-A075F target profile for {release}')
+          PY
+
+  build-kernelsu:
+    name: Build standard KernelSU pair
+    needs: prepare
+    uses: ./.github/workflows/ksu-build.yml
+    with:
+      publish: false
+      flavor: kernelsu
+      ksu_ref: v3.3.0
+      ddk_release: '20260828'
+      target_id: a07-SM-A075F
+      target_release: ${{ needs.prepare.outputs.target_release }}
+      pair_kmi: android16-6.12
+      ddk_kmi: android16-6.12
+
+  build-kernelsu-next:
+    name: Build KernelSU-Next pair
+    needs: prepare
+    uses: ./.github/workflows/ksu-build.yml
+    with:
+      publish: false
+      flavor: kernelsu-next
+      ksu_ref: v3.4.0
+      ddk_release: '20260828'
+      target_id: a07-SM-A075F
+      target_release: ${{ needs.prepare.outputs.target_release }}
+      pair_kmi: android16-6.12
+      ddk_kmi: android16-6.12
+
+  build-resukisu:
+    name: Build ReSukiSU pair
+    needs: prepare
+    uses: ./.github/workflows/ksu-build.yml
+    with:
+      publish: false
+      flavor: resukisu
+      ksu_ref: v4.2.0-rc3
+      ddk_release: '20260828'
+      target_id: a07-SM-A075F
+      target_release: ${{ needs.prepare.outputs.target_release }}
+      pair_kmi: android16-6.12
+      ddk_kmi: android16-6.12
+
+  build-payload-and-publish:
+    name: Build, validate, and publish A07 artifacts
+    needs:
+      - prepare
+      - build-kernelsu
+      - build-kernelsu-next
+      - build-resukisu
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      TARGET_RELEASE: ${{ needs.prepare.outputs.target_release }}
+      RELEASE_TAG: ${{ inputs.payload_release_tag }}
+    steps:
+      - name: Checkout payload repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up JetBrains Runtime 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: jetbrains
+          java-version: '21'
+          java-package: jdk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Android SDK 37, NDK 28, and CMake 3.22.1
+        uses: android-actions/setup-android@v4
+        with:
+          packages: |
+            platforms;android-37
+            build-tools;37.0.0
+            ndk;28.2.13676358
+            cmake;3.22.1
+
+      - name: Verify build toolchain
+        run: |
+          set -euo pipefail
+          java --version
+          java_properties=$(java -XshowSettings:properties -version 2>&1)
+          printf '%s\n' "$java_properties" | grep -E 'java.vendor|java.version' | head -4
+          printf '%s\n' "$java_properties" | grep -qi 'JetBrains'
+          printf '%s\n' "$java_properties" | grep -q '21'
+          test -d "$ANDROID_SDK_ROOT/platforms/android-37"
+          test -x "$ANDROID_SDK_ROOT/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
+          test -x "$ANDROID_SDK_ROOT/cmake/3.22.1/bin/cmake"
+          "$ANDROID_SDK_ROOT/cmake/3.22.1/bin/cmake" --version | head -1
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "CMake: $ANDROID_SDK_ROOT/cmake/3.22.1/bin/cmake"
+
+      - name: Set NDK environment
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: Download verified target header from extraction run
+        uses: actions/download-artifact@v7
+        with:
+          name: a07-target-${{ inputs.target_run_id }}
+          run-id: ${{ inputs.target_run_id }}
+          repository: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: target-profile
+
+      - name: Install A07 target header
+        run: |
+          set -euo pipefail
+          test -s target-profile/target.h
+          install -D target-profile/target.h src/targets/a07-SM-A075F/target.h
+          grep -q '^#define TARGET_A07_SM_A075F 1$' src/targets/a07-SM-A075F/target.h
+          grep -q '^#define TARGET_KERNEL_RELEASE ' src/targets/a07-SM-A075F/target.h
+
+      - name: Confirm Makefile publishes the requested stable recipe
+        run: |
+          set -euo pipefail
+          make -s TARGET=a07-SM-A075F ANDROID_NDK_HOME=$ANDROID_NDK_HOME info | tee /tmp/a07-make-info.txt
+          grep -q '^APP_PUBLISH_RECIPE=stable$' /tmp/a07-make-info.txt
+          grep -q '^APP_STABLE_TARGET_CFLAGS=$' /tmp/a07-make-info.txt
+
+      - name: Build stable exploit payload
+        run: make TARGET=a07-SM-A075F ANDROID_NDK_HOME=$ANDROID_NDK_HOME stable
+
+      - name: Validate exploit payload and prepare output directories
+        run: |
+          set -euo pipefail
+          app=build/a07-SM-A075F/cve-2026-43499-app.stable.so
+          test -s "$app"
+          size=$(stat -c %s "$app")
+          if [ "$size" -ne 104128 ]; then
+            echo "::error::stable payload size is $size, expected 104128"
+            exit 1
+          fi
+          file "$app"
+          readelf -h "$app" | grep -E 'Class:|Machine:'
+          mkdir -p artifacts/a07-SM-A075F release-assets
+          install -m 0644 "$app" artifacts/a07-SM-A075F/cve-2026-43499-app.so
+          install -m 0644 "$app" release-assets/cve-2026-43499-app-a07-SM-A075F-6.12.38.so
+          install -m 0644 src/targets/a07-SM-A075F/target.h release-assets/target-a07-SM-A075F-6.12.38.h
+
+      - name: Download standard KernelSU manager APK
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: tiann/KernelSU
+          tag: v3.3.0
+          fileName: KernelSU_v3.3.0_32601-release.apk
+          out-file-path: manager-apks
+          token: ${{ secrets.GITHUB_TOKEN }}
+          zipBall: false
+          tarBall: false
+
+      - name: Download KernelSU-Next manager APK
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: KernelSU-Next/KernelSU-Next
+          tag: v3.4.0
+          fileName: KernelSU_Next_v3.4.0_33294-release.apk
+          out-file-path: manager-apks
+          token: ${{ secrets.GITHUB_TOKEN }}
+          zipBall: false
+          tarBall: false
+
+      - name: Download ReSukiSU universal manager APK
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ReSukiSU/ReSukiSU
+          tag: v4.2.0-rc3
+          fileName: ReSukiSU_v4.2.0-rc3_35171-universal-release.apk
+          out-file-path: manager-apks
+          token: ${{ secrets.GITHUB_TOKEN }}
+          zipBall: false
+          tarBall: false
+
+      - name: Download the three target-specific KSU pair artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: pair-*-a07-SM-A075F
+          merge-multiple: false
+          path: pair-artifacts
+
+      - name: Validate pair contents and manager packages
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends kmod
+          mkdir -p kernelsu
+          copy_artifact() {
+            local search_root="$1" pattern="$2" destination="$3"
+            mapfile -t matches < <(find "$search_root" -type f -name "$pattern" -print)
+            if [ "${#matches[@]}" -ne 1 ]; then
+              echo "::error::Expected one $pattern under $search_root, found ${#matches[@]}"
+              find "$search_root" -type f -maxdepth 4 -printf '%p\n' || true
+              return 1
+            fi
+            install -m 0644 "${matches[0]}" "$destination"
+          }
+          copy_artifact pair-artifacts 'ksud-a07-SM-A075F-kdp' kernelsu/ksud-a07-SM-A075F-kdp
+          copy_artifact pair-artifacts 'android16-6.12_kernelsu-a07-SM-A075F-kdp.ko' kernelsu/android16-6.12_kernelsu-a07-SM-A075F-kdp.ko
+          copy_artifact pair-artifacts 'ksud-next-a07-SM-A075F-kdp' kernelsu/ksud-next-a07-SM-A075F-kdp
+          copy_artifact pair-artifacts 'android16-6.12_kernelsu-next-a07-SM-A075F-kdp.ko' kernelsu/android16-6.12_kernelsu-next-a07-SM-A075F-kdp.ko
+          copy_artifact pair-artifacts 'ksud-rsksu-a07-SM-A075F-kdp' kernelsu/ksud-rsksu-a07-SM-A075F-kdp
+          copy_artifact pair-artifacts 'android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko' kernelsu/android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko
+
+          for module in kernelsu/android16-6.12_kernelsu*-a07-SM-A075F-kdp.ko; do
+            echo "=== $module ==="
+            modinfo "$module" | grep -E '^(name|vermagic):'
+            vermagic=$(modinfo -F vermagic "$module")
+            case "$vermagic" in
+              "$TARGET_RELEASE"\ *) ;;
+              *) echo "::error::module vermagic does not match $TARGET_RELEASE: $vermagic"; exit 1 ;;
+            esac
+          done
+
+          aapt="$ANDROID_SDK_ROOT/build-tools/37.0.0/aapt"
+          verify_apk() {
+            local apk="$1" expected="$2" version="$3"
+            test -s "$apk"
+            local metadata package actual_version
+            metadata=$("$aapt" dump badging "$apk")
+            package=$(printf '%s\n' "$metadata" | sed -n "s/^package: name='\\([^']*\\)'.*/\\1/p" | head -1)
+            actual_version=$(printf '%s\n' "$metadata" | sed -n "s/^package:.*versionName='\\([^']*\\)'.*/\\1/p" | head -1)
+            if [ "$package" != "$expected" ]; then
+              echo "::error::manager package for $apk is '$package', expected '$expected'"
+              exit 1
+            fi
+            if [ "$actual_version" != "$version" ]; then
+              echo "::error::manager version for $apk is '$actual_version', expected '$version'"
+              exit 1
+            fi
+            echo "$apk => $package $actual_version"
+            cp "$apk" release-assets/
+          }
+          verify_apk manager-apks/KernelSU_v3.3.0_32601-release.apk me.weishu.kernelsu 3.3.0
+          verify_apk manager-apks/KernelSU_Next_v3.4.0_33294-release.apk com.rifsxd.ksunext 3.4.0
+          verify_apk manager-apks/ReSukiSU_v4.2.0-rc3_35171-universal-release.apk com.resukisu.resukisu 4.2.0-rc3
+
+          cp kernelsu/ksud-a07-SM-A075F-kdp release-assets/
+          cp kernelsu/ksud-next-a07-SM-A075F-kdp release-assets/
+          cp kernelsu/ksud-rsksu-a07-SM-A075F-kdp release-assets/
+          cp kernelsu/*.ko release-assets/
+
+      - name: Generate exact v3 feed entries
+        run: |
+          python3 tools/generate_a07_targets.py \
+            --feed support/targets-v3.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME" \
+            --kernel-release "$TARGET_RELEASE"
+
+      - name: Verify generated feed entries and hashes
+        run: |
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          feed = json.loads(Path('support/targets-v3.json').read_text())
+          rows = [p for p in feed['payloads'] if 'SM-A075F' in p.get('models', []) and '6.12.38' in p.get('kernelVersions', [])]
+          expected = {
+              'kernelsu': ('3.3.0', 'me.weishu.kernelsu'),
+              'kernelsu-next': ('3.4.0', 'com.rifsxd.ksunext'),
+              'resukisu': ('4.2.0-rc3', 'com.resukisu.resukisu'),
+          }
+          if len(rows) != 3:
+              raise SystemExit(f'expected exactly three A07 6.12.38 entries, found {len(rows)}')
+          for row in rows:
+              flavor = row.get('flavor', 'kernelsu')
+              version, package = expected[flavor]
+              daemon_path = Path('kernelsu') / row['kernelsu']['url'].rsplit('/', 1)[1]
+              if row['kernelsu'].get('version') != version:
+                  raise SystemExit(f"{flavor}: wrong kernelsu.version {row['kernelsu'].get('version')!r}")
+              if row.get('managerPackage') != package:
+                  raise SystemExit(f"{flavor}: wrong managerPackage {row.get('managerPackage')!r}")
+              if not daemon_path.is_file():
+                  raise SystemExit(f'missing daemon {daemon_path}')
+              digest = hashlib.sha256(daemon_path.read_bytes()).hexdigest()
+              if row['kernelsu'].get('sha256') != digest or row['kernelsu'].get('size') != daemon_path.stat().st_size:
+                  raise SystemExit(f'{flavor}: ksud size/hash does not match the file')
+              if row['models'] != ['SM-A075F'] or '6.12.38' not in row['kernelVersions']:
+                  raise SystemExit(f'{flavor}: wrong model/kernel declaration')
+              if not row['exploit'].get('sha256') or not row['exploit'].get('size'):
+                  raise SystemExit(f'{flavor}: exploit artifact lacks size/hash')
+              print(f"{flavor}: version={version}, package={package}, sha256={digest}")
+          PY
+
+      - name: Upload release bundle as a workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: a07-payload-${{ github.run_id }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Commit target header, payloads, KSU pairs, and feed on this source branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            src/targets/a07-SM-A075F/target.h \
+            artifacts/a07-SM-A075F/cve-2026-43499-app.so \
+            kernelsu/ksud-a07-SM-A075F-kdp \
+            kernelsu/ksud-next-a07-SM-A075F-kdp \
+            kernelsu/ksud-rsksu-a07-SM-A075F-kdp \
+            kernelsu/android16-6.12_kernelsu-a07-SM-A075F-kdp.ko \
+            kernelsu/android16-6.12_kernelsu-next-a07-SM-A075F-kdp.ko \
+            kernelsu/android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko \
+            support/targets-v3.json
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No tracked changes to publish.'
+          else
+            git commit -m 'Add SM-A075F payloads for kernel 6.12.38'
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+
+      - name: Create or update the GitHub release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* \
+              --target "$GITHUB_REF_NAME" \
+              --title "Galaxy A07 SM-A075F | Kernel 6.12.38 payloads" \
+              --notes "Stable exploit payload and target-specific KernelSU, KernelSU-Next, and ReSukiSU pairs. The target profile and feed entries were generated from the exact SM-A075F kernel 6.12.38 inputs."
+          fi

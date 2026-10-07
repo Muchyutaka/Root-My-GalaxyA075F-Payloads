@@ -5,6 +5,55 @@
 
 #include "offset.h"
 
+/* A07 is generated only from verified SM-A075F data. Do not let generic fallbacks below silently
+ * supply target-specific values for an incomplete profile. */
+#if defined(TARGET_A07_SM_A075F)
+#if !defined(KIMAGE_TEXT_BASE)
+#error "A07 target header is missing verified KIMAGE_TEXT_BASE"
+#endif
+#if !defined(P0_PAGE_OFFSET) || !defined(P0_PHYS_OFFSET) || !defined(P0_KERNEL_PHYS_LOAD)
+#error "A07 target header is missing verified physical/kernel memory layout values"
+#endif
+#if !defined(DIRECT_MAP_BASE) || !defined(DIRECT_MAP_END) || !defined(VMEMMAP_START)
+#error "A07 target header is missing verified direct-map/vmemmap layout values"
+#endif
+#if !defined(SKB_DATA_DELTA)
+#error "A07 target header must define verified SKB_DATA_DELTA; the common fallback is not valid evidence"
+#endif
+#if !defined(MM_STRUCT_SZ)
+#error "A07 target header must define MM_STRUCT_SZ from its own vmlinux.btf"
+#endif
+#if !defined(SLIDE_PSELECT_WORD_SHIFT)
+#error "A07 target header must define the verified SLIDE_PSELECT_WORD_SHIFT"
+#endif
+#if !defined(SLIDE_TRACEFS_EVENT_ID) || !defined(SLIDE_TRACEFS_WORKER_CALLER_OFF)
+#error "A07 target header is missing verified tracefs event/caller offsets"
+#endif
+#if !defined(KMALLOC_CACHE_TYPES) || !defined(KMALLOC_CGROUP_TYPE)
+#error "A07 target header must define the A07 kmalloc cache layout"
+#endif
+#if !defined(SLIDE_NFULNL_LOGGER_NAME_OFF) || \
+    !defined(SLIDE_NFULNL_LOGGER_OBJECT_OFF) || \
+    !defined(SLIDE_RANDOM_TABLE_BOOT_ID_DATA_PTR_OFF) || \
+    !defined(SLIDE_SYSCTL_BOOTID_OFF)
+#error "A07 target header is missing verified slide-chain data offsets"
+#endif
+#if !defined(SLIDE_FAKE_WAITER_PRIO) || !defined(SLIDE_WAITER_WAKE_STATE)
+#error "A07 target header is missing verified waiter priority/wake-state values"
+#endif
+#if !defined(LEGACY_RT_MUTEX_WAITER) || !defined(COMPACT_RT_MUTEX_WAITER)
+#error "A07 target header must select its verified rt_mutex_waiter layout"
+#endif
+#if (LEGACY_RT_MUTEX_WAITER + COMPACT_RT_MUTEX_WAITER) != 1
+#error "A07 target header must select exactly one rt_mutex_waiter layout"
+#endif
+#if !defined(SLIDE_LOCK_OWNER_VALUE) || !defined(SLIDE_USE_FAKE_TASK) || \
+    !defined(SLIDE_RB_PARENT_TYPE_RESTORE) || \
+    !defined(SLIDE_P0_OFFSET_CANDIDATES)
+#error "A07 target header is missing evidence-backed runtime/layout choices"
+#endif
+#endif
+
 #define PAGE_SHIFT 12
 #define PAGE_SIZE (1UL << PAGE_SHIFT)
 #define KS_PAGE_SIZE 4096
