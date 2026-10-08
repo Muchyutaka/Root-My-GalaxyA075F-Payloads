@@ -74,6 +74,13 @@ def notices(directory: Path) -> list[str]:
     ):
         if groups[key]:
             out.append(f"{label}: " + clip("; ".join(groups[key])))
+    waiter = layouts.get("rtMutexWaiterLayoutCandidate")
+    if waiter:
+        out.append(f"rt_mutex_waiter layout measured from A07 BTF: {clip(str(waiter))}")
+    diagnostics = layouts.get("incompleteStructDiagnostics") or {}
+    for name in sorted(diagnostics):
+        members = diagnostics[name].get("parsedMembers") or []
+        out.append(f"struct {name}: pahole parsed {len(members)} members: " + clip(", ".join(members) or "(none)"))
     if status.get("warnings"):
         out.append("Warnings: " + clip("; ".join(str(w) for w in status["warnings"])))
     return out

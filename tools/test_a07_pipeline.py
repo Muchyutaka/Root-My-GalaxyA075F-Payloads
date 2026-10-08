@@ -96,6 +96,25 @@ class A07ExtractionHelperTests(unittest.TestCase):
             self.assertFalse((output / "target.h").exists())
             self.assertFalse(json.loads((output / "status.json").read_text())["ready"])
 
+    def test_pahole_member_names(self) -> None:
+        cases = {
+            "        struct module  *               owner;                /*     0x0     0x8 */": "owner",
+            "        loff_t                       (*llseek)(struct file  *, loff_t, int); /*     0x8     0x8 */": "llseek",
+            "        ssize_t                      (*read)(struct file  *, char  *, size_t, loff_t *); /*    0x10     0x8 */": "read",
+            "        u64                            mask:1;               /*    0x28     0x8 */": "mask",
+            "        char                           name[16];             /*    0x30    0x10 */": "name",
+            "        struct x *                     arr[4];               /*    0x40    0x20 */": "arr",
+            "        int                        prio;                 /*    0x40     0x4 */": "prio",
+            "        struct rb_node             tree_entry;           /*     0x0    0x18 */": "tree_entry",
+        }
+        for line, expected in cases.items():
+            declaration = line.split("/*", 1)[0]
+            self.assertEqual(expected, extract_a07_offsets.member_name(declaration), line)
+
+    def test_pahole_non_member_lines(self) -> None:
+        for declaration in ("        };", "        union {", "        struct {", "        int", "        unsigned long"):
+            self.assertIsNone(extract_a07_offsets.member_name(declaration), declaration)
+
     def test_samsung_source_accepts_unique_root_kernel_archive(self) -> None:
         if sys.version_info < (3, 12):
             self.skipTest("the safe tarfile data filter is available in CI's Python 3.12")

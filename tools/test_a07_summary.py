@@ -18,7 +18,11 @@ STATUS = {
         "converted kernel.raw ELF remains incomplete: missing target-header symbols",
     ],
 }
-LAYOUTS = {"task_struct_mm": {"btfOffset": 1672, "verified": True}}
+LAYOUTS = {
+    "task_struct_mm": {"btfOffset": 1672, "verified": True},
+    "rtMutexWaiterLayoutCandidate": "COMPACT_RT_MUTEX_WAITER=1 (BTF carries tree_entry/prio/deadline)",
+    "incompleteStructDiagnostics": {"file_operations": {"parsedMembers": ["owner", "llseek", "read"]}},
+}
 SYMBOLS = {"kernelRelease": STATUS["kernelRelease"], "offsetMacros": {"INIT_TASK_OFF": "0x1234"}}
 
 
@@ -47,6 +51,11 @@ class SummaryTests(unittest.TestCase):
         self.assertIn("INIT_TASK_OFF=0x1234", text)
         self.assertIn("header ready=False", text)
         self.assertIn("selinux_enforcing", text)
+
+    def test_reports_measured_layout_evidence(self):
+        text = "\n".join(notices(self.root))
+        self.assertIn("rt_mutex_waiter layout measured from A07 BTF: COMPACT_RT_MUTEX_WAITER=1", text)
+        self.assertIn("struct file_operations: pahole parsed 3 members: owner, llseek, read", text)
 
     def test_survives_absent_results(self):
         empty = self.root / "empty"

@@ -392,6 +392,38 @@ def parse_integer(text: str) -> int:
     return int(text, 16) if text.lower().startswith("0x") else int(text, 10)
 
 
+# pahole prints function-pointer members as `loff_t (*llseek)(struct file *, loff_t, int);`.
+# Taking the last identifier of that line yields the parameter type (`int`), not the member, so
+# every `file_operations` callback used to be recorded under a type keyword and then reported as
+# missing. The member name is inside the `(*name)` group; bitfields carry a `:width` suffix.
+FUNC_PTR_MEMBER = re.compile(r"\(\s*\*\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)")
+BITFIELD_MEMBER = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*:\s*\d+\s*$")
+TRAILING_MEMBER = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*$")
+TYPE_KEYWORDS = frozenset(
+    """int long short char unsigned signed void struct union enum float double bool const
+    volatile restrict u8 u16 u32 u64 s8 s16 s32 s64 __u8 __u16 __u32 __u64 size_t ssize_t
+    loff_t off_t atomic_t refcount_t spinlock_t""".split()
+)
+
+
+def member_name(declaration: str) -> str | None:
+    """The C member a pahole declaration line describes, or None when it is not a member."""
+    text = declaration.strip().rstrip(";").strip()
+    text = re.sub(r"\[[^\]]*\]\s*$", "", text).strip()
+    if not text or text in {"}", "};", "{", "union", "struct"}:
+        return None
+    bitfield = BITFIELD_MEMBER.search(text)
+    if bitfield:
+        return bitfield.group(1)
+    func_ptr = FUNC_PTR_MEMBER.search(text)
+    if func_ptr:
+        return func_ptr.group(1)
+    trailing = TRAILING_MEMBER.search(text)
+    if not trailing or trailing.group(1) in TYPE_KEYWORDS:
+        return None
+    return trailing.group(1)
+
+
 def pahole_type(path: Path, type_name: str) -> tuple[dict[str, int], int | None, str]:
     result = run(["pahole", "--hex", "-C", type_name, str(path)], check=False)
     output = result.stdout
@@ -406,11 +438,9 @@ def pahole_type(path: Path, type_name: str) -> tuple[dict[str, int], int | None,
         comment = re.search(r"/\*\s*(0x[0-9a-fA-F]+|\d+)\s+(?:0x[0-9a-fA-F]+|\d+)", line)
         if not comment:
             continue
-        declaration = line.split("/*", 1)[0].strip().rstrip(";").strip()
-        declaration = re.sub(r"\[[^\]]*\]\s*$", "", declaration)
-        name = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*$", declaration)
+        name = member_name(line.split("/*", 1)[0])
         if name:
-            fields[name.group(1)] = parse_integer(comment.group(1))
+            fields[name] = parse_integer(comment.group(1))
     return fields, size, output
 
 
@@ -863,14 +893,41 @@ def main() -> int:
                 f"- Type/name agree: **{mm_valid}**\n"
             )
             missing_btf = []
+            incomplete_structs: set[str] = set()
             for macro, (type_name, member) in BTF_FIELD_MACROS.items():
                 if member not in btf_fields.get(type_name, {}):
                     missing_btf.append(f"{type_name}.{member} -> {macro}")
+                    incomplete_structs.add(type_name)
             for macro, type_name in BTF_SIZE_MACROS.items():
                 if type_name not in btf_sizes:
                     missing_btf.append(f"sizeof(struct {type_name}) -> {macro}")
+                    incomplete_structs.add(type_name)
             if missing_btf:
                 missing.extend("BTF/pahole missing " + item for item in missing_btf)
+            # Ground truth for a reviewer: what pahole actually saw for the structs whose members
+            # are absent. Reading the A07 layout is how LEGACY/COMPACT rt_mutex_waiter and the
+            # file_operations set are decided; it is never inferred from another device's header.
+            btf_diagnostic = {
+                name: {
+                    "parsedMembers": sorted(btf_fields.get(name, {})),
+                    "rawPahole": pahole_outputs.get(name, "")[:4000],
+                }
+                for name in sorted(incomplete_structs)
+            }
+            waiter = sorted(btf_fields.get("rt_mutex_waiter", {}))
+            waiter_candidate = None
+            if waiter:
+                legacy_only = {"pi_tree_entry", "pi_tree_prio", "pi_tree_deadline"}
+                compact_only = {"tree_entry", "prio", "deadline"}
+                if legacy_only <= set(waiter):
+                    waiter_candidate = "LEGACY_RT_MUTEX_WAITER=1 (BTF carries the pi_tree_* members)"
+                elif compact_only <= set(waiter):
+                    waiter_candidate = "COMPACT_RT_MUTEX_WAITER=1 (BTF carries tree_entry/prio/deadline)"
+                else:
+                    waiter_candidate = (
+                        "undetermined: rt_mutex_waiter has neither the legacy pi_tree_* set nor "
+                        f"tree_entry/prio/deadline; parsed members: {', '.join(waiter)}"
+                    )
             (out_dir / "btf-layouts.json").write_text(
                 json.dumps(
                     {
@@ -887,12 +944,25 @@ def main() -> int:
                             name: {"size": btf_sizes.get(name), "fields": fields}
                             for name, fields in sorted(btf_fields.items())
                         },
+                        "rtMutexWaiterLayoutCandidate": waiter_candidate,
+                        "incompleteStructDiagnostics": btf_diagnostic,
                     },
                     indent=2,
                     sort_keys=True,
                 )
                 + "\n"
             )
+            if waiter_candidate or btf_diagnostic:
+                sections.append(
+                    "## BTF layout evidence (measured candidates, not applied)\n\n"
+                    + (f"- `rt_mutex_waiter` layout candidate: {waiter_candidate}\n" if waiter_candidate else "")
+                    + "".join(
+                        f"- `struct {name}` members pahole parsed: {', '.join(info['parsedMembers']) or '(none)'}\n"
+                        for name, info in btf_diagnostic.items()
+                    )
+                    + "\nThese are measurements of A07's own BTF, reported for review. The production\n"
+                    "header is still emitted only from verified symbols plus the evidence-bearing profile.\n"
+                )
         except Exception as error:
             missing.append(f"pahole/BTF audit failed: {error}")
     else:
