@@ -13,12 +13,17 @@ on:
       - src/targets/a07-SM-A075F/target-values.json
   workflow_dispatch:
 
+# The existing reusable KSU pair workflow declares contents:write, even when
+# called with publish:false. GitHub validates the nested call before jobs start.
+# Restrict the extraction job itself to read-only; the review build cannot publish.
 permissions:
-  contents: read   # Same-repository release metadata and asset download
-  actions: read    # Only needed by the later build for same-run artifact access
+  contents: write
+  actions: read
 
 jobs:
   extract:
+    permissions:
+      contents: read
     name: Audit A07 kernel, BTF, and Samsung source
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -139,5 +144,5 @@ jobs:
     with:
       target_run_id: ${{ github.run_id }}
     permissions:
-      contents: read
+      contents: write
       actions: read

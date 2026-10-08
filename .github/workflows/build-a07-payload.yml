@@ -16,9 +16,11 @@ on:
         required: true
         type: string
 
+# The existing KSU pair workflow requires contents:write even with publish:false.
+# Only pair jobs inherit it; prepare and candidate build stay read-only.
 permissions:
   actions: read
-  contents: read
+  contents: write
 
 concurrency:
   group: a07-payload-${{ github.ref }}
@@ -28,6 +30,9 @@ jobs:
   prepare:
     name: Verify the extracted A07 profile
     runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
     outputs:
       target_release: ${{ steps.profile.outputs.target_release }}
     steps:
@@ -125,8 +130,11 @@ jobs:
       pair_kmi: android16-6.12
       ddk_kmi: android16-6.12
 
-  build-payload-and-publish:
+  build-candidate:
     name: Build and validate A07 artifacts (review only)
+    permissions:
+      actions: read
+      contents: read
     needs:
       - prepare
       - build-kernelsu

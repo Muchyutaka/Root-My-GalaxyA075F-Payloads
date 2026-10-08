@@ -137,10 +137,20 @@ manual API dispatch is needed, reconnect/update the Arena GitHub app installatio
 **Actions: write** on this repository; changing `GITHUB_TOKEN` YAML alone cannot repair that
 403. GitHub's web Actions tab can dispatch with the owner's own permissions instead.
 
-**No automatic publication:** `build-a07-payload.yml` has only `contents: read` and
-`actions: read`. Its optional `workflow_dispatch` requires an actual successful extraction
-run ID; the extraction workflow can call it directly on success. Any generated `target.h`,
-`.so`, and draft `targets-v3.json` are review artifacts only. Until the verified profile and
-all three pairs exist and a separate reviewed publication occurs, the checked-in feed stays
-without an A07 entry. Temporary root on SM-A075F/A075FXXS5CZF2 with a locked bootloader
-remains **NOT DEVICE-TESTED**.
+**No automatic publication:** the old shared `ksu-build.yml` declares `contents: write`
+even when its caller sets `publish: false`. GitHub validates a nested reusable workflow's
+requested permissions *before* executing any jobs; the first push-triggered extraction run
+failed at startup when the caller allowed only `contents: read`. To satisfy that existing
+contract without changing unrelated KSU publishing, the **parent and pair-build jobs** now
+allow `contents: write`; the firmware extraction job and the review build's preparation and
+candidate-bundle jobs explicitly use `contents: read`. All A07 KSU calls pass
+`publish: false`, and the A07 build workflow has **no `git push` or release publishing
+step**. This write scope is an internal reusable-workflow requirement; it does not grant
+Arena's external integration the missing `Actions: write` needed for API dispatch.
+
+The optional `workflow_dispatch` requires an actual successful extraction run ID; extraction
+can call the review build directly on success. Any generated `target.h`, `.so`, and draft
+`targets-v3.json` are review artifacts only. Until the verified profile and all three pairs
+exist and a separate reviewed publication occurs, the checked-in feed stays without an A07
+entry. Temporary root on SM-A075F/A075FXXS5CZF2 with a locked bootloader remains
+**NOT DEVICE-TESTED**.
