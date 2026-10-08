@@ -855,6 +855,12 @@ def main() -> int:
                 sections.append("## Kernel ELF selection\n\n- Audited partial `kernel.elf` for diagnostics only. Incomplete: **no production header**.\n")
     if selected_kernel is None:
         missing.append("usable AArch64 kernel ELF with a symbol table")
+    elif selected_kernel != asset_paths.get("kernel.elf"):
+        # The image every offset below is measured from has to stay readable by later steps, and a
+        # converted ELF lives in a temporary directory that does not outlive this script.
+        persisted = out_dir / "selected-kernel.elf"
+        shutil.copyfile(selected_kernel, persisted)
+        selected_kernel = persisted
 
     if selected_kernel:
         kernel_release = find_linux_release(selected_kernel)
@@ -1262,6 +1268,7 @@ def main() -> int:
         "model": MODEL,
         "kernelVersion": KERNEL_VERSION,
         "kernelRelease": kernel_release,
+        "selectedKernel": str(selected_kernel) if selected_kernel else None,
         "ready": ready,
         "missing": missing,
         "warnings": warnings,

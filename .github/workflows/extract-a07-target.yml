@@ -14,6 +14,9 @@ on:
       - tools/test_a07_pipeline.py
       - tools/test_a07_release.py
       - tools/test_a07_summary.py
+      - tools/a07_elf.py
+      - tools/derive_a07_image.py
+      - tools/test_a07_image.py
       - src/targets/a07-SM-A075F/target-values.json
   workflow_dispatch:
 
@@ -43,7 +46,7 @@ jobs:
           python-version: '3.12'
 
       - name: Test extraction and SHA-256 verifier before processing firmware
-        run: python3 -m unittest tools.test_a07_pipeline tools.test_a07_release tools.test_a07_summary -q
+        run: python3 -m unittest tools.test_a07_pipeline tools.test_a07_release tools.test_a07_summary tools.test_a07_image -q
 
       - name: Install analysis tools
         run: |
@@ -118,6 +121,25 @@ jobs:
           fi
           exit 0
 
+      - name: Derive A07 image facts from the same kernel ELF
+        run: |
+          set -euo pipefail
+          selected=$(python3 -c 'import json;print(json.load(open("a07-target-output/status.json")).get("selectedKernel") or "")')
+          if [ -z "$selected" ] || [ ! -f "$selected" ]; then
+            echo '::error::no usable A07 kernel ELF was selected, so no image fact can be derived'
+            exit 1
+          fi
+          # Fail-closed by design: this step reports evidence for the port. It never writes
+          # target.h and never feeds a value into the header without its own cross-check.
+          python3 tools/derive_a07_image.py \
+            --kernel-elf "$selected" \
+            --btf a07-release-assets/vmlinux.btf \
+            --symbol-offsets a07-target-output/symbol-offsets.json \
+            --source-zip a07-release-assets/SM-A075F_16_Opensource.zip \
+            --output-dir a07-target-output \
+            --work-dir a07-derive-work \
+            --github
+
       - name: Summarize parse status in GitHub check annotations
         if: always()
         run: |
@@ -133,6 +155,7 @@ jobs:
           path: |
             a07-target-output/report.md
             a07-target-output/input-hashes.json
+            a07-target-output/image-facts.json
             a07-target-output/status.json
             a07-target-output/kernel-release.txt
             a07-target-output/target-metadata.json
