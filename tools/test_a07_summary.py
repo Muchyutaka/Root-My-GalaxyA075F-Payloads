@@ -71,7 +71,7 @@ class SummaryTests(unittest.TestCase):
     def test_reports_unresolved_derivation_detail(self):
         text = "\n".join(notices(self.root))
         self.assertIn("Unresolved derivation FAKE_WAITER_TREE_PRIO_OFF", text)
-        self.assertIn("struct rt_waiter_node members: deadline, node", text)
+        self.assertIn("struct rt_waiter_node members: node, deadline", text)
 
     def test_survives_absent_results(self):
         empty = self.root / "empty"
