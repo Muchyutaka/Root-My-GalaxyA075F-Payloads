@@ -10,6 +10,7 @@ on:
       - .github/workflows/extract-a07-target.yml
       - tools/extract_a07_offsets.py
       - tools/verify_a07_release.py
+      - tools/summarize_a07_status.py
       - src/targets/a07-SM-A075F/target-values.json
   workflow_dispatch:
 
@@ -39,7 +40,7 @@ jobs:
           python-version: '3.12'
 
       - name: Test extraction and SHA-256 verifier before processing firmware
-        run: python3 -m unittest tools.test_a07_pipeline tools.test_a07_release -q
+        run: python3 -m unittest tools.test_a07_pipeline tools.test_a07_release tools.test_a07_summary -q
 
       - name: Install analysis tools
         run: |
@@ -117,25 +118,9 @@ jobs:
       - name: Summarize parse status in GitHub check annotations
         if: always()
         run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          out = Path('a07-target-output')
-          def read(name):
-              path = out / name
-              return json.loads(path.read_text()) if path.is_file() else {}
-          status, layout, symbols = (read(name) for name in
-              ('status.json', 'btf-layouts.json', 'symbol-offsets.json'))
-          mm = layout.get('task_struct_mm', {})
-          offsets = symbols.get('offsetMacros', {})
-          print(f"::notice::A07 ELF release: {symbols.get('kernelRelease') or 'NOT PARSED'}; "
-                f"diagnostic ELF offsets: {len(offsets)}; "
-                f"BTF/source task_struct.mm verified: {mm.get('verified') is True}; "
-                f"missing requirements: {len(status.get('missing', []))}; "
-                f"production header ready: {status.get('ready') is True}")
-          if mm.get('verified') is True:
-              print(f"::notice::A07 BTF task_struct.mm offset: {mm['btfOffset']}")
-          PY
+          # Artifacts and logs redirect to blob storage, which the Arena sandbox cannot
+          # reach; grouped annotations keep the full fail-closed picture readable via API.
+          python3 tools/summarize_a07_status.py --output-dir a07-target-output --github
 
       - name: Upload sanitized extraction report and verified header
         if: always()
