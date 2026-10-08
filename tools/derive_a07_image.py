@@ -467,6 +467,13 @@ SOURCE_EXCERPTS: tuple[tuple[str, str, str, int, int, int], ...] = (
     ("ashmem_rust area object definition", r"ashmem_rust", r"^(?:pub )?struct \w+|ASHMEM_NAME_LEN|name:\s", 4, 34, 3),
     ("ashmem_rust area accessors glue", r"ashmem_rust_exports", r"ashmem_area_name|is_ashmem_file|ashmem_area_vmfile", 4, 30, 3),
     ("ashmem_rust memfd binding", r"ashmem_rust|mm/shmem", r"is_ashmem_file|memfd|shmem_file\(|vm_file", 6, 26, 3),
+    # `me.inner.lock()` and `asma.name.as_ref()` say the name lives behind a mutex inside the
+    # Ashmem object. Whether it is an inline array (fixed offset from file->private_data, so the
+    # payload's blob-overlay primitive survives) or a separate heap allocation (so it does not) is
+    # decided by these three quotes.
+    ("ashmem_rust set_name body", r"ashmem_rust", r"fn set_name|fn get_name", 4, 48, 2),
+    ("ashmem_rust Ashmem struct fields", r"ashmem_rust", r"struct Ashmem\b|struct AshmemInner|inner:", 6, 40, 3),
+    ("ashmem_rust misc device registration", r"ashmem_rust", r"MiscDevice|misc_register|define_misc|b\"ashmem\"", 4, 24, 3),
     ("CONFIG_ASHMEM in defconfigs", r"arch/arm64/configs|defconfig", r"ASHMEM", 1, 1, 8),
     ("selinux_state struct", r"security/selinux/include/security.h", r"struct\s+selinux_state\s*\{", 3, 28, 1),
     ("selinux enforcing accessors", r"security/selinux", r"enforcing_enabled|enforcing\s*=|selinux_enforcing_boot", 2, 6, 8),
@@ -481,9 +488,14 @@ SOURCE_EXCERPTS: tuple[tuple[str, str, str, int, int, int], ...] = (
 
 EXCERPT_GROUPS: dict[str, tuple[str, ...]] = {
     "ashmem-rust": (
+        "ashmem_rust set_name body",
+        "ashmem_rust Ashmem struct fields",
+        "ashmem_rust misc device registration",
+        "ashmem_rust private_data attach",
+    ),
+    "ashmem-rust-context": (
         "ashmem_rust ioctl commands handled",
         "ashmem_rust SET_NAME path",
-        "ashmem_rust private_data attach",
         "ashmem_rust area object definition",
         "ashmem_rust area accessors glue",
         "ashmem_rust memfd binding",
@@ -600,6 +612,20 @@ def audit_source(source_root: Path, limit: int = 12) -> dict[str, list[dict[str,
     return findings
 
 
+def btf_names_matching(btf: Path, pattern: str, limit: int = 12) -> list[str]:
+    """Type/member names in the BTF string table that match a pattern (no external tools needed)."""
+    data = btf.read_bytes()
+    regex = re.compile(pattern)
+    names: list[str] = []
+    for token in re.findall(rb"[ -~]{3,128}", data):
+        text = token.decode("ascii", "replace")
+        if regex.search(text) and text not in names:
+            names.append(text)
+            if len(names) >= limit:
+                break
+    return names
+
+
 def layouts_from_btf(
     btf: Path, work: Path, wanted: tuple[str, ...]
 ) -> tuple[dict[str, dict[str, int]], dict[str, int], dict[str, str]]:
@@ -697,7 +723,24 @@ def main() -> int:
     else:
         btf_error = "no vmlinux.btf supplied"
 
+    ashmem_btf: dict[str, Any] = {"names": []}
+    if args.btf and args.btf.is_file():
+        try:
+            ashmem_btf["names"] = btf_names_matching(args.btf, r"[Aa]shmem")
+            for name in ashmem_btf["names"]:
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) and name.lower().startswith("ashmem"):
+                    fields, types, size, _raw = pahole_type(work / "a07-derive-btf.elf", name)
+                    if fields:
+                        ashmem_btf.setdefault("types", {})[name] = {
+                            "size": size,
+                            "fields": fields,
+                            "fieldTypes": types,
+                        }
+        except Exception as error:
+            ashmem_btf["error"] = str(error)
+
     facts: dict[str, Any] = {
+        "ashmemBtf": ashmem_btf,
         "model": MODEL,
         "kernelVersion": KERNEL_VERSION,
         "imageTextBase": f"0x{text_base:x}",
@@ -749,6 +792,11 @@ def main() -> int:
          + (enforcing.get("evidence") or enforcing.get("reason") or "")
          + (f"; value=0x{enforcing['value']:x}" if enforcing.get("value") is not None else ""))
     emit("notice", f"struct slab overlay: {facts['slab']['status']} - {facts['slab']['evidence']}")
+    emit("notice", f"ashmem names in vmlinux.btf: {', '.join(ashmem_btf.get('names') or []) or '(none)'}"
+         + ("; measurable types: " + "; ".join(
+             f"{name}(size={info['size']}, " + ", ".join(f"{k}@0x{v:x}" for k, v in sorted(info['fields'].items())) + ")"
+             for name, info in sorted((ashmem_btf.get("types") or {}).items()))
+            if ashmem_btf.get("types") else "; no ashmem struct layout is measurable from this BTF"))
     emit("notice", f"workqueue max_active: pwq has it = {facts['workqueue']['pwqHasMaxActive']}, "
                    f"workqueue_struct.max_active = {facts['workqueue']['wqMaxActiveOffset']}, "
                    f"pwq.wq = {facts['workqueue']['pwqWqOffset']}")
