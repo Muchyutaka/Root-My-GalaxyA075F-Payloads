@@ -52,3 +52,53 @@ also publishes the binaries and three manager APKs as release assets. `managerPa
 metadata; the current app selects the package from `flavor` and has these same package mappings.
 
 Neither workflow writes to a device or to device partitions.
+
+## Current verification status (2026-10-08)
+
+**NOT DEVICE-TESTED.** This repository does not currently contain an A07 `target.h`, an A07
+`.so`, an A07 KernelSU pair, or A07 entries in `support/targets-v3.json`. There is **no A07
+payload to run or select in the app yet**. A successful compiler exit alone would not establish
+that a locked-bootloader phone can load a late-load module or that the exploit works on CZF2.
+Never fill missing offsets from another model, or publish placeholder hashes/entries.
+
+The exact input assets are under the GitHub release `a07-firmware-v1`. Extraction consumes
+`kernel.elf`, `kernel.raw` (fallback only), `kallsyms.txt`, `vmlinux.btf` and
+`SM-A075F_16_Opensource.zip`, checking each against the release API's SHA-256 digest. The AP/BL
+images and ramdisk on that release are *not* flashed or modified by either workflow. They are
+not currently parsed into exploit geometry; their presence alone cannot verify the physical map,
+tracefs event ID, skb delta, or runtime choices listed above. The evidence-bearing profile's
+`kernelRelease` must match the ELF UTS_RELEASE exactly. Even when `target.h` is generated, the
+remaining device/runtime assumptions need independent validation on the **exact** build.
+
+The selected upstream release tags in the pair workflow are
+[KernelSU v3.3.0](https://github.com/tiann/KernelSU/releases/tag/v3.3.0),
+[KernelSU-Next v3.4.0](https://github.com/KernelSU-Next/KernelSU-Next/releases/tag/v3.4.0), and
+[ReSukiSU v4.2.0-rc3](https://github.com/ReSukiSU/ReSukiSU/releases/tag/v4.2.0-rc3).
+These tags and the named manager APK assets exist upstream. The versions become
+`kernelsu.version` **only after** matching target-specific daemon/module builds exist.
+
+### How the app reads a completed source
+
+Source of truth: `rushiranpise/Root-My-Galaxy-Next`'s `PayloadSources.kt`,
+`PayloadRepository.kt`, `SupportManifest.kt`, and `LocalPayload.kt`. In Settings → Payload
+Management → Payload Sources, the app takes separate **repository** and **branch** fields,
+not a release/download URL. After publication, enter repository
+`Muchyutaka/Root-My-GalaxyA075F-Payloads` and branch
+`arena/15acdeec-root-my-galaxya075f-payloads`. It reads `support/targets-v3.json` at the
+resolved commit. The feed must point to **raw GitHub branch URLs in that same repository** for
+both `exploit` (`.so`) and `kernelsu` (daemon); the app rewrites those URLs to the resolved commit
+before downloading. A GitHub Release URL cannot be used as the artifact URL in this app.
+
+The app's v3 parser reads `schemaVersion`, `payloads`, `payloadId`, `displayName`, `models`,
+`kernelVersions`, `flavor`, `exploit` (`url`, `size`, `sha256`), and `kernelsu` (`url`, `size`,
+`sha256`, `version`). It does **not** read `managerPackage` or `kernelModule`; these are not
+emitted in newly generated A07 entries. Each of the three flavors will get a separate row.
+The module is embedded in the matching daemon by the pair build; the module file is separately
+retained for offline verification. The app checks the hashes on downloaded artifacts.
+
+For a local `.so` test, Settings → Payload Management → Local Payload accepts an ELF file named
+with `.so` (up to 16 MiB). Its `LocalPayload` implementation copies the exploit library into
+app storage and substitutes it for the downloaded exploit in a run. **It does not import a
+KernelSU daemon/module and does not make an unsupported model appear in the feed.** A matching
+source/daemon must still be selected. Import is useful only after a real A07 `.so` exists; it
+cannot compensate for unverified offsets. Neither workflow writes any device partition.

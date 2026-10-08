@@ -38,69 +38,41 @@ jobs:
           pahole --version
           vmlinux-to-elf --help | head -8
 
-      - name: Download the kernel ELF and raw recovery fallback
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: ${{ github.repository }}
-          tag: ${{ inputs.firmware_tag }}
-          fileName: 'kernel.*'
-          out-file-path: a07-release-assets
-          token: ${{ secrets.GITHUB_TOKEN }}
-          zipBall: false
-          tarBall: false
-          extract: false
-
-      - name: Download Samsung's A07 source archive
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: ${{ github.repository }}
-          tag: ${{ inputs.firmware_tag }}
-          fileName: 'SM-A075F_16_Opensource.zip'
-          out-file-path: a07-release-assets
-          token: ${{ secrets.GITHUB_TOKEN }}
-          zipBall: false
-          tarBall: false
-          extract: false
-
-      - name: Download kallsyms symbol names
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: ${{ github.repository }}
-          tag: ${{ inputs.firmware_tag }}
-          fileName: 'kallsyms.txt'
-          out-file-path: a07-release-assets
-          token: ${{ secrets.GITHUB_TOKEN }}
-          zipBall: false
-          tarBall: false
-          extract: false
-
-      - name: Download the kernel's BTF data
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: ${{ github.repository }}
-          tag: ${{ inputs.firmware_tag }}
-          fileName: 'vmlinux.btf'
-          out-file-path: a07-release-assets
-          token: ${{ secrets.GITHUB_TOKEN }}
-          zipBall: false
-          tarBall: false
-          extract: false
-
-      - name: Confirm required sanitized inputs exist
+      - name: Download exact release assets and verify GitHub SHA-256 digests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIRMWARE_TAG: ${{ inputs.firmware_tag }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          for name in \
-            'SM-A075F_16_Opensource.zip' \
-            'kernel.elf' \
-            'kallsyms.txt' \
-            'vmlinux.btf'; do
-            count=$(find a07-release-assets -type f -name "$name" | wc -l)
-            if [ "$count" -ne 1 ]; then
-              echo "::error::Expected exactly one $name in release ${{ inputs.firmware_tag }}; found $count"
-              exit 1
-            fi
-          done
-          echo 'Firmware inputs are present; original images/source will not be uploaded as workflow artifacts.'
+          mkdir -p a07-release-assets
+          gh release download "$FIRMWARE_TAG" -R "$REPO" -D a07-release-assets \
+            -p 'kernel.elf' -p 'kernel.raw' -p 'kallsyms.txt' -p 'vmlinux.btf' \
+            -p 'SM-A075F_16_Opensource.zip'
+          gh api "repos/$REPO/releases/tags/$FIRMWARE_TAG" > a07-release-assets/release-metadata.json
+          python3 - <<'PYCODE'
+          import hashlib, json
+          from pathlib import Path
+
+          root = Path('a07-release-assets')
+          names = {'kernel.elf', 'kernel.raw', 'kallsyms.txt', 'vmlinux.btf', 'SM-A075F_16_Opensource.zip'}
+          release = json.loads((root / 'release-metadata.json').read_text())
+          assets = {asset['name']: asset for asset in release['assets']}
+          for name in sorted(names):
+              if name not in assets or not (root / name).is_file():
+                  raise SystemExit(f'required firmware asset missing: {name}')
+              asset = assets[name]
+              digest = asset.get('digest', '')
+              if not digest.startswith('sha256:') or len(digest) != 71:
+                  raise SystemExit(f'GitHub does not publish a usable SHA-256 for {name}')
+              h = hashlib.sha256()
+              with (root / name).open('rb') as data:
+                  for block in iter(lambda: data.read(1 << 20), b''):
+                      h.update(block)
+              if h.hexdigest() != digest.removeprefix('sha256:') or (root / name).stat().st_size != asset['size']:
+                  raise SystemExit(f'release size/SHA-256 mismatch: {name}')
+              print(f'{name}: {digest}')
+          PYCODE
 
       - name: Extract and cross-check target offsets
         id: analyze
@@ -118,6 +90,12 @@ jobs:
           fi
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
           echo "extract_exit=$result" >> "$GITHUB_OUTPUT"
+          if [ -f a07-target-output/report.md ]; then
+            cat a07-target-output/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$ready" = true ]; then
+            install -D a07-target-output/target.h src/targets/a07-SM-A075F/target.h
+          fi
           exit 0
 
       - name: Upload sanitized extraction report and verified header

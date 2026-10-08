@@ -320,40 +320,49 @@ jobs:
             --ref "$GITHUB_REF_NAME" \
             --kernel-release "$TARGET_RELEASE"
 
-      - name: Verify generated feed entries and hashes
+      - name: Verify generated feed entries, app URLs, and artifact hashes
         run: |
-          python3 - <<'PY'
-          import hashlib, json
+          python3 - <<'PYCODE'
+          import hashlib, json, os
           from pathlib import Path
 
           feed = json.loads(Path('support/targets-v3.json').read_text())
           rows = [p for p in feed['payloads'] if 'SM-A075F' in p.get('models', []) and '6.12.38' in p.get('kernelVersions', [])]
           expected = {
-              'kernelsu': ('3.3.0', 'me.weishu.kernelsu'),
-              'kernelsu-next': ('3.4.0', 'com.rifsxd.ksunext'),
-              'resukisu': ('4.2.0-rc3', 'com.resukisu.resukisu'),
+              'kernelsu': ('3.3.0', 'ksud-a07-SM-A075F-kdp', 'android16-6.12_kernelsu-a07-SM-A075F-kdp.ko'),
+              'kernelsu-next': ('3.4.0', 'ksud-next-a07-SM-A075F-kdp', 'android16-6.12_kernelsu-next-a07-SM-A075F-kdp.ko'),
+              'resukisu': ('4.2.0-rc3', 'ksud-rsksu-a07-SM-A075F-kdp', 'android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko'),
           }
-          if len(rows) != 3:
-              raise SystemExit(f'expected exactly three A07 6.12.38 entries, found {len(rows)}')
+          if len(rows) != 3 or {p.get('flavor') for p in rows} != set(expected):
+              raise SystemExit('expected exactly three distinct A07 flavor entries')
+          root = f"https://raw.githubusercontent.com/{os.environ['GITHUB_REPOSITORY']}/{os.environ['GITHUB_REF_NAME']}/"
+          def verify_artifact(row, field, path):
+              record = row[field]
+              if record.get('url') != root + str(path):
+                  raise SystemExit(f'{field}: URL not pinnable by Root My Galaxy Next: {record.get("url")}')
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              if record.get('sha256') != digest or record.get('size') != path.stat().st_size:
+                  raise SystemExit(f'{field}: size/hash mismatch: {path}')
+              return digest
+
+          app = Path('artifacts/a07-SM-A075F/cve-2026-43499-app.so')
           for row in rows:
-              flavor = row.get('flavor', 'kernelsu')
-              version, package = expected[flavor]
-              daemon_path = Path('kernelsu') / row['kernelsu']['url'].rsplit('/', 1)[1]
+              flavor = row['flavor']
+              version, daemon, module = expected[flavor]
               if row['kernelsu'].get('version') != version:
-                  raise SystemExit(f"{flavor}: wrong kernelsu.version {row['kernelsu'].get('version')!r}")
-              if row.get('managerPackage') != package:
-                  raise SystemExit(f"{flavor}: wrong managerPackage {row.get('managerPackage')!r}")
-              if not daemon_path.is_file():
-                  raise SystemExit(f'missing daemon {daemon_path}')
-              digest = hashlib.sha256(daemon_path.read_bytes()).hexdigest()
-              if row['kernelsu'].get('sha256') != digest or row['kernelsu'].get('size') != daemon_path.stat().st_size:
-                  raise SystemExit(f'{flavor}: ksud size/hash does not match the file')
+                  raise SystemExit(f'{flavor}: wrong kernelsu.version')
               if row['models'] != ['SM-A075F'] or '6.12.38' not in row['kernelVersions']:
                   raise SystemExit(f'{flavor}: wrong model/kernel declaration')
-              if not row['exploit'].get('sha256') or not row['exploit'].get('size'):
-                  raise SystemExit(f'{flavor}: exploit artifact lacks size/hash')
-              print(f"{flavor}: version={version}, package={package}, sha256={digest}")
-          PY
+              if row['payloadId'] != 'a07-SM-A075F-' + {'kernelsu':'ksu330', 'kernelsu-next':'ksun340', 'resukisu':'rsksu420rc3'}[flavor]:
+                  raise SystemExit(f'{flavor}: unexpected payloadId')
+              if any(field in row for field in ('managerPackage', 'kernelModule')):
+                  raise SystemExit(f'{flavor}: non-app v3 fields must not be required for loading')
+              app_hash = verify_artifact(row, 'exploit', app)
+              daemon_hash = verify_artifact(row, 'kernelsu', Path('kernelsu') / daemon)
+              if not (Path('kernelsu') / module).is_file():
+                  raise SystemExit(f'{flavor}: missing paired kernel module {module}')
+              print(f'{flavor}: version={version}, exploit={app_hash}, daemon={daemon_hash}')
+          PYCODE
 
       - name: Upload release bundle as a workflow artifact
         uses: actions/upload-artifact@v7

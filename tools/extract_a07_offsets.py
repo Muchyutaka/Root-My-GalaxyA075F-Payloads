@@ -232,11 +232,11 @@ def parse_readelf_symbols(path: Path) -> dict[str, int]:
     for line in result.stdout.splitlines():
         # Num: Value Size Type Bind Vis Ndx Name
         match = re.match(
-            r"^\s*\d+:\s+([0-9a-fA-F]+)\s+\d+\s+\S+\s+\S+\s+\S+\s+\S+\s+(\S+)",
+            r"^\s*\d+:\s+([0-9a-fA-F]+)\s+\d+\s+\S+\s+\S+\s+\S+\s+(\S+)\s+(\S+)",
             line,
         )
-        if match:
-            name = match.group(2).split("@", 1)[0]
+        if match and match.group(2) not in ("UND", "ABS"):
+            name = match.group(3).split("@", 1)[0]
             value = int(match.group(1), 16)
             if value:
                 symbols[name] = value
@@ -627,6 +627,9 @@ def main() -> int:
 
     out_dir = args.output_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    # A rerun in an existing directory must not leave a previously successful header behind.
+    for stale in ("target.h", "target-metadata.json", "kernel-release.txt", "symbol-offsets.json", "btf-layouts.json"):
+        (out_dir / stale).unlink(missing_ok=True)
     work_dir = out_dir / "work"
     work_dir.mkdir(exist_ok=True)
     sections: list[str] = []
@@ -752,6 +755,8 @@ def main() -> int:
         }
         if chosen:
             row["matched_symbol"] = chosen
+            if required and chosen not in kallsyms_names:
+                missing.append(f"kallsyms.txt lacks exact required ELF symbol `{chosen}` for {canonical}")
         if address is not None and text_base is not None:
             row["elf_offset"] = f"0x{address - text_base:x}"
         if chosen is None:
@@ -883,16 +888,15 @@ def main() -> int:
     try:
         profile, evidence, profile_missing = profile_values(args.profile)
         missing.extend(profile_missing)
+        if profile and profile.get("kernelRelease") != kernel_release:
+            missing.append(
+                "profile kernelRelease does not match the exact ELF UTS_RELEASE "
+                f"({profile.get('kernelRelease')!r} != {kernel_release!r})"
+            )
     except Exception as error:
         profile, evidence = {}, {}
         missing.append(f"verified target profile could not be parsed: {error}")
 
-    # Ensure profile values do not contradict automatically extracted facts.
-    if profile:
-        if profile.get("kernelRelease") and kernel_release and profile["kernelRelease"] != kernel_release:
-            missing.append("profile kernelRelease does not match the ELF UTS_RELEASE")
-        if profile.get("model") != MODEL or profile.get("kernelVersion") != KERNEL_VERSION:
-            missing.append("profile model/kernelVersion does not match SM-A075F/6.12.38")
 
     offsets_path = out_dir / "symbol-offsets.json"
     offsets_path.write_text(

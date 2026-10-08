@@ -80,6 +80,33 @@ class A07ExtractionHelperTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must be an object"):
                 extract_a07_offsets.profile_values(profile_path)
 
+    def test_failed_extraction_removes_stale_header(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / "output"
+            output.mkdir()
+            (output / "target.h").write_text("stale header")
+            result = subprocess.run(
+                [sys.executable, str(ROOT / "tools/extract_a07_offsets.py"),
+                 "--release-assets", str(root / "empty"), "--output-dir", str(output),
+                 "--profile", str(ROOT / "src/targets/a07-SM-A075F/target-values.template.json")],
+                capture_output=True, text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((output / "target.h").exists())
+            self.assertFalse(json.loads((output / "status.json").read_text())["ready"])
+
+    def test_readelf_excludes_undefined_symbols(self) -> None:
+        from unittest.mock import patch
+        from subprocess import CompletedProcess
+        listing = (
+            "   1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND init_task\n"
+            "   2: ffffffc080001000   128 OBJECT  GLOBAL DEFAULT   15 root_task_group\n"
+        )
+        with patch.object(extract_a07_offsets, "run", return_value=CompletedProcess([], 0, listing, "")):
+            self.assertEqual(extract_a07_offsets.parse_readelf_symbols(Path("vmlinux")),
+                             {"root_task_group": 0xffffffc080001000})
+
     def test_header_emission_uses_elf_btf_and_explicit_profile_values(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             header = Path(tmp) / "target.h"
@@ -167,11 +194,19 @@ class A07FeedGeneratorTests(unittest.TestCase):
             self.assertEqual(row["models"], ["SM-A075F"])
             self.assertEqual(row["kernelVersions"], ["6.12.38", "6.12.38-android16-5-abA075FXXS5CZF2-4k"])
             self.assertEqual(row["kernelsu"]["version"], version)
-            self.assertEqual(row["managerPackage"], package)
+            self.assertNotIn("managerPackage", row)
+            self.assertNotIn("kernelModule", row)
             self.assertEqual(row["kernelsu"]["size"], daemon.stat().st_size)
             self.assertEqual(row["kernelsu"]["sha256"], hashlib.sha256(daemon.read_bytes()).hexdigest())
             self.assertIn("raw.githubusercontent.com/owner/payloads/feature/a07/", row["exploit"]["url"])
             self.assertIn("/artifacts/a07-SM-A075F/cve-2026-43499-app.so", row["exploit"]["url"])
+
+    def test_missing_pair_prevents_partial_feed(self) -> None:
+        (self.root / "kernelsu/android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko").unlink()
+        before = self.feed.read_bytes()
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.generate()
+        self.assertEqual(self.feed.read_bytes(), before)
 
     def test_generation_is_idempotent(self) -> None:
         self.generate()

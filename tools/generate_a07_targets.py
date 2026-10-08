@@ -5,10 +5,8 @@ The app resolves artifacts by rewriting an allowed raw.githubusercontent.com sou
 source commit it read. For that reason the feed points at this repository/ref, not at a GitHub
 release URL. The build workflow also uploads the same files as release assets for manual download.
 
-`managerPackage` is included as descriptive manifest metadata. Current app builds select the actual
-manager package from the `flavor` enum (whose packages are me.weishu.kernelsu,
-com.rifsxd.ksunext, and com.resukisu.resukisu); the generator checks that metadata agrees with
-those flavor mappings.
+The app reads `flavor` and `kernelsu.version` directly; package names and module metadata
+are not v3 manifest fields. The module/daemon pair is validated by the build workflow.
 """
 
 from __future__ import annotations
@@ -95,25 +93,20 @@ def make_payload(
     kernel_versions = [KERNEL_VERSION]
     if kernel_release != KERNEL_VERSION:
         kernel_versions.append(kernel_release)
+    # Fail before modifying the feed if the matching module was not produced.
+    artifact(module_path, f"{root}/kernelsu/{flavor['module']}")
     payload_id = f"{TARGET_ID}-{flavor['payload_suffix']}"
     entry: dict[str, object] = {
         "payloadId": payload_id,
         "displayName": f"Galaxy A07 ({MODEL}) | Kernel {KERNEL_VERSION} | {flavor['name']} {flavor['version']}",
         "models": [MODEL],
         "kernelVersions": kernel_versions,
-        "managerPackage": flavor["package"],
         "flavor": flavor["id"],
         "exploit": artifact(app_path, app_url),
         "kernelsu": {
             **artifact(daemon_path, daemon_url),
             "version": flavor["version"],
         },
-        # Module metadata is useful for auditing the daemon pair but is not consumed by the current
-        # app, which downloads the module embedded inside ksud.
-        "kernelModule": artifact(
-            module_path,
-            f"{root}/kernelsu/{flavor['module']}",
-        ),
     }
     return entry
 
