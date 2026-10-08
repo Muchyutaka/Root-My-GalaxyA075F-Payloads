@@ -111,6 +111,48 @@ class A07ExtractionHelperTests(unittest.TestCase):
             declaration = line.split("/*", 1)[0]
             self.assertEqual(expected, extract_a07_offsets.member_name(declaration), line)
 
+    def test_pahole_member_embedded_types(self) -> None:
+        cases = {
+            "        struct rt_waiter_node        tree;               ": ("tree", "rt_waiter_node", False),
+            "        struct module  *               owner;              ": ("owner", "module", True),
+            "        struct rb_node             node;                 ": ("node", "rb_node", False),
+            "        int                        prio;                 ": ("prio", None, False),
+            "        loff_t                       (*llseek)(struct file  *, loff_t, int); ": ("llseek", None, False),
+        }
+        for declaration, expected in cases.items():
+            self.assertEqual(expected, extract_a07_offsets.member_declaration(declaration), declaration)
+
+    def test_resolve_btf_path_walks_nested_members(self) -> None:
+        fields = {
+            "rt_mutex_waiter": {"tree": 0x0, "pi_tree": 0x18, "task": 0x30},
+            "rt_waiter_node": {"node": 0x0, "prio": 0x18, "deadline": 0x20},
+        }
+        types = {"rt_mutex_waiter": {"tree": ("rt_waiter_node", False), "pi_tree": ("rt_waiter_node", False),
+                                     "task": ("task_struct", True)}}
+        sizes = {"rt_mutex_waiter": 0x40, "rt_waiter_node": 0x28}
+        walk = extract_a07_offsets.resolve_btf_path
+        offset, evidence = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "pi_tree.prio")
+        self.assertEqual(0x30, offset)
+        self.assertIn("pi_tree@0x18", evidence)
+        offset, reason = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "task.prio")
+        self.assertIsNone(offset)
+        self.assertIn("not an embedded", reason)
+        offset, reason = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "tree.absent")
+        self.assertIsNone(offset)
+        self.assertIn("has no member `absent`", reason)
+
+    def test_resolve_btf_path_refuses_out_of_range_offset(self) -> None:
+        fields = {"slab": {"__page": 0x0, "slab_cache": 0x80}}
+        offset, reason = extract_a07_offsets.resolve_btf_path(
+            fields, {}, {"slab": 0x40}, lambda name: None, "slab", "slab_cache"
+        )
+        self.assertIsNone(offset)
+        self.assertIn("outside sizeof(struct slab)", reason)
+
+    def test_slab_derivation_requires_page_at_zero(self) -> None:
+        self.assertEqual(("slab", "slab_cache", ("__page", 0)),
+                         extract_a07_offsets.DERIVED_BTF_PATHS["STRUCT_SLAB_CACHE_OFF"])
+
     def test_pahole_non_member_lines(self) -> None:
         for declaration in ("        };", "        union {", "        struct {", "        int", "        unsigned long"):
             self.assertIsNone(extract_a07_offsets.member_name(declaration), declaration)

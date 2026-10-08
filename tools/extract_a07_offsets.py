@@ -406,30 +406,49 @@ TYPE_KEYWORDS = frozenset(
 )
 
 
-def member_name(declaration: str) -> str | None:
-    """The C member a pahole declaration line describes, or None when it is not a member."""
+STRUCT_BASE = re.compile(r"\b(?:struct|union|enum)\s+([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def member_declaration(declaration: str) -> tuple[str | None, str | None, bool]:
+    """The member a pahole line declares, the struct/union type it embeds, and whether it is a pointer.
+
+    The embedded type is what makes a nested member path (`rt_mutex_waiter.tree.prio`) walkable
+    from A07's own BTF instead of being assumed from another kernel's layout.
+    """
     text = declaration.strip().rstrip(";").strip()
     text = re.sub(r"\[[^\]]*\]\s*$", "", text).strip()
     if not text or text in {"}", "};", "{", "union", "struct"}:
-        return None
+        return None, None, False
     bitfield = BITFIELD_MEMBER.search(text)
-    if bitfield:
-        return bitfield.group(1)
     func_ptr = FUNC_PTR_MEMBER.search(text)
-    if func_ptr:
-        return func_ptr.group(1)
-    trailing = TRAILING_MEMBER.search(text)
-    if not trailing or trailing.group(1) in TYPE_KEYWORDS:
-        return None
-    return trailing.group(1)
+    if bitfield:
+        name, type_text = bitfield.group(1), text[: bitfield.start()]
+    elif func_ptr:
+        name, type_text = func_ptr.group(1), text[: func_ptr.start()]
+    else:
+        trailing = TRAILING_MEMBER.search(text)
+        if not trailing or trailing.group(1) in TYPE_KEYWORDS:
+            return None, None, False
+        name, type_text = trailing.group(1), text[: trailing.start()]
+    base = STRUCT_BASE.search(type_text)
+    return name, (base.group(1) if base else None), ("*" in type_text)
 
 
-def pahole_type(path: Path, type_name: str) -> tuple[dict[str, int], int | None, str]:
+def member_name(declaration: str) -> str | None:
+    """The C member a pahole declaration line describes, or None when it is not a member."""
+    return member_declaration(declaration)[0]
+
+
+def pahole_type(
+    path: Path, type_name: str
+) -> tuple[dict[str, int], dict[str, tuple[str, bool]], int | None, str]:
+    """Member offsets, the struct/union each member embeds, the type size, and pahole's raw text."""
     result = run(["pahole", "--hex", "-C", type_name, str(path)], check=False)
     output = result.stdout
     if result.returncode != 0 or not output.strip():
-        return {}, None, result.stderr.strip() or output.strip() or f"pahole could not find {type_name}"
+        return {}, {}, None, result.stderr.strip() or output.strip() or f"pahole could not find {type_name}"
     fields: dict[str, int] = {}
+    types: dict[str, tuple[str, bool]] = {}
     size = None
     size_match = re.search(r"/\*\s*size:\s*(0x[0-9a-fA-F]+|\d+)", output)
     if size_match:
@@ -438,10 +457,68 @@ def pahole_type(path: Path, type_name: str) -> tuple[dict[str, int], int | None,
         comment = re.search(r"/\*\s*(0x[0-9a-fA-F]+|\d+)\s+(?:0x[0-9a-fA-F]+|\d+)", line)
         if not comment:
             continue
-        name = member_name(line.split("/*", 1)[0])
+        name, base, pointer = member_declaration(line.split("/*", 1)[0])
         if name:
             fields[name] = parse_integer(comment.group(1))
-    return fields, size, output
+            if base:
+                types[name] = (base, pointer)
+    return fields, types, size, output
+
+
+# Macros whose value moved inside a nested struct (or into a companion struct that embeds the
+# original one) in this kernel generation. Each entry is `(root type, dotted member path, optional
+# cross-check)`. A path is walked through A07's own BTF; anything absent is reported, never assumed.
+DERIVED_BTF_PATHS: dict[str, tuple[str, str, tuple[str, int] | None]] = {
+    "FAKE_WAITER_TREE_PRIO_OFF": ("rt_mutex_waiter", "tree.prio", None),
+    "FAKE_WAITER_TREE_DEADLINE_OFF": ("rt_mutex_waiter", "tree.deadline", None),
+    "FAKE_WAITER_PI_TREE_ENTRY_OFF": ("rt_mutex_waiter", "pi_tree.node", None),
+    "FAKE_WAITER_PI_TREE_PRIO_OFF": ("rt_mutex_waiter", "pi_tree.prio", None),
+    "FAKE_WAITER_PI_TREE_DEADLINE_OFF": ("rt_mutex_waiter", "pi_tree.deadline", None),
+    # `struct slab` embeds `struct page __page` first, so a member offset inside it is also an
+    # offset from the page address the payload already holds. That zero offset is asserted here.
+    "STRUCT_SLAB_CACHE_OFF": ("slab", "slab_cache", ("__page", 0)),
+}
+
+# Two adjacent members of the same embedded type have to be exactly that type's size apart. This is
+# the independent check that a nested walk read the real layout rather than a plausible-looking one.
+DERIVED_SPACING_CHECKS: tuple[tuple[str, str, str], ...] = (("rt_mutex_waiter", "tree", "pi_tree"),)
+
+
+def resolve_btf_path(
+    btf_fields: dict[str, dict[str, int]],
+    btf_types: dict[str, dict[str, tuple[str, bool]]],
+    btf_sizes: dict[str, int],
+    ensure,
+    root: str,
+    path: str,
+) -> tuple[int | None, str]:
+    """Walk a dotted member path through measured BTF layouts; return (offset, evidence)."""
+    parts = path.split(".")
+    current = root
+    offset = 0
+    trail = [f"struct {root}"]
+    for index, part in enumerate(parts):
+        ensure(current)
+        fields = btf_fields.get(current, {})
+        if part not in fields:
+            return None, (
+                f"struct {current} has no member `{part}` in A07's BTF; parsed members: "
+                + (", ".join(sorted(fields)) or "(none)")
+            )
+        offset += fields[part]
+        trail.append(f"{part}@0x{fields[part]:x}")
+        if index + 1 < len(parts):
+            nested = btf_types.get(current, {}).get(part)
+            if not nested or nested[1]:
+                return None, (
+                    f"struct {current}.{part} is not an embedded struct/union member, "
+                    "so it has no nested layout to walk"
+                )
+            current = nested[0]
+    total = btf_sizes.get(root)
+    if total is not None and offset >= total:
+        return None, f"derived offset 0x{offset:x} is outside sizeof(struct {root}) = 0x{total:x}"
+    return offset, " -> ".join(trail)
 
 
 def c_literal(value: Any) -> str:
@@ -863,12 +940,21 @@ def main() -> int:
         try:
             btf_elf = work_dir / "vmlinux-with-btf.elf"
             make_btf_elf(asset_paths["vmlinux.btf"], btf_elf)
-            for type_name in sorted({t for t, _ in BTF_FIELD_MACROS.values()} | set(BTF_SIZE_MACROS.values()) | {"task_struct"}):
-                fields, size, raw = pahole_type(btf_elf, type_name)
-                pahole_outputs[type_name] = raw
-                btf_fields[type_name] = fields
+            btf_types: dict[str, dict[str, tuple[str, bool]]] = {}
+
+            def ensure_type(name: str) -> None:
+                """pahole a type on demand, once, so nested paths can be walked from real BTF."""
+                if not name or name in btf_fields:
+                    return
+                fields, types, size, raw = pahole_type(btf_elf, name)
+                pahole_outputs[name] = raw
+                btf_fields[name] = fields
+                btf_types[name] = types
                 if size is not None:
-                    btf_sizes[type_name] = size
+                    btf_sizes[name] = size
+
+            for type_name in sorted({t for t, _ in BTF_FIELD_MACROS.values()} | set(BTF_SIZE_MACROS.values()) | {"task_struct"}):
+                ensure_type(type_name)
             mm_offset = btf_fields.get("task_struct", {}).get("mm")
             mm_line = next(
                 (line.strip() for line in pahole_outputs.get("task_struct", "").splitlines()
@@ -892,6 +978,65 @@ def main() -> int:
                 f"- Source declaration: `{source_context or 'MISSING'}` (line {source_line or 'n/a'})\n"
                 f"- Type/name agree: **{mm_valid}**\n"
             )
+            # What pahole reported before any nested derivation, so diagnostics keep showing the
+            # kernel's own layout rather than this script's conclusions about it.
+            raw_btf_fields = {name: dict(fields) for name, fields in btf_fields.items()}
+
+            derived_members: dict[str, Any] = {}
+            for macro, (root, path, cross_check) in DERIVED_BTF_PATHS.items():
+                declared_type, declared_member = BTF_FIELD_MACROS[macro]
+                if declared_member in raw_btf_fields.get(declared_type, {}):
+                    continue  # the flat member exists in this kernel; no derivation is needed
+                offset, evidence = resolve_btf_path(
+                    btf_fields, btf_types, btf_sizes, ensure_type, root, path
+                )
+                record: dict[str, Any] = {"root": root, "path": path, "evidence": evidence}
+                if offset is None:
+                    record["status"] = "unresolved"
+                    derived_members[macro] = record
+                    continue
+                if cross_check:
+                    member, expected = cross_check
+                    actual = btf_fields.get(root, {}).get(member)
+                    if actual != expected:
+                        record["status"] = "cross-check-failed"
+                        record["crossCheck"] = f"struct {root}.{member} == 0x{expected:x}"
+                        record["observed"] = actual
+                        derived_members[macro] = record
+                        continue
+                    record["crossCheck"] = f"struct {root}.{member} == 0x{expected:x} (verified)"
+                for spacing_root, first, second in DERIVED_SPACING_CHECKS:
+                    if root != spacing_root or first not in path.split(".")[0:1]:
+                        continue
+                    embedded = btf_types.get(spacing_root, {}).get(first)
+                    both = btf_fields.get(spacing_root, {})
+                    if not embedded or embedded[1] or first not in both or second not in both:
+                        continue
+                    ensure_type(embedded[0])
+                    inner_size = btf_sizes.get(embedded[0])
+                    spacing = both[second] - both[first]
+                    if inner_size is None:
+                        record["spacingCheck"] = f"sizeof(struct {embedded[0]}) unknown"
+                    elif spacing != inner_size:
+                        record["status"] = "cross-check-failed"
+                        record["spacingCheck"] = (
+                            f"struct {spacing_root}.{second} - .{first} = 0x{spacing:x}, "
+                            f"but sizeof(struct {embedded[0]}) = 0x{inner_size:x}"
+                        )
+                        break
+                    else:
+                        record["spacingCheck"] = (
+                            f"struct {spacing_root}.{second} - .{first} = 0x{spacing:x} "
+                            f"== sizeof(struct {embedded[0]}) (verified)"
+                        )
+                if record.get("status") == "cross-check-failed":
+                    derived_members[macro] = record
+                    continue
+                record["status"] = "derived"
+                record["offset"] = offset
+                derived_members[macro] = record
+                btf_fields.setdefault(declared_type, {})[declared_member] = offset
+
             missing_btf = []
             incomplete_structs: set[str] = set()
             for macro, (type_name, member) in BTF_FIELD_MACROS.items():
@@ -909,20 +1054,28 @@ def main() -> int:
             # file_operations set are decided; it is never inferred from another device's header.
             btf_diagnostic = {
                 name: {
-                    "parsedMembers": sorted(btf_fields.get(name, {})),
+                    "parsedMembers": sorted(raw_btf_fields.get(name, {})),
                     "rawPahole": pahole_outputs.get(name, "")[:4000],
                 }
                 for name in sorted(incomplete_structs)
             }
-            waiter = sorted(btf_fields.get("rt_mutex_waiter", {}))
+            waiter = sorted(raw_btf_fields.get("rt_mutex_waiter", {}))
             waiter_candidate = None
             if waiter:
                 legacy_only = {"pi_tree_entry", "pi_tree_prio", "pi_tree_deadline"}
                 compact_only = {"tree_entry", "prio", "deadline"}
+                nested = {"tree", "pi_tree"}
                 if legacy_only <= set(waiter):
                     waiter_candidate = "LEGACY_RT_MUTEX_WAITER=1 (BTF carries the pi_tree_* members)"
                 elif compact_only <= set(waiter):
                     waiter_candidate = "COMPACT_RT_MUTEX_WAITER=1 (BTF carries tree_entry/prio/deadline)"
+                elif nested <= set(waiter):
+                    waiter_candidate = (
+                        "NEITHER FLAG FITS: rt_mutex_waiter embeds `tree`/`pi_tree` node structs, so "
+                        "prio/deadline are nested rather than flat. src/common.h only offers the "
+                        "LEGACY and COMPACT layouts; choosing one for A07 is a source-level porting "
+                        f"decision, not a value to guess. Measured members: {', '.join(waiter)}"
+                    )
                 else:
                     waiter_candidate = (
                         "undetermined: rt_mutex_waiter has neither the legacy pi_tree_* set nor "
@@ -945,6 +1098,7 @@ def main() -> int:
                             for name, fields in sorted(btf_fields.items())
                         },
                         "rtMutexWaiterLayoutCandidate": waiter_candidate,
+                        "derivedMembers": derived_members,
                         "incompleteStructDiagnostics": btf_diagnostic,
                     },
                     indent=2,
@@ -952,6 +1106,20 @@ def main() -> int:
                 )
                 + "\n"
             )
+            if derived_members:
+                sections.append(
+                    "## Nested BTF derivation (measured, with cross-checks)\n\n"
+                    + "".join(
+                        f"- `{macro}`: **{info.get('status')}** via `{info['root']}.{info['path']}`"
+                        + (f" = `0x{info['offset']:x}`" if info.get("offset") is not None else "")
+                        + f"\n  - evidence: {info.get('evidence')}\n"
+                        + (f"  - cross-check: {info['crossCheck']}\n" if info.get("crossCheck") else "")
+                        + (f"  - spacing check: {info['spacingCheck']}\n" if info.get("spacingCheck") else "")
+                        for macro, info in sorted(derived_members.items())
+                    )
+                    + "\nDerived offsets are injected only after their cross-checks pass; an\n"
+                    "unresolved or failed path stays a reported gap rather than a value.\n"
+                )
             if waiter_candidate or btf_diagnostic:
                 sections.append(
                     "## BTF layout evidence (measured candidates, not applied)\n\n"

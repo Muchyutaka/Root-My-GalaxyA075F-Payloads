@@ -22,6 +22,10 @@ LAYOUTS = {
     "task_struct_mm": {"btfOffset": 1672, "verified": True},
     "rtMutexWaiterLayoutCandidate": "COMPACT_RT_MUTEX_WAITER=1 (BTF carries tree_entry/prio/deadline)",
     "incompleteStructDiagnostics": {"file_operations": {"parsedMembers": ["owner", "llseek", "read"]}},
+    "derivedMembers": {
+        "STRUCT_SLAB_CACHE_OFF": {"status": "derived", "offset": 40, "root": "slab", "path": "slab_cache"},
+        "FAKE_WAITER_TREE_PRIO_OFF": {"status": "unresolved", "root": "rt_mutex_waiter", "path": "tree.prio"},
+    },
 }
 SYMBOLS = {"kernelRelease": STATUS["kernelRelease"], "offsetMacros": {"INIT_TASK_OFF": "0x1234"}}
 
@@ -56,6 +60,11 @@ class SummaryTests(unittest.TestCase):
         text = "\n".join(notices(self.root))
         self.assertIn("rt_mutex_waiter layout measured from A07 BTF: COMPACT_RT_MUTEX_WAITER=1", text)
         self.assertIn("struct file_operations: pahole parsed 3 members: owner, llseek, read", text)
+
+    def test_reports_nested_derivation_status(self):
+        text = "\n".join(notices(self.root))
+        self.assertIn("STRUCT_SLAB_CACHE_OFF=derived@0x28 (slab.slab_cache)", text)
+        self.assertIn("FAKE_WAITER_TREE_PRIO_OFF=unresolved (rt_mutex_waiter.tree.prio)", text)
 
     def test_survives_absent_results(self):
         empty = self.root / "empty"

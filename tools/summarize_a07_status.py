@@ -74,6 +74,14 @@ def notices(directory: Path) -> list[str]:
     ):
         if groups[key]:
             out.append(f"{label}: " + clip("; ".join(groups[key])))
+    derived = layouts.get("derivedMembers") or {}
+    if derived:
+        out.append("Nested BTF derivation: " + clip("; ".join(
+            f"{macro}={info.get('status')}"
+            + (f"@0x{info['offset']:x}" if isinstance(info.get("offset"), int) else "")
+            + f" ({info.get('root')}.{info.get('path')})"
+            for macro, info in sorted(derived.items())
+        )))
     waiter = layouts.get("rtMutexWaiterLayoutCandidate")
     if waiter:
         out.append(f"rt_mutex_waiter layout measured from A07 BTF: {clip(str(waiter))}")
