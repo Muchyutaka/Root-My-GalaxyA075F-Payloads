@@ -114,6 +114,29 @@ jobs:
           fi
           exit 0
 
+      - name: Summarize parse status in GitHub check annotations
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          out = Path('a07-target-output')
+          def read(name):
+              path = out / name
+              return json.loads(path.read_text()) if path.is_file() else {}
+          status, layout, symbols = (read(name) for name in
+              ('status.json', 'btf-layouts.json', 'symbol-offsets.json'))
+          mm = layout.get('task_struct_mm', {})
+          offsets = symbols.get('offsetMacros', {})
+          print(f"::notice::A07 ELF release: {symbols.get('kernelRelease') or 'NOT PARSED'}; "
+                f"diagnostic ELF offsets: {len(offsets)}; "
+                f"BTF/source task_struct.mm verified: {mm.get('verified') is True}; "
+                f"missing requirements: {len(status.get('missing', []))}; "
+                f"production header ready: {status.get('ready') is True}")
+          if mm.get('verified') is True:
+              print(f"::notice::A07 BTF task_struct.mm offset: {mm['btfOffset']}")
+          PY
+
       - name: Upload sanitized extraction report and verified header
         if: always()
         uses: actions/upload-artifact@v7
