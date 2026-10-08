@@ -97,6 +97,36 @@ jobs:
             --assets a07-release-assets \
             --output a07-target-output/input-hashes.json
 
+      - name: Generate the A07 P0 fingerprint from the verified raw kernel Image
+        run: |
+          set -euo pipefail
+          mkdir -p a07-target-output
+          raw=a07-release-assets/kernel.raw
+          # The fingerprint table is a byte-level record of the exact Image the device boots, so the
+          # input has to prove it is a raw arm64 Image before anything is generated from it.
+          python3 - "$raw" <<'PY'
+          import struct, sys
+          header = open(sys.argv[1], 'rb').read(64)
+          magic = header[0x38:0x3c]
+          if magic != b'ARM\x64':
+              raise SystemExit(f'::error::kernel.raw is not a raw arm64 Image (magic at 0x38 is {magic!r}), so no P0 fingerprint can be generated from it')
+          image_size, flags = struct.unpack_from('<QQ', header, 0x10)
+          print(f'::notice::kernel.raw arm64 Image header: image_size=0x{image_size:x} flags=0x{flags:x}')
+          PY
+          perl tools/generate_p0_fingerprint.pl "$raw" 0x1f0000 a07-target-output/p0_fingerprint.h
+          python3 - <<'PY'
+          import hashlib, pathlib, re
+          path = pathlib.Path('a07-target-output/p0_fingerprint.h')
+          text = path.read_text()
+          rows = re.findall(r'\{ (0x[0-9a-f]{6}ULL), \{', text)
+          digest = hashlib.sha256(path.read_bytes()).hexdigest()
+          if len(rows) != 32 or rows[0] != '0x000000ULL' or rows[-1] != '0x1f0000ULL':
+              raise SystemExit(f'::error::P0 fingerprint table is incomplete: {len(rows)} rows from {rows[:1]} to {rows[-1:]}')
+          print(f'::notice::A07 p0_fingerprint.h generated from verified kernel.raw at probe 0x1f0000: rows={len(rows)} sha256={digest}')
+          first = re.search(r'\{ (0x[0-9a-f]{6}ULL), \{ ([^}]*)\}', text)
+          print('::notice::A07 p0_fingerprint.h slide ' + first.group(1) + ' words: ' + ' '.join(first.group(2).split()))
+          PY
+
       - name: Extract and cross-check target offsets
         id: analyze
         run: |
@@ -189,6 +219,7 @@ jobs:
             a07-target-output/report.md
             a07-target-output/input-hashes.json
             a07-target-output/image-facts.json
+            a07-target-output/p0_fingerprint.h
             a07-target-output/status.json
             a07-target-output/kernel-release.txt
             a07-target-output/target-metadata.json
