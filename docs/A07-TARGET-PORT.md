@@ -85,7 +85,56 @@ The selected upstream release tags in the pair workflow are
 These tags and the named manager APK assets exist upstream. The versions become
 `kernelsu.version` **only after** matching target-specific daemon/module builds exist.
 
-### What CI measured (extraction run 37710697461, commit 0e8df9a)
+### P0 fingerprint table (generated, verified)
+
+`src/targets/a07-SM-A075F/p0_fingerprint.h` was generated in CI (run `37781227490`, commit
+`3e8921f`) by `tools/generate_p0_fingerprint.pl` at probe offset `0x1f0000` from the release asset
+`kernel.raw`, after that asset passed SHA-256 verification against the `a07-firmware-v1` release and
+proved it is a raw arm64 Image (`ARM\x64` magic at `0x38`, `image_size=0x3250000`, `flags=0xa`).
+
+- 32 slide rows (`0x000000`..`0x1f0000`, step `0x10000`), 8 qwords each, read at
+  `Image[0x1f0000 - slide + {0x000,0x200,...,0xe00}]`.
+- File SHA-256 `37713e9b894e5c6a9e2e679ee230da19904827b40b169b19cbd17e7aa02595af`, 7476 bytes. The
+  header travelled out of CI as base64 chunks with that digest and was rebuilt locally; the rebuilt
+  file reproduces the digest, so it is the same bytes CI generated.
+- Every row carries distinct AArch64 code words (the highest slide reads the Image header, whose
+  first word contains the `MZ` PE magic), so the rows are distinguishable by `p0_fingerprint_score`.
+
+This table is target data only. It does not make the payload buildable: `target.h` still cannot be
+generated, and the reason is recorded in the next section.
+
+## Why the payload cannot be built for A07 (measured, not assumed)
+
+A07's kernel does not contain the ashmem driver the payload's write primitive depends on.
+`arch/arm64/configs/gki_defconfig` sets `CONFIG_ASHMEM=y` and `CONFIG_ASHMEM_RUST=y`, and
+`drivers/staging/android/Kconfig` defines `ASHMEM_C` as `def_bool ASHMEM && !ASHMEM_RUST`, so the C
+driver (`drivers/staging/android/ashmem.c`, the `/dev/ashmem` misc device whose
+`struct ashmem_area` holds `char name[ASHMEM_NAME_LEN]` inline) is not compiled in. The ELF agrees:
+no `ashmem_fops`, `ashmem_misc_fops`, `ashmem_ioctl`, `ashmem_open`, `ashmem_release`, `ashmem_mmap`
+or `ashmem_show_fdinfo`; only `ashmem_memfd_ioctl`, `ashmem_area_name`, `ashmem_area_size` and
+`ashmem_area_vmfile`.
+
+`drivers/staging/android/ashmem_rust.rs` (quoted from CI run `37743414981`) shows what replaces it:
+
+- `struct Ashmem { inner: Mutex<AshmemInner> }`, `struct AshmemInner { size, prot_mask,
+  name: Option<KVec<u8>>, file: Option<ShmemFile>, area: Area }`, and `file->private_data` holds a
+  `Pin<KBox<Ashmem>>` (`get_ashmem_area()` borrows that `ForeignOwnable`).
+- `fn set_name` copies the user string into a **fresh heap vector sized to the string**
+  (`KVec::with_capacity(name.len(), GFP_KERNEL)`) and stores it in `asma.name`; it returns `EINVAL`
+  once `asma.file.is_some()`.
+
+So the name is not a 256-byte array at a fixed offset from `file->private_data`. The payload's
+primitive - `ioctl(fd, ASHMEM_SET_NAME, blob)` writing 255 controlled bytes at exactly
+`private_data + ASHMEM_NAME_PREFIX_LEN` so a fake `configfs_buffer` can be overlaid on the object
+that `configfs_read_iter`/`configfs_bin_write_iter` will then use - has no equivalent on this
+kernel, and `vmlinux.btf` contains no ashmem type names at all, so no offset for the Rust layout is
+measurable from the release inputs either.
+
+That is a missing mechanism, not a missing number: no `target.h` value can supply it. Porting A07
+therefore requires a different arbitrary-write primitive, which is exploit design work and cannot be
+invented from these inputs without guessing - which this repository forbids.
+
+## What CI measured (extraction run 37710697461, commit 0e8df9a)
 
 The push-triggered extraction run executed on a GitHub-hosted runner. Stages 1-3 **pass**; stage 4
 is **partial**; stages 5-10 were correctly **not reached**. Nothing below was copied from another
