@@ -151,6 +151,17 @@ jobs:
           python3 tools/derive_a07_image.py --only excerpts --excerpt-group ashmem \
             --source-root "$root" --output-dir a07-target-output --github
 
+      - name: Quote the Rust ashmem implementation that replaces /dev/ashmem
+        run: |
+          set -euo pipefail
+          root=$(python3 -c 'import json;print(json.load(open("a07-target-output/image-facts.json")).get("sourceRoot") or "")')
+          if [ -z "$root" ] || [ ! -d "$root" ]; then
+            echo '::error::the Samsung kernel source was not extracted, so the Rust ashmem shim cannot be quoted'
+            exit 1
+          fi
+          python3 tools/derive_a07_image.py --only excerpts --excerpt-group ashmem-rust \
+            --source-root "$root" --output-dir a07-target-output --github
+
       - name: Quote the kernel data declarations the port depends on
         run: |
           set -euo pipefail

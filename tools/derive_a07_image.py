@@ -436,6 +436,7 @@ SOURCE_PROBES: tuple[tuple[str, str, str], ...] = (
     ("struct slab definition", r"include/linux", r"struct\s+slab\s*\{[^}]*\}"),
     ("rt_mutex_waiter definition", r"include/linux|kernel/locking", r"struct\s+rt_waiter_node\s*\{[^}]*\}|struct\s+rt_mutex_waiter\s*\{[^}]*\}"),
     ("arm64 memory map constants", r"arch/arm64/include/asm", r"#define\s+(PAGE_OFFSET|VMEMMAP_START|KIMAGE_VADDR|DIRECT_MAP_BASE|_PAGE_OFFSET|VA_BITS)\b[^\n]*$"),
+    ("arm64 VA_BITS config", r"defconfig|auto\.conf|\.config$", r"ARM64_VA_BITS|ARM64_PA_BITS"),
 )
 
 # Files whose *path* names the driver answer "is the classic ashmem driver even in this tree"
@@ -456,6 +457,16 @@ SOURCE_EXCERPTS: tuple[tuple[str, str, str, int, int, int], ...] = (
     ("ashmem SET_NAME uapi", r"ashmem", r"ASHMEM_SET_NAME|ASHMEM_NAME_LEN|ASHMEM_NAME_PREFIX", 2, 4, 6),
     ("ashmem_rust_exports declarations", r"ashmem_rust_exports", r"^(?:#include|static|long|int|void|struct|EXPORT)", 0, 2, 40),
     ("ashmem Kconfig/Makefile gating", r"drivers/(?:staging/)?android/(?:Kconfig|Makefile)", r"ASHMEM", 2, 6, 6),
+    # CONFIG_ASHMEM_RUST=y and CONFIG_ASHMEM_C=n on A07, so drivers/staging/android/ashmem_rust.rs is
+    # the implementation that runs. The payload's arbitrary-write primitive is a 255-byte name blob
+    # landing at a *known offset from file->private_data*; these probes are what settles whether the
+    # Rust shim still gives that, and where the area object is attached to the memfd file.
+    ("ashmem_rust ioctl commands handled", r"ashmem_rust", r"bindings::(?:COMPAT_)?ASHMEM_\w+", 1, 3, 10),
+    ("ashmem_rust SET_NAME path", r"ashmem_rust", r"SET_NAME|set_name|fn .*name", 8, 55, 2),
+    ("ashmem_rust private_data attach", r"ashmem_rust", r"private_data", 12, 30, 3),
+    ("ashmem_rust area object definition", r"ashmem_rust", r"^(?:pub )?struct \w+|ASHMEM_NAME_LEN|name:\s", 4, 34, 3),
+    ("ashmem_rust area accessors glue", r"ashmem_rust_exports", r"ashmem_area_name|is_ashmem_file|ashmem_area_vmfile", 4, 30, 3),
+    ("ashmem_rust memfd binding", r"ashmem_rust|mm/shmem", r"is_ashmem_file|memfd|shmem_file\(|vm_file", 6, 26, 3),
     ("CONFIG_ASHMEM in defconfigs", r"arch/arm64/configs|defconfig", r"ASHMEM", 1, 1, 8),
     ("selinux_state struct", r"security/selinux/include/security.h", r"struct\s+selinux_state\s*\{", 3, 28, 1),
     ("selinux enforcing accessors", r"security/selinux", r"enforcing_enabled|enforcing\s*=|selinux_enforcing_boot", 2, 6, 8),
@@ -469,6 +480,14 @@ SOURCE_EXCERPTS: tuple[tuple[str, str, str, int, int, int], ...] = (
 
 
 EXCERPT_GROUPS: dict[str, tuple[str, ...]] = {
+    "ashmem-rust": (
+        "ashmem_rust ioctl commands handled",
+        "ashmem_rust SET_NAME path",
+        "ashmem_rust private_data attach",
+        "ashmem_rust area object definition",
+        "ashmem_rust area accessors glue",
+        "ashmem_rust memfd binding",
+    ),
     "ashmem": (
         "ashmem_memfd_ioctl body",
         "ashmem area accessors",
