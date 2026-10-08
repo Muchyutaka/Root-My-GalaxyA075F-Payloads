@@ -1,21 +1,24 @@
 name: Build SM-A075F temporary-root payloads
 
+# Can run as a separate manual review build or as a gated call from extraction.
+# Neither route commits artifacts or publishes a release.
 on:
+  workflow_call:
+    inputs:
+      target_run_id:
+        description: Run ID that produced a complete verified A07 target artifact
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       target_run_id:
         description: Successful run ID of Extract SM-A075F target profile
         required: true
         type: string
-      payload_release_tag:
-        description: GitHub release tag for the payloads, modules, daemons, and managers
-        required: true
-        type: string
-        default: a07-payload-v1
 
 permissions:
   actions: read
-  contents: write
+  contents: read
 
 concurrency:
   group: a07-payload-${{ github.ref }}
@@ -51,6 +54,13 @@ jobs:
           root = Path('target-profile')
           status = json.loads((root / 'status.json').read_text())
           metadata = json.loads((root / 'target-metadata.json').read_text())
+          receipt = json.loads((root / 'input-hashes.json').read_text())
+          from tools.verify_a07_release import ASSETS, TAG, DIGEST
+          if receipt.get('releaseTag') != TAG or set(receipt.get('assets', {})) != set(ASSETS):
+              raise SystemExit('extraction artifact lacks all 13 verified A07 release inputs')
+          for name, item in receipt['assets'].items():
+              if not DIGEST.fullmatch(item.get('digest', '')) or item.get('size', 0) <= 0:
+                  raise SystemExit(f'no verified SHA-256/size for {name}')
           header = root / 'target.h'
           release = (root / 'kernel-release.txt').read_text().strip()
           if status.get('ready') is not True:
@@ -61,6 +71,9 @@ jobs:
               raise SystemExit(f'exact kernel release mismatch or invalid value: {release!r}')
           if not header.is_file() or 'TARGET_A07_SM_A075F' not in header.read_text():
               raise SystemExit('verified target.h is missing the A07 marker')
+          import hashlib
+          if hashlib.sha256(header.read_bytes()).hexdigest() != metadata.get('targetHeaderSha256'):
+              raise SystemExit('target.h SHA-256 differs from verified extraction metadata')
           text = header.read_text()
           if '#error' in text or 'TODO' in text or 'UNKNOWN' in text:
               raise SystemExit('target.h contains a diagnostic/unresolved marker')
@@ -113,7 +126,7 @@ jobs:
       ddk_kmi: android16-6.12
 
   build-payload-and-publish:
-    name: Build, validate, and publish A07 artifacts
+    name: Build and validate A07 artifacts (review only)
     needs:
       - prepare
       - build-kernelsu
@@ -123,7 +136,6 @@ jobs:
     timeout-minutes: 90
     env:
       TARGET_RELEASE: ${{ needs.prepare.outputs.target_release }}
-      RELEASE_TAG: ${{ inputs.payload_release_tag }}
     steps:
       - name: Checkout payload repository
         uses: actions/checkout@v7
@@ -213,38 +225,18 @@ jobs:
           install -m 0644 "$app" release-assets/cve-2026-43499-app-a07-SM-A075F-6.12.38.so
           install -m 0644 src/targets/a07-SM-A075F/target.h release-assets/target-a07-SM-A075F-6.12.38.h
 
-      - name: Download standard KernelSU manager APK
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: tiann/KernelSU
-          tag: v3.3.0
-          fileName: KernelSU_v3.3.0_32601-release.apk
-          out-file-path: manager-apks
-          token: ${{ secrets.GITHUB_TOKEN }}
-          zipBall: false
-          tarBall: false
-
-      - name: Download KernelSU-Next manager APK
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: KernelSU-Next/KernelSU-Next
-          tag: v3.4.0
-          fileName: KernelSU_Next_v3.4.0_33294-release.apk
-          out-file-path: manager-apks
-          token: ${{ secrets.GITHUB_TOKEN }}
-          zipBall: false
-          tarBall: false
-
-      - name: Download ReSukiSU universal manager APK
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: ReSukiSU/ReSukiSU
-          tag: v4.2.0-rc3
-          fileName: ReSukiSU_v4.2.0-rc3_35171-universal-release.apk
-          out-file-path: manager-apks
-          token: ${{ secrets.GITHUB_TOKEN }}
-          zipBall: false
-          tarBall: false
+      - name: Download exact official manager APK release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p manager-apks
+          gh release download v3.3.0 -R tiann/KernelSU -D manager-apks \
+            -p 'KernelSU_v3.3.0_32601-release.apk'
+          gh release download v3.4.0 -R KernelSU-Next/KernelSU-Next -D manager-apks \
+            -p 'KernelSU_Next_v3.4.0_33294-release.apk'
+          gh release download v4.2.0-rc3 -R ReSukiSU/ReSukiSU -D manager-apks \
+            -p 'ReSukiSU_v4.2.0-rc3_35171-universal-release.apk'
 
       - name: Download the three target-specific KSU pair artifacts
         uses: actions/download-artifact@v7
@@ -314,7 +306,7 @@ jobs:
           cp kernelsu/ksud-rsksu-a07-SM-A075F-kdp release-assets/
           cp kernelsu/*.ko release-assets/
 
-      - name: Generate exact v3 feed entries
+      - name: Generate draft v3 feed entries only after payload and pair validation
         run: |
           python3 tools/generate_a07_targets.py \
             --feed support/targets-v3.json \
@@ -366,47 +358,12 @@ jobs:
               print(f'{flavor}: version={version}, exploit={app_hash}, daemon={daemon_hash}')
           PYCODE
 
-      - name: Upload release bundle as a workflow artifact
+      - name: Upload validated candidate bundle for review (no publish)
         uses: actions/upload-artifact@v7
         with:
-          name: a07-payload-${{ github.run_id }}
-          path: release-assets/*
+          name: a07-candidate-${{ github.run_id }}
+          path: |
+            release-assets/*
+            support/targets-v3.json
           if-no-files-found: error
           retention-days: 30
-
-      - name: Commit target header, payloads, KSU pairs, and feed on this source branch
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            src/targets/a07-SM-A075F/target.h \
-            artifacts/a07-SM-A075F/cve-2026-43499-app.so \
-            kernelsu/ksud-a07-SM-A075F-kdp \
-            kernelsu/ksud-next-a07-SM-A075F-kdp \
-            kernelsu/ksud-rsksu-a07-SM-A075F-kdp \
-            kernelsu/android16-6.12_kernelsu-a07-SM-A075F-kdp.ko \
-            kernelsu/android16-6.12_kernelsu-next-a07-SM-A075F-kdp.ko \
-            kernelsu/android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko \
-            support/targets-v3.json
-          git diff --cached --check
-          if git diff --cached --quiet; then
-            echo 'No tracked changes to publish.'
-          else
-            git commit -m 'Add SM-A075F payloads for kernel 6.12.38'
-            git push origin "HEAD:$GITHUB_REF_NAME"
-          fi
-
-      - name: Create or update the GitHub release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" release-assets/* --clobber
-          else
-            gh release create "$RELEASE_TAG" release-assets/* \
-              --target "$GITHUB_REF_NAME" \
-              --title "Galaxy A07 SM-A075F | Kernel 6.12.38 payloads" \
-              --notes "Stable exploit payload and target-specific KernelSU, KernelSU-Next, and ReSukiSU pairs. The target profile and feed entries were generated from the exact SM-A075F kernel 6.12.38 inputs."
-          fi

@@ -1,22 +1,29 @@
 name: Extract SM-A075F target profile
 
+# A push from this branch starts extraction without the Actions:write API permission
+# needed to call workflow_dispatch. Keep manual dispatch for users running it in GitHub UI.
 on:
+  push:
+    branches:
+      - arena/15acdeec-root-my-galaxya075f-payloads
+    paths:
+      - .github/workflows/extract-a07-target.yml
+      - tools/extract_a07_offsets.py
+      - tools/verify_a07_release.py
+      - src/targets/a07-SM-A075F/target-values.json
   workflow_dispatch:
-    inputs:
-      firmware_tag:
-        description: GitHub release containing the stripped SM-A075F firmware/source inputs
-        required: true
-        type: string
-        default: a07-firmware-v1
 
 permissions:
-  contents: read
+  contents: read   # Same-repository release metadata and asset download
+  actions: read    # Only needed by the later build for same-run artifact access
 
 jobs:
   extract:
     name: Audit A07 kernel, BTF, and Samsung source
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    outputs:
+      ready: ${{ steps.analyze.outputs.ready }}
     steps:
       - name: Checkout payload tooling
         uses: actions/checkout@v7
@@ -38,41 +45,42 @@ jobs:
           pahole --version
           vmlinux-to-elf --help | head -8
 
-      - name: Download exact release assets and verify GitHub SHA-256 digests
+      - name: Read and validate the release asset metadata
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FIRMWARE_TAG: ${{ inputs.firmware_tag }}
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          mkdir -p a07-release-assets
-          gh release download "$FIRMWARE_TAG" -R "$REPO" -D a07-release-assets \
-            -p 'kernel.elf' -p 'kernel.raw' -p 'kallsyms.txt' -p 'vmlinux.btf' \
-            -p 'SM-A075F_16_Opensource.zip'
-          gh api "repos/$REPO/releases/tags/$FIRMWARE_TAG" > a07-release-assets/release-metadata.json
-          python3 - <<'PYCODE'
-          import hashlib, json
-          from pathlib import Path
+          mkdir -p a07-release-assets a07-target-output
+          gh api "repos/$REPO/releases/tags/a07-firmware-v1" > a07-release-assets/release-before.json
+          python3 tools/verify_a07_release.py --before a07-release-assets/release-before.json
 
-          root = Path('a07-release-assets')
-          names = {'kernel.elf', 'kernel.raw', 'kallsyms.txt', 'vmlinux.btf', 'SM-A075F_16_Opensource.zip'}
-          release = json.loads((root / 'release-metadata.json').read_text())
-          assets = {asset['name']: asset for asset in release['assets']}
-          for name in sorted(names):
-              if name not in assets or not (root / name).is_file():
-                  raise SystemExit(f'required firmware asset missing: {name}')
-              asset = assets[name]
-              digest = asset.get('digest', '')
-              if not digest.startswith('sha256:') or len(digest) != 71:
-                  raise SystemExit(f'GitHub does not publish a usable SHA-256 for {name}')
-              h = hashlib.sha256()
-              with (root / name).open('rb') as data:
-                  for block in iter(lambda: data.read(1 << 20), b''):
-                      h.update(block)
-              if h.hexdigest() != digest.removeprefix('sha256:') or (root / name).stat().st_size != asset['size']:
-                  raise SystemExit(f'release size/SHA-256 mismatch: {name}')
-              print(f'{name}: {digest}')
-          PYCODE
+      - name: Download all 13 exact release assets with the Actions token
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # The hosted runner can follow GitHub's signed asset redirect; the Arena sandbox cannot.
+          # No PAT or third-party downloader is used. Do not continue on a failed download.
+          gh release download a07-firmware-v1 -R "$REPO" -D a07-release-assets \
+            -p 'boot.img' -p 'vendor_boot.img' -p 'dtbo.img' \
+            -p 'preloader.img' -p 'lk-verified.img' -p 'param.bin' -p 'up_param.bin' \
+            -p 'kernel.raw' -p 'kernel.elf' -p 'ramdisk.cpio' -p 'kallsyms.txt' \
+            -p 'vmlinux.btf' -p 'SM-A075F_16_Opensource.zip'
+
+      - name: Verify every input against SHA-256 and unchanged release metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/releases/tags/a07-firmware-v1" > a07-release-assets/release-after.json
+          python3 tools/verify_a07_release.py \
+            --before a07-release-assets/release-before.json \
+            --after a07-release-assets/release-after.json \
+            --assets a07-release-assets \
+            --output a07-target-output/input-hashes.json
 
       - name: Extract and cross-check target offsets
         id: analyze
@@ -105,6 +113,7 @@ jobs:
           name: a07-target-${{ github.run_id }}
           path: |
             a07-target-output/report.md
+            a07-target-output/input-hashes.json
             a07-target-output/status.json
             a07-target-output/kernel-release.txt
             a07-target-output/target-metadata.json
@@ -119,3 +128,16 @@ jobs:
         run: |
           echo '::error::No production target.h was emitted. Review the a07-target artifact and provide only verified A07-specific values; do not copy SM-A175F offsets.'
           exit 1
+
+  # This is a reusable workflow call, not an API dispatch. It runs only after a verified
+  # header was produced. The called build uploads review artifacts; it cannot push a feed.
+  build:
+    name: Build verified A07 artifacts without publishing
+    needs: extract
+    if: needs.extract.outputs.ready == 'true'
+    uses: ./.github/workflows/build-a07-payload.yml
+    with:
+      target_run_id: ${{ github.run_id }}
+    permissions:
+      contents: read
+      actions: read

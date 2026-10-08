@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import json
 import os
 import re
@@ -935,6 +936,7 @@ def main() -> int:
                 "kernelVersion": KERNEL_VERSION,
                 "kernelRelease": kernel_release,
                 "targetHeader": "target.h",
+                "targetHeaderSha256": hashlib.sha256((out_dir / "target.h").read_bytes()).hexdigest(),
                 "sourceMmVerified": True,
                 "profileEvidenceKeys": sorted(evidence),
             }
