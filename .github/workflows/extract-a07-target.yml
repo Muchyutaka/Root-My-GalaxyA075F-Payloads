@@ -125,6 +125,15 @@ jobs:
           print(f'::notice::A07 p0_fingerprint.h generated from verified kernel.raw at probe 0x1f0000: rows={len(rows)} sha256={digest}')
           first = re.search(r'\{ (0x[0-9a-f]{6}ULL), \{ ([^}]*)\}', text)
           print('::notice::A07 p0_fingerprint.h slide ' + first.group(1) + ' words: ' + ' '.join(first.group(2).split()))
+          # The sandbox cannot download run artifacts, so the generated header travels out in
+          # base64 chunks with its digest; the receiver rebuilds it and must reproduce that digest.
+          import base64
+          raw_bytes = path.read_bytes()
+          chunk = 1800
+          total = (len(raw_bytes) + chunk - 1) // chunk
+          for index in range(total):
+              part = base64.b64encode(raw_bytes[index * chunk:(index + 1) * chunk]).decode()
+              print(f'::notice::A07 p0_fingerprint.h chunk {index + 1}/{total} bytes={len(raw_bytes)} sha256={digest} b64={part}')
           PY
 
       - name: Extract and cross-check target offsets
