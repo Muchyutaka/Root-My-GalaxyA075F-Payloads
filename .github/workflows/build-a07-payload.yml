@@ -205,7 +205,9 @@ jobs:
             exit 1
           fi
           file "$app"
-          readelf -h "$app" | grep -E 'Class:|Machine:'
+          readelf -h "$app" | grep -Eq 'Class:[[:space:]]+ELF64'
+          readelf -h "$app" | grep -Eq 'Machine:[[:space:]]+AArch64'
+          readelf -h "$app" | grep -Eq 'Type:[[:space:]]+DYN'
           mkdir -p artifacts/a07-SM-A075F release-assets
           install -m 0644 "$app" artifacts/a07-SM-A075F/cve-2026-43499-app.so
           install -m 0644 "$app" release-assets/cve-2026-43499-app-a07-SM-A075F-6.12.38.so
