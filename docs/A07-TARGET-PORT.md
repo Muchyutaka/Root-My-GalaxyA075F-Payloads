@@ -85,6 +85,67 @@ The selected upstream release tags in the pair workflow are
 These tags and the named manager APK assets exist upstream. The versions become
 `kernelsu.version` **only after** matching target-specific daemon/module builds exist.
 
+### What CI measured (extraction run 37710697461, commit 0e8df9a)
+
+The push-triggered extraction run executed on a GitHub-hosted runner. Stages 1-3 **pass**; stage 4
+is **partial**; stages 5-10 were correctly **not reached**. Nothing below was copied from another
+model, and no value was accepted without a cross-check.
+
+| Stage | Result | Evidence |
+| --- | --- | --- |
+| 1. Release assets downloaded | **PASS** | all 13 assets of `a07-firmware-v1` via `gh release download` using the run's own `GITHUB_TOKEN` |
+| 2. SHA-256 verified | **PASS** | every file's size and `sha256:` digest from the Releases API; release metadata re-read after download and compared, so a swapped asset fails |
+| 3. Kernel ELF/BTF parsed | **PASS** | `UTS_RELEASE` = `6.12.38-android16-5-abA075FXXS5CZF2-4k` (matches firmware `A075FXXS5CZF2`, kernel `6.12.38`, 4K pages); `task_struct.mm` = **1672 (0x688)** from A07's own `vmlinux.btf`, cross-checked against Samsung's `include/linux/sched.h` inside `SM-A075F_16_Opensource.zip` |
+| 4. Offsets extracted | **PARTIAL** | 10/19 required symbol offsets cross-verified (`nm` == `readelf`, name present in `kallsyms.txt`); 5 waiter offsets derived from nested BTF with spacing + leaf-type checks; 9 symbols and 3 BTF members do not exist in this kernel |
+| 5. `target.h` generated | **NOT GENERATED** | fail-closed: 38 requirements unmet (9 symbols, 24 profile values, 5 structural) |
+| 6-10. `.so`, pairs, feed, app source | **NOT REACHED** | the build job is gated on a ready extraction; `support/targets-v3.json` still has no SM-A075F entry |
+
+Cross-verified image-relative symbol offsets (text base subtracted): `INIT_TASK_OFF=0x250cf40`,
+`ROOT_TASK_GROUP_OFF=0x2dcfd80`, `KMALLOC_CACHES_OFF=0x18934c0`, `ANON_PIPE_BUF_OPS_OFF=0x126efc8`,
+`NOOP_LLSEEK_OFF=0x4414d8`, `COPY_SPLICE_READ_OFF=0x4943f0`, `CONFIGFS_READ_ITER_OFF=0x5184bc`,
+`CONFIGFS_BIN_WRITE_ITER_OFF=0x518a68`, `CALL_USERMODEHELPER_EXEC_WORK_OFF=0xf8e68`,
+`SYSTEM_UNBOUND_WQ_OFF=0x1893250`.
+
+Derived from A07's BTF by walking embedded members, each with an independent check
+(`pi_tree - tree == sizeof(struct rt_waiter_node) == 0x28`, and the leaf of `pi_tree.entry`
+asserted to embed `struct rb_node`): `FAKE_WAITER_TREE_PRIO_OFF=0x18`,
+`FAKE_WAITER_TREE_DEADLINE_OFF=0x20`, `FAKE_WAITER_PI_TREE_ENTRY_OFF=0x28`,
+`FAKE_WAITER_PI_TREE_PRIO_OFF=0x40`, `FAKE_WAITER_PI_TREE_DEADLINE_OFF=0x48`. A07's
+`rt_mutex_waiter` members are `tree`, `pi_tree`, `task`, `lock`, `wake_state`, `ww_ctx`;
+`struct rt_waiter_node` is `entry`, `prio`, `deadline`.
+
+Also measured and reported but **not** accepted: `struct slab` in this kernel does not embed
+`struct page __page` (its members are `__page_flags`, `__page_refcount`, `__page_type`,
+`slab_cache@0x8`, `freelist`, `obj_exts`, ...), so the page-relative equivalence the payload
+assumes for `STRUCT_SLAB_CACHE_OFF` is unproven and stays a reported gap rather than a value.
+
+### The three blockers that remain (each needs evidence or a source port, never a guess)
+
+1. **Nine required symbols do not exist in this kernel.** `selinux_enforcing` is present only as
+   `selinux_enforcing_boot`; the eight `ashmem_*` symbols are gone (A07's 6.12 kernel exposes
+   `ashmem_memfd_ioctl`, i.e. the memfd shim). The extractor refuses closest-name substitution, so
+   `SELINUX_ENFORCING_OFF` and the `ASHMEM_*_OFF` set cannot be filled for A07 as the payload is
+   written today. Porting the exploit to 6.12's SELinux state and memfd-based ashmem is a **source
+   change**, not a header value.
+2. **`rt_mutex_waiter` has a third layout.** `src/common.h` offers only `LEGACY_RT_MUTEX_WAITER`
+   (flat `pi_tree_entry`/`pi_tree_prio`/`pi_tree_deadline`) and `COMPACT_RT_MUTEX_WAITER`
+   (`tree_entry`/`prio`/`deadline`). A07 embeds `tree`/`pi_tree` node structs, so neither flag
+   describes it. Deciding which flag's code paths match the nested layout - or adding a third -
+   requires reading how `src/util.c` and `src/slide_app.c` write the rb_node and prio/deadline
+   fields. `pool_workqueue.max_active` is the same class of problem: it moved to
+   `workqueue_struct.max_active` (measured at `0xa4`), while `src/root.c:355` reads
+   `pwq + PWQ_MAX_ACTIVE_OFF`; that is a source port.
+3. **24 evidence-bearing profile values are absent** (`src/targets/a07-SM-A075F/target-values.json`
+   does not exist). They include the P0/direct-map physical constants, `SKB_DATA_DELTA`, the pselect
+   word shift, the tracefs event ID and worker caller offset, the allocator/runtime choices, and the
+   four text-relative slide addresses (`SLIDE_NFULNL_LOGGER_NAME_OFF`,
+   `SLIDE_NFULNL_LOGGER_OBJECT_OFF`, `SLIDE_RANDOM_TABLE_BOOT_ID_DATA_PTR_OFF`,
+   `SLIDE_SYSCTL_BOOTID_OFF`). Those four are addresses of code/data **inside the A07 image** and
+   require disassembling A07's own `kernel.elf`; no other device's values transfer.
+
+Unrelated `nm`/`readelf` address disagreements (`add`, `gic_of_init`, `phy_exit`, `phy_init`,
+`poly1305_blocks`, `shrinker_list`, `user_destroy`, `user_read`) are reported and never used.
+
 ### How the app reads a completed source
 
 Source of truth: `rushiranpise/Root-My-Galaxy-Next`'s `PayloadSources.kt`,
@@ -125,7 +186,10 @@ network does not allow that redirected host, so a local `gh release download` ca
 for an Actions run. If the hosted runner also cannot follow the redirect, the download step
 fails without claiming any input SHA-256 succeeded.
 
-The earlier API request to dispatch a workflow returned HTTP 403 with
+**Resolved by not needing that permission:** extraction now starts from a push to this branch, and
+runs `37707541106`, `37708402625`, `37708933950`, `37709369351`, `37710215624`, `37710306116`, and
+`37710697461` all executed on GitHub-hosted runners. The earlier API request to dispatch a workflow
+returned HTTP 403 with
 `X-Accepted-Github-Permissions: actions=write`: the **Arena GitHub integration** lacks the
 `Actions: write` repository permission needed by `POST /actions/workflows/{id}/dispatches`.
 Adding `permissions: actions: write` to workflow YAML does **not** change that external
