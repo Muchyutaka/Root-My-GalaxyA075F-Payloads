@@ -14,14 +14,18 @@ import unittest
 from pathlib import Path
 
 from tools.a07_elf import ElfError, ElfImage
+import dataclasses
+
 from tools.derive_a07_image import (
     derive_ashmem,
+    source_excerpts,
     derive_selinux,
     derive_slab,
     derive_slide_chain,
     derive_workqueue,
     section_kind,
     writable,
+    writability,
 )
 
 BASE = 0xFFFFFFC008000000
@@ -102,13 +106,14 @@ def build_image(path: Path, *, logger_string: str = "nfnetlink_log") -> None:
         )
 
     sections = [
-        # name, type, addr, offset, size, link, entsize
-        ("", 0, 0, 0, 0, 0, 0),
-        (".text", 1, BASE + 0x0000, data_start + 0x0000, 0x1000, 0, 0),
-        (".rodata", 1, BASE + 0x1000, data_start + 0x1000, 0x1000, 0, 0),
-        (".data", 1, BASE + 0x2000, data_start + 0x2000, 0x0400, 0, 0),
-        (".data..ro_after_init", 1, BASE + 0x2400, data_start + 0x2400, 0x0100, 0, 0),
-        (".bss", 8, BASE + 0x3000, 0, 0x1000, 0, 0),
+        # name, type, addr, offset, size, link, entsize, sh_flags
+        ("", 0, 0, 0, 0, 0, 0, 0),
+        (".text", 1, BASE + 0x0000, data_start + 0x0000, 0x1000, 0, 0, 0x6),
+        (".rodata", 1, BASE + 0x1000, data_start + 0x1000, 0x1000, 0, 0, 0x2),
+        (".data", 1, BASE + 0x2000, data_start + 0x2000, 0x0400, 0, 0, 0x3),
+        # __ro_after_init storage is SHF_WRITE in the ELF: only its name says it is read-only later.
+        (".data..ro_after_init", 1, BASE + 0x2400, data_start + 0x2400, 0x0100, 0, 0, 0x3),
+        (".bss", 8, BASE + 0x3000, 0, 0x1000, 0, 0, 0x3),
     ]
     symtab_offset = data_start + len(blob)
     strtab_offset = symtab_offset + len(symtab)
@@ -117,9 +122,9 @@ def build_image(path: Path, *, logger_string: str = "nfnetlink_log") -> None:
         b".symtab\0", b".strtab\0", b".shstrtab\0"
     ]
     sections += [
-        (".symtab", 2, 0, symtab_offset, len(symtab), 7, 24),
-        (".strtab", 3, 0, strtab_offset, len(strtab), 0, 0),
-        (".shstrtab", 3, 0, shstrtab_offset, sum(len(n) for n in section_names), 0, 0),
+        (".symtab", 2, 0, symtab_offset, len(symtab), 7, 24, 0),
+        (".strtab", 3, 0, strtab_offset, len(strtab), 0, 0, 0),
+        (".shstrtab", 3, 0, shstrtab_offset, sum(len(n) for n in section_names), 0, 0, 0),
     ]
     shstrtab = b"".join(section_names)
     shstr_offsets: list[int] = []
@@ -142,8 +147,8 @@ def build_image(path: Path, *, logger_string: str = "nfnetlink_log") -> None:
     body = bytes(out) + bytes(blob) + bytes(symtab) + strtab + shstrtab
     body += b"\0" * (shoff - len(body))
     shdr = bytearray()
-    for index, (name, stype, addr, offset, size, link, entsize) in enumerate(sections):
-        shdr += struct.pack("<IIQQQQIIQQ", shstr_offsets[index], stype, 0x3 if addr else 0, addr,
+    for index, (name, stype, addr, offset, size, link, entsize, flags) in enumerate(sections):
+        shdr += struct.pack("<IIQQQQIIQQ", shstr_offsets[index], stype, flags, addr,
                             offset, size, link, 0, 8 if addr else 1, entsize)
     path.write_bytes(body + bytes(shdr))
 
@@ -242,6 +247,57 @@ class ImageTests(unittest.TestCase):
         self.assertEqual(".data", derived["section"])
         self.assertEqual(8, derived["enforcingMemberOffset"])
         self.assertEqual(1, derived["byteInImage"])
+
+    def test_source_excerpts_quote_the_decisive_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            driver = root / "drivers" / "staging" / "android"
+            driver.mkdir(parents=True)
+            (driver / "ashmem_rust_exports.c").write_text(
+                "#include <linux/fs.h>\n"
+                "/* filler */\n" * 3
+                + "long ashmem_memfd_ioctl(struct file *file, unsigned int cmd, unsigned long arg)\n"
+                "{\n\tstruct ashmem_area *area = memfd_ashmem_area(file);\n"
+                + "\treturn 0;\n}\n"
+            )
+            (root / "mm" / "slab.h").parent.mkdir(parents=True, exist_ok=True)
+            (root / "mm" / "slab.h").write_text(
+                "struct slab {\n\tstruct page __page;\n\tstruct kmem_cache *slab_cache;\n};\n"
+            )
+            quotes = source_excerpts(root)
+            body = " ".join(quotes["ashmem_memfd_ioctl body"])
+            self.assertIn("ashmem_rust_exports.c", body)
+            self.assertIn("memfd_ashmem_area(file)", body)
+            self.assertIn("struct slab {", " ".join(quotes["struct slab definition"]))
+            self.assertEqual([], quotes["selinux_state struct"], "an absent file yields no quote")
+
+    def test_writability_uses_names_then_elf_flags(self):
+        moved = self.root / "writability.elf"
+        build_image(moved)
+        image = ElfImage(moved)
+        self.assertTrue(writability(image, BASE + 0x2000)["writable"], ".data is writable by name")
+        ro = writability(image, BASE + 0x2400)
+        self.assertFalse(ro["writable"])
+        self.assertIn("read-only at runtime", ro["reason"])
+        self.assertTrue(ro["segmentFlags"].find("W") >= 0, "PT_LOAD is RWX in the fixture")
+
+        # A07's kernel.elf puts some objects in a section named `.kernel`; the ELF flags decide then.
+        sections = list(image.sections)
+        index = next(i for i, sec in enumerate(sections) if sec.name == ".data")
+        sections[index] = dataclasses.replace(sections[index], name=".kernel")
+        image.sections = sections
+        fallback = writability(image, BASE + 0x2000)
+        self.assertTrue(fallback["writable"])
+        self.assertIn("SHF_WRITE", fallback["reason"])
+        sections[index] = dataclasses.replace(sections[index], name=".kernel", flags=0x2)
+        image.sections = sections
+        self.assertFalse(writability(image, BASE + 0x2000)["writable"])
+
+    def test_bss_object_has_no_file_bytes_but_is_writable(self):
+        verdict = writability(self.image, BASE + 0x3000)
+        self.assertTrue(verdict["nobits"])
+        self.assertTrue(verdict["writable"])
+        self.assertIsNone(self.image.read(BASE + 0x3000, 1))
 
     def test_selinux_enforcing_needs_a_writable_object(self):
         # Same member layout, but the global lives in read-only-after-init storage: the exploit

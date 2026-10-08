@@ -18,7 +18,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 PT_LOAD = 1
+SHT_NOBITS = 8
 SHT_SYMTAB = 2
+SHF_WRITE = 0x1
+SHF_ALLOC = 0x2
+PF_X = 0x1
+PF_W = 0x2
+PF_R = 0x4
 SHT_STRTAB = 3
 SHT_DYNSYM = 11
 
@@ -38,6 +44,15 @@ class Section:
     size: int
     link: int
     entsize: int
+    flags: int = 0
+
+    @property
+    def nobits(self) -> bool:
+        return self.type == SHT_NOBITS
+
+    @property
+    def shf_write(self) -> bool:
+        return bool(self.flags & SHF_WRITE)
 
 
 @dataclass(frozen=True)
@@ -106,16 +121,16 @@ class ElfImage:
         raw: list[tuple[int, Section]] = []
         for index in range(self.e_shnum):
             base = self.e_shoff + index * self.e_shentsize
-            nameoff, sh_type, _flags, addr, offset, size, link, _info, _align, entsize = (
+            nameoff, sh_type, sh_flags, addr, offset, size, link, _info, _align, entsize = (
                 struct.unpack_from("<IIQQQQIIQQ", self.data, base)
             )
-            raw.append((nameoff, Section("", sh_type, addr, offset, size, link, entsize)))
+            raw.append((nameoff, Section("", sh_type, addr, offset, size, link, entsize, sh_flags)))
         strtab = raw[self.e_shstrndx][1]
         out: list[Section] = []
         for nameoff, section in raw:
             out.append(
                 Section(self._string_at_offset(strtab, nameoff), section.type, section.addr,
-                        section.offset, section.size, section.link, section.entsize)
+                        section.offset, section.size, section.link, section.entsize, section.flags)
             )
         return out
 
@@ -233,6 +248,23 @@ class ElfImage:
         if not candidate or any(byte < 0x20 or byte > 0x7E for byte in candidate):
             return None
         return candidate.decode("ascii")
+
+    def section_at(self, va: int) -> Section | None:
+        """The most specific allocated section that contains a virtual address."""
+        best: Section | None = None
+        for section in self.sections:
+            if section.addr and section.size and section.addr <= va < section.addr + section.size:
+                if best is None or len(section.name) > len(best.name):
+                    best = section
+        return best
+
+    def segment_at(self, va: int) -> Segment | None:
+        for segment in self.segments:
+            if segment.type != PT_LOAD:
+                continue
+            if segment.vaddr <= va < segment.vaddr + max(segment.filesz, segment.memsz):
+                return segment
+        return None
 
     def section_by_name(self, name: str) -> Section | None:
         return next((section for section in self.sections if section.name == name), None)

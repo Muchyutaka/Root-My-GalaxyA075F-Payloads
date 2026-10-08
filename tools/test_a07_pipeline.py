@@ -209,9 +209,16 @@ class A07ExtractionHelperTests(unittest.TestCase):
         self.assertIn("outside sizeof(struct slab)", reason)
         self.assertEqual("slab", container)
 
-    def test_slab_derivation_requires_page_at_zero(self) -> None:
-        self.assertEqual(("slab", "slab_cache", ("__page", 0), None),
-                         extract_a07_offsets.DERIVED_BTF_PATHS["STRUCT_SLAB_CACHE_OFF"])
+    def test_slab_offset_is_proven_by_the_page_mirror_not_by_an_absent_member(self) -> None:
+        # A07's struct slab declares __page_flags/__page_refcount/__page_type instead of embedding
+        # `struct page __page`, so the overlay has to be proven by the mirror pairs.
+        self.assertNotIn("STRUCT_SLAB_CACHE_OFF", extract_a07_offsets.DERIVED_BTF_PATHS)
+        self.assertEqual(("page", "slab_cache"),
+                         extract_a07_offsets.BTF_FIELD_MACROS["STRUCT_SLAB_CACHE_OFF"])
+
+    def test_selinux_enforcing_is_derived_from_selinux_state(self) -> None:
+        self.assertEqual(("selinux_state",), extract_a07_offsets.SYMBOL_MACROS["SELINUX_STATE_OFF"])
+        self.assertNotIn("SELINUX_ENFORCING_OFF", extract_a07_offsets.SYMBOL_MACROS)
 
     def test_pi_tree_entry_requires_an_embedded_rb_node(self) -> None:
         self.assertEqual(("rt_mutex_waiter", "pi_tree.entry", None, "rb_node"),

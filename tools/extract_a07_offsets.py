@@ -29,6 +29,11 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    # `python3 tools/extract_a07_offsets.py` puts tools/ on sys.path, not the repository root.
+    sys.path.insert(0, str(REPO_ROOT))
+
 MODEL = "SM-A075F"
 KERNEL_VERSION = "6.12.38"
 
@@ -36,7 +41,11 @@ KERNEL_VERSION = "6.12.38"
 SYMBOL_MACROS: dict[str, tuple[str, ...]] = {
     "INIT_TASK_OFF": ("init_task",),
     "ROOT_TASK_GROUP_OFF": ("root_task_group",),
-    "SELINUX_ENFORCING_OFF": ("selinux_enforcing",),
+    # A07's 6.12 has no `selinux_enforcing` symbol: the runtime flag is `selinux_state.enforcing`
+    # (security/selinux/hooks.c:111 declares the object, include/security.h declares the member).
+    # The object address is verified like every other symbol; the member offset comes from BTF and
+    # the two are combined below, so SELINUX_ENFORCING_OFF is derived rather than hand-written.
+    "SELINUX_STATE_OFF": ("selinux_state",),
     "KMALLOC_CACHES_OFF": ("kmalloc_caches",),
     "ANON_PIPE_BUF_OPS_OFF": ("anon_pipe_buf_ops",),
     "ASHMEM_MISC_FOPS_OFF": ("ashmem_misc_fops", "ashmem_fops_misc"),
@@ -471,9 +480,10 @@ DERIVED_BTF_PATHS: dict[str, tuple[str, str, tuple[str, int] | None, str | None]
     "FAKE_WAITER_PI_TREE_ENTRY_OFF": ("rt_mutex_waiter", "pi_tree.entry", None, "rb_node"),
     "FAKE_WAITER_PI_TREE_PRIO_OFF": ("rt_mutex_waiter", "pi_tree.prio", None, None),
     "FAKE_WAITER_PI_TREE_DEADLINE_OFF": ("rt_mutex_waiter", "pi_tree.deadline", None, None),
-    # `struct slab` embeds `struct page __page` first, so a member offset inside it is also an
-    # offset from the page address the payload already holds. That zero offset is asserted here.
-    "STRUCT_SLAB_CACHE_OFF": ("slab", "slab_cache", ("__page", 0), None),
+    # `struct slab` on A07 declares the page fields it mirrors (`__page_flags`, `__page_refcount`,
+    # `__page_type`) instead of embedding `struct page __page`, so STRUCT_SLAB_CACHE_OFF is proven
+    # separately by derive_slab(): every mirrored pair has to agree, and sizeof(slab) has to fit
+    # inside sizeof(page). Only then is slab.slab_cache also a page-relative offset.
 }
 
 # Macros whose member genuinely moved off the struct the payload addresses in this kernel
@@ -1134,6 +1144,28 @@ def main() -> int:
                 derived_members[macro] = record
                 btf_fields.setdefault(declared_type, {})[declared_member] = offset
 
+            try:
+                from tools.derive_a07_image import derive_slab
+
+                slab_proof = derive_slab(btf_fields, btf_sizes)
+            except Exception as error:
+                slab_proof = {"status": "unresolved", "evidence": f"slab overlay proof failed: {error}"}
+            if slab_proof.get("status") == "derived" and slab_proof.get("value") is not None:
+                btf_fields.setdefault("page", {})["slab_cache"] = slab_proof["value"]
+                derived_members["STRUCT_SLAB_CACHE_OFF"] = {
+                    "root": "slab",
+                    "path": "slab_cache",
+                    "status": "derived",
+                    "offset": slab_proof["value"],
+                    "evidence": slab_proof.get("evidence", ""),
+                    "crossCheck": "struct slab mirrors struct page member-for-member and fits in it",
+                }
+            else:
+                missing.append(
+                    f"STRUCT_SLAB_CACHE_OFF: {slab_proof.get('status')} - "
+                    f"{slab_proof.get('evidence') or 'no mirror proof recorded'}"
+                )
+
             missing_btf = []
             incomplete_structs: set[str] = set()
             for macro, (type_name, member) in BTF_FIELD_MACROS.items():
@@ -1194,18 +1226,42 @@ def main() -> int:
                 "workqueue_max_active": wq_evidence,
             }
             slide_chain: dict[str, Any] = {}
+            selinux_derived: dict[str, Any] = {"status": "not attempted"}
             if selected_kernel is not None and text_base is not None:
                 try:
                     from tools.a07_elf import ElfImage as SlideElfImage
-                    from tools.derive_a07_image import derive_slide_chain
+                    from tools.derive_a07_image import derive_selinux, derive_slide_chain
 
                     ensure_type("nf_logger")
                     ensure_type("ctl_table")
+                    ensure_type("selinux_state")
+                    slide_image = SlideElfImage(selected_kernel)
                     slide_chain = derive_slide_chain(
-                        SlideElfImage(selected_kernel), {**btf_fields, "__sizes__": btf_sizes}, text_base
+                        slide_image, {**btf_fields, "__sizes__": btf_sizes}, text_base
                     )
+                    selinux_derived = derive_selinux(
+                        slide_image, btf_fields, btf_sizes, pahole_outputs, text_base
+                    )["derivedEnforcing"]
                 except Exception as error:
                     missing.append(f"image-derived slide chain failed: {error}")
+            enforcing = selinux_derived.get("value")
+            if selinux_derived.get("status") == "derived" and enforcing is not None:
+                layout_macros["SELINUX_ENFORCING_OFF"] = f"0x{enforcing:x}ULL"
+                layout_evidence["SELINUX_ENFORCING_OFF"] = selinux_derived.get("evidence", "")
+                state_offset = offsets.get("SELINUX_STATE_OFF")
+                member_offset = btf_fields.get("selinux_state", {}).get("enforcing")
+                if state_offset is not None and member_offset is not None and \
+                        state_offset + member_offset != enforcing:
+                    missing.append(
+                        f"SELINUX_ENFORCING_OFF disagrees with the verified symbol: "
+                        f"SELINUX_STATE_OFF 0x{state_offset:x} + selinux_state.enforcing "
+                        f"0x{member_offset:x} != 0x{enforcing:x}"
+                    )
+            else:
+                missing.append(
+                    f"SELINUX_ENFORCING_OFF: {selinux_derived.get('status')} - "
+                    f"{selinux_derived.get('evidence') or selinux_derived.get('reason') or 'no evidence recorded'}"
+                )
             for macro in SLIDE_CHAIN_MACROS:
                 info = slide_chain.get(macro)
                 if not info:
@@ -1263,6 +1319,7 @@ def main() -> int:
                         "rtMutexWaiterLayoutCandidate": waiter_candidate,
                         "layoutMacros": layout_macros,
                         "imageDerivedSlideChain": slide_chain,
+                        "imageDerivedSelinux": selinux_derived,
                         "layoutEvidence": layout_evidence,
                         "resolvedBySourcePort": resolved_by_source_port,
                         "derivedMembers": derived_members,
@@ -1286,6 +1343,12 @@ def main() -> int:
                     )
                     + "\nDerived offsets are injected only after their cross-checks pass; an\n"
                     "unresolved or failed path stays a reported gap rather than a value.\n"
+                )
+            if selinux_derived.get("evidence") or selinux_derived.get("reason"):
+                sections.append(
+                    "## SELinux enforcing flag\n\n"
+                    f"- status: **{selinux_derived.get('status')}**\n"
+                    f"- {selinux_derived.get('evidence') or selinux_derived.get('reason')}\n"
                 )
             if slide_chain:
                 sections.append(

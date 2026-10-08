@@ -140,6 +140,28 @@ jobs:
             --work-dir a07-derive-work \
             --github
 
+      - name: Quote the Samsung ashmem implementation from the extracted source
+        run: |
+          set -euo pipefail
+          root=$(python3 -c 'import json;print(json.load(open("a07-target-output/image-facts.json")).get("sourceRoot") or "")')
+          if [ -z "$root" ] || [ ! -d "$root" ]; then
+            echo '::error::the Samsung kernel source was not extracted, so the ashmem implementation cannot be quoted'
+            exit 1
+          fi
+          python3 tools/derive_a07_image.py --only excerpts --excerpt-group ashmem \
+            --source-root "$root" --output-dir a07-target-output --github
+
+      - name: Quote the kernel data declarations the port depends on
+        run: |
+          set -euo pipefail
+          root=$(python3 -c 'import json;print(json.load(open("a07-target-output/image-facts.json")).get("sourceRoot") or "")')
+          if [ -z "$root" ] || [ ! -d "$root" ]; then
+            echo '::error::the Samsung kernel source was not extracted, so the declarations cannot be quoted'
+            exit 1
+          fi
+          python3 tools/derive_a07_image.py --only excerpts --excerpt-group kernel-data \
+            --source-root "$root" --output-dir a07-target-output --github
+
       - name: Summarize parse status in GitHub check annotations
         if: always()
         run: |

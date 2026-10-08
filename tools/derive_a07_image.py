@@ -52,6 +52,9 @@ MAX_TABLE_ENTRIES = 64
 # a read-only mapping, and writing it faults instead of sliding anything.
 WRITABLE_SECTION_PREFIXES = (".data", ".bss")
 READONLY_AFTER_INIT = ".data..ro_after_init"
+# Sections the kernel maps read-only once boot finishes, whatever the ELF flags say: a
+# `__ro_after_init` object *is* SHF_WRITE in vmlinux, because it is writable until mark_rodata_ro().
+RUNTIME_READONLY_NAME_PREFIXES = (".data..ro_after_init", ".rodata", ".init", ".text", ".exit")
 
 
 def image_offset(address: int, text_base: int) -> int | None:
@@ -70,6 +73,50 @@ def section_kind(image: ElfImage, address: int) -> str:
 
 def writable(section: str) -> bool:
     return section.startswith(WRITABLE_SECTION_PREFIXES) and section != READONLY_AFTER_INIT
+
+
+def writability(image: ElfImage, address: int) -> dict[str, Any]:
+    """Is this image address writable *at runtime*, and what exactly says so?
+
+    The name check alone is not enough: A07's kernel.elf puts some objects in a section literally
+    named `.kernel`, which carries no information. The ELF's own SHF_WRITE bit and the PF_W flag of
+    the enclosing PT_LOAD are then the evidence, and the answer says which of the three decided it.
+    """
+    section = image.section_at(address)
+    segment = image.segment_at(address)
+    name = section.name if section else "(no section)"
+    segment_flags = "".join(
+        flag for flag, bit in (("R", 4), ("W", 2), ("X", 1))
+        if segment is not None and segment.flags & bit
+    ) or "(none)"
+    by_name = name.startswith(RUNTIME_READONLY_NAME_PREFIXES)
+    specific_name = name.startswith(WRITABLE_SECTION_PREFIXES) or by_name
+    shf_write = bool(section.shf_write) if section else False
+    nobits = bool(section.nobits) if section else False
+    segment_writable = segment is not None and bool(segment.flags & 2)
+    if by_name:
+        ok, why = False, f"section `{name}` is mapped read-only at runtime"
+    elif specific_name:
+        ok, why = True, f"section `{name}` is runtime-writable kernel data"
+    elif shf_write and segment_writable:
+        ok, why = True, (
+            f"section name `{name}` is not specific in this ELF, but it carries SHF_WRITE and its "
+            f"PT_LOAD segment is {segment_flags}"
+        )
+    else:
+        ok, why = False, (
+            f"section `{name}` (SHF_WRITE={shf_write}, nobits={nobits}) in PT_LOAD {segment_flags} "
+            "is not shown to be writable"
+        )
+    return {
+        "writable": ok,
+        "section": name,
+        "sectionFlags": f"0x{section.flags:x}" if section else None,
+        "nobits": nobits,
+        "segmentFlags": segment_flags,
+        "specificName": specific_name,
+        "reason": why,
+    }
 
 
 def symbol_fact(image: ElfImage, name: str, text_base: int) -> dict[str, Any] | None:
@@ -95,18 +142,19 @@ def derive_slide_chain(image: ElfImage, layouts: dict[str, dict[str, int]], text
     if logger is None:
         out["SLIDE_NFULNL_LOGGER_OBJECT_OFF"] = {"status": "unresolved", "reason": "no `nfulnl_logger` symbol in kernel.elf"}
     else:
-        section = section_kind(image, logger.value)
+        verdict = writability(image, logger.value)
+        section = verdict["section"]
         out["SLIDE_NFULNL_LOGGER_OBJECT_OFF"] = {
-            "status": "derived" if writable(section) else "incompatible-section",
-            "value": image_offset(logger.value, text_base) if writable(section) else None,
+            "status": "derived" if verdict["writable"] else "incompatible-section",
+            "value": image_offset(logger.value, text_base) if verdict["writable"] else None,
             "symbol": "nfulnl_logger",
             "section": section,
-            "evidence": f"symbol `nfulnl_logger` at 0x{logger.value:x} in {section}"
-            + ("" if writable(section) else
-               ", which the kernel maps read-only at runtime. src/util.c:1800 and src/fops.c:314 "
-               "write and restore rb_node words inside this object, so on A07 it cannot serve as "
-               "the slide scratch target; a writable replacement has to be chosen from A07's own "
-               "image, not copied from another device."),
+            "writability": verdict,
+            "evidence": f"symbol `nfulnl_logger` at 0x{logger.value:x}: {verdict['reason']}"
+            + ("" if verdict["writable"] else
+               ". src/util.c:1800 and src/fops.c:314 write and restore rb_node words inside this "
+               "object, so on A07 it cannot serve as the slide scratch target; a writable "
+               "replacement has to be chosen from A07's own image, not copied from another device."),
         }
         name_field = layouts.get("nf_logger", {}).get("name")
         if name_field is None:
@@ -285,13 +333,16 @@ def derive_selinux(image: ElfImage, layouts: dict[str, dict[str, int]], sizes: d
                    "reason": "BTF has no `selinux_state.enforcing` member offset",
                    "selinuxStateMembers": sorted(layouts.get("selinux_state", {}))}
     else:
-        section = section_kind(image, state.value)
+        verdict = writability(image, state.value)
+        section = verdict["section"]
         raw = pahole_raw.get("selinux_state", "")
         is_bool = bool(re.search(r"\benforcing\s*;\s*/\*", raw)) and "bool" in raw
         object_size = state.size or sizes.get("selinux_state") or 0
         fits = object_size == 0 or enforcing_off + 1 <= object_size
         current = image.read(state.value + enforcing_off, 1)
-        ok = writable(section) and fits and current is not None and current[0] in (0, 1)
+        # A zero-initialised object has no bytes in the file at all; that is not a contradiction.
+        byte_ok = verdict["nobits"] or (current is not None and current[0] in (0, 1))
+        ok = verdict["writable"] and fits and byte_ok
         derived = {
             "status": "derived" if ok else "cross-check-failed",
             "value": image_offset(state.value + enforcing_off, text_base) if ok else None,
@@ -299,14 +350,15 @@ def derive_selinux(image: ElfImage, layouts: dict[str, dict[str, int]], sizes: d
             "section": section,
             "enforcingMemberOffset": enforcing_off,
             "objectSize": object_size,
-            "byteInImage": current[0] if current else None,
+            "byteInImage": current[0] if current else ("(nobits: no file bytes)" if verdict["nobits"] else None),
             "declaredBool": is_bool,
+            "writability": verdict,
             "evidence": (
-                f"`selinux_state` at 0x{state.value:x} in {section} (size 0x{object_size:x}), "
-                f"BTF `enforcing` at +0x{enforcing_off:x}, byte in image = "
-                f"{current[0] if current else 'unreadable'}"
-                + ("" if ok else " - rejected: needs a writable section, a bool-sized member that "
-                                 "fits the object, and a 0/1 value in the image")
+                f"`selinux_state` at 0x{state.value:x}, {verdict['reason']} (size 0x{object_size:x}); "
+                f"BTF `enforcing` at +0x{enforcing_off:x}; byte in image = "
+                f"{current[0] if current else ('absent because the object is zero-initialised' if verdict['nobits'] else 'unreadable')}"
+                + ("" if ok else " - rejected: needs a runtime-writable section, a bool-sized member "
+                                 "that fits the object, and a 0/1 byte when the image stores one")
             ),
         }
     return {
@@ -394,6 +446,102 @@ PATH_CENSUS: tuple[tuple[str, str], ...] = (
 )
 
 
+# The sandbox cannot read the 360 MB Samsung archive, so the decisive declarations are quoted here
+# as bounded excerpts: which ashmem implementation this kernel actually compiles, how the enforcing
+# flag is declared, and what the slide-chain objects look like in source.
+SOURCE_EXCERPTS: tuple[tuple[str, str, str, int, int, int], ...] = (
+    # label, path regex, content regex, lines before, lines after, max matches
+    ("ashmem_memfd_ioctl body", r"ashmem", r"\bashmem_memfd_ioctl\b", 4, 70, 2),
+    ("ashmem area accessors", r"ashmem", r"\bashmem_area_(?:name|size|vmfile)\s*\(", 2, 30, 3),
+    ("ashmem SET_NAME uapi", r"ashmem", r"ASHMEM_SET_NAME|ASHMEM_NAME_LEN|ASHMEM_NAME_PREFIX", 2, 4, 6),
+    ("ashmem_rust_exports declarations", r"ashmem_rust_exports", r"^(?:#include|static|long|int|void|struct|EXPORT)", 0, 2, 40),
+    ("ashmem Kconfig/Makefile gating", r"drivers/(?:staging/)?android/(?:Kconfig|Makefile)", r"ASHMEM", 2, 6, 6),
+    ("CONFIG_ASHMEM in defconfigs", r"arch/arm64/configs|defconfig", r"ASHMEM", 1, 1, 8),
+    ("selinux_state struct", r"security/selinux/include/security.h", r"struct\s+selinux_state\s*\{", 3, 28, 1),
+    ("selinux enforcing accessors", r"security/selinux", r"enforcing_enabled|enforcing\s*=|selinux_enforcing_boot", 2, 6, 8),
+    ("nfulnl_logger declaration", r"net/netfilter/nfnetlink_log.c", r"nfulnl_logger", 8, 10, 2),
+    ("nf_logger struct", r"include/net/netfilter/nf_log.h", r"struct\s+nf_logger\s*\{", 2, 16, 1),
+    ("boot_id sysctl entry", r"drivers/char/random.c", r"\"boot_id\"", 8, 12, 1),
+    ("struct slab definition", r"mm/slab.h|include/linux/(?:slab|mm)\.h", r"struct\s+slab\s*\{", 3, 34, 1),
+    ("shmem_file_operations definition", r"mm/shmem.c", r"shmem_file_operations\s*=|file_operations\s+shmem_file_operations", 3, 28, 1),
+    ("memfd ashmem shim glue", r"\.(?:c|h|rs)$", r"ashmem_memfd|memfd_ashmem", 3, 20, 3),
+)
+
+
+EXCERPT_GROUPS: dict[str, tuple[str, ...]] = {
+    "ashmem": (
+        "ashmem_memfd_ioctl body",
+        "ashmem area accessors",
+        "ashmem SET_NAME uapi",
+        "ashmem_rust_exports declarations",
+        "memfd ashmem shim glue",
+        "ashmem Kconfig/Makefile gating",
+        "CONFIG_ASHMEM in defconfigs",
+    ),
+    "kernel-data": (
+        "selinux_state struct",
+        "nfulnl_logger declaration",
+        "nf_logger struct",
+        "boot_id sysctl entry",
+        "struct slab definition",
+        "shmem_file_operations definition",
+    ),
+}
+
+
+def source_excerpts(source_root: Path, cache_limit: int = 6_000_000,
+                    labels: tuple[str, ...] | None = None) -> dict[str, list[str]]:
+    """Quote the lines that decide the port, so a reviewer can read them from CI annotations."""
+    out: dict[str, list[str]] = {}
+    if not source_root.is_dir():
+        return out
+    def wanted_file(path: Path) -> bool:
+        if not path.is_file():
+            return False
+        return (path.suffix in {".c", ".h", ".rs", ".S"}
+                or path.name in {"Kconfig", "Makefile"}
+                or "defconfig" in path.name)
+
+    files = [path for path in source_root.rglob("*") if wanted_file(path)]
+    text_cache: dict[Path, str | None] = {}
+
+    def read(path: Path) -> str | None:
+        if path not in text_cache:
+            try:
+                text_cache[path] = path.read_text(errors="replace") if path.stat().st_size <= cache_limit else None
+            except OSError:
+                text_cache[path] = None
+        return text_cache[path]
+
+    for label, path_pattern, content_pattern, before, after, max_matches in SOURCE_EXCERPTS:
+        if labels is not None and label not in labels:
+            continue
+        path_regex = re.compile(path_pattern)
+        content_regex = re.compile(content_pattern, re.MULTILINE)
+        quotes: list[str] = []
+        for path in sorted(files, key=lambda item: len(item.relative_to(source_root).as_posix())):
+            if len(quotes) >= max_matches:
+                break
+            relative = path.relative_to(source_root).as_posix()
+            if not path_regex.search(relative):
+                continue
+            text = read(path)
+            if not text:
+                continue
+            lines = text.splitlines()
+            for match in list(content_regex.finditer(text))[:max_matches]:
+                number = text.count("\n", 0, match.start())
+                window = lines[max(0, number - before): number + after + 1]
+                quotes.append(
+                    f"{relative}:{number + 1}: "
+                    + " ⏎ ".join(line.rstrip() for line in window)[:1800]
+                )
+                if len(quotes) >= max_matches:
+                    break
+        out[label] = quotes
+    return out
+
+
 def audit_source(source_root: Path, limit: int = 12) -> dict[str, list[dict[str, Any]]]:
     """Cited source evidence for each porting decision; no value is taken from prose alone."""
     findings: dict[str, list[dict[str, Any]]] = {}
@@ -455,7 +603,10 @@ def layouts_from_btf(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--kernel-elf", required=True, type=Path)
+    parser.add_argument("--kernel-elf", type=Path)
+    parser.add_argument("--only", choices=("all", "excerpts"), default="all")
+    parser.add_argument("--excerpt-group", action="append", choices=tuple(EXCERPT_GROUPS),
+                        help="quote one group of source excerpts in its own annotation budget")
     parser.add_argument("--btf", type=Path)
     parser.add_argument("--text-base", type=lambda value: int(value, 0))
     parser.add_argument("--symbol-offsets", type=Path, help="extractor JSON carrying imageTextBase")
@@ -466,6 +617,32 @@ def main() -> int:
     parser.add_argument("--github", action="store_true", help="emit ::notice::/::error:: commands")
     args = parser.parse_args()
 
+    def emit(level: str, message: str) -> None:
+        print(f"::{level}::{message}" if args.github else message)
+
+    if args.only == "excerpts":
+        if not args.source_root or not args.source_root.is_dir():
+            emit("error", "--only excerpts needs --source-root pointing at the extracted Samsung source")
+            return 1
+        groups = args.excerpt_group or sorted(EXCERPT_GROUPS)
+        labels = tuple(label for group in groups for label in EXCERPT_GROUPS[group])
+        excerpts = source_excerpts(args.source_root, labels=labels)
+        out_dir = args.output_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / f"source-excerpts-{'-'.join(sorted(groups))}.json").write_text(
+            json.dumps({"sourceRoot": str(args.source_root), "excerpts": excerpts},
+                       indent=2, sort_keys=True) + "\n"
+        )
+        for label in labels:
+            quotes = excerpts.get(label) or []
+            emit("notice" if quotes else "error",
+                 f"src[{label}] " + (" ||| ".join(quotes)[:3000] if quotes
+                                     else "(no match in the extracted Samsung source)"))
+        return 0
+
+    if args.kernel_elf is None:
+        emit("error", "--kernel-elf is required unless --only excerpts is used")
+        return 1
     text_base = args.text_base
     if text_base is None and args.symbol_offsets and args.symbol_offsets.is_file():
         raw = json.loads(args.symbol_offsets.read_text()).get("imageTextBase")
@@ -527,11 +704,9 @@ def main() -> int:
     if source_root:
         facts["sourceRoot"] = str(source_root)
         facts["sourceAudit"] = audit_source(source_root)
+        facts["sourceExcerpts"] = source_excerpts(source_root)
 
     (out_dir / "image-facts.json").write_text(json.dumps(facts, indent=2, sort_keys=True, default=str) + "\n")
-
-    def emit(level: str, message: str) -> None:
-        print(f"::{level}::{message}" if args.github else message)
 
     slide = facts["slideChain"]
     derived = sorted(name for name, item in slide.items() if item.get("status") == "derived")
@@ -554,21 +729,14 @@ def main() -> int:
          f"SELinux enforcing derivation: {enforcing.get('status')} - "
          + (enforcing.get("evidence") or enforcing.get("reason") or "")
          + (f"; value=0x{enforcing['value']:x}" if enforcing.get("value") is not None else ""))
-    named = [f"{c['name']}[{c['section']}{'/w' if c['writable'] else '/ro'}:{c['size']}]"
-             for c in selinux["candidates"][:24]]
-    emit("notice", f"SELinux object candidates ({len(selinux['candidates'])}): " + ", ".join(named))
     emit("notice", f"struct slab overlay: {facts['slab']['status']} - {facts['slab']['evidence']}")
     emit("notice", f"workqueue max_active: pwq has it = {facts['workqueue']['pwqHasMaxActive']}, "
                    f"workqueue_struct.max_active = {facts['workqueue']['wqMaxActiveOffset']}, "
                    f"pwq.wq = {facts['workqueue']['pwqWqOffset']}")
     if btf_error:
         emit("error", f"BTF layouts unavailable, so structure-dependent derivations are unresolved: {btf_error}")
-    for label, hits in (facts.get("sourceAudit") or {}).items():
-        if hits:
-            emit("notice", f"source[{label}]: " + " | ".join(
-                f"{h['file']}:{h['line']}: {h['text'][:120]}" for h in hits[:6]))
-        else:
-            emit("error", f"source[{label}]: no match in the extracted Samsung source")
+    # Source excerpts and the full audit lists are quoted by the dedicated --only excerpts steps,
+    # which get their own annotation budget; repeating them here would push the decisions out.
     return 0
 
 
