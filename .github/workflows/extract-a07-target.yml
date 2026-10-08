@@ -38,6 +38,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Test extraction and SHA-256 verifier before processing firmware
+        run: python3 -m unittest tools.test_a07_pipeline tools.test_a07_release -q
+
       - name: Install analysis tools
         run: |
           sudo apt-get update

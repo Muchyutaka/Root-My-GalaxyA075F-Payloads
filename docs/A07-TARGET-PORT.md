@@ -2,7 +2,7 @@
 
 The A07 profile is intentionally fail-closed. `SM-A175F`/A17 offsets are not accepted as defaults.
 `extract-a07-target.yml` downloads the `a07-firmware-v1` release assets, extracts the embedded
-`Kernel/Kernel.tar.gz` from `SM-A075F_16_Opensource.zip`, prefers the supplied `kernel.elf`, and only
+the unique `Kernel.tar.gz` (if present) from `SM-A075F_16_Opensource.zip`, prefers the supplied `kernel.elf`, and only
 runs `vmlinux-to-elf` on `kernel.raw` if the ELF is incomplete. It audits ELF symbols with `nm` and
 `readelf`, cross-checks names against `kallsyms.txt`, and runs `pahole` against the supplied BTF.
 

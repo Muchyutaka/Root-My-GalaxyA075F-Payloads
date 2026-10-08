@@ -96,6 +96,27 @@ class A07ExtractionHelperTests(unittest.TestCase):
             self.assertFalse((output / "target.h").exists())
             self.assertFalse(json.loads((output / "status.json").read_text())["ready"])
 
+    def test_samsung_source_accepts_unique_root_kernel_archive(self) -> None:
+        if sys.version_info < (3, 12):
+            self.skipTest("the safe tarfile data filter is available in CI's Python 3.12")
+        import io
+        import tarfile
+        import zipfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            contents = b"struct task_struct { struct mm_struct *mm; };\n"
+            raw = io.BytesIO()
+            with tarfile.open(fileobj=raw, mode="w:gz") as archive:
+                info = tarfile.TarInfo("include/linux/sched.h")
+                info.size = len(contents)
+                archive.addfile(info, io.BytesIO(contents))
+            source_zip = root / "source.zip"
+            with zipfile.ZipFile(source_zip, "w") as archive:
+                archive.writestr("Kernel.tar.gz", raw.getvalue())
+            source_root, member = extract_a07_offsets.extract_kernel_source(source_zip, root / "out")
+            self.assertEqual(member, "Kernel.tar.gz")
+            self.assertTrue((source_root / "include/linux/sched.h").is_file())
+
     def test_readelf_excludes_undefined_symbols(self) -> None:
         from unittest.mock import patch
         from subprocess import CompletedProcess

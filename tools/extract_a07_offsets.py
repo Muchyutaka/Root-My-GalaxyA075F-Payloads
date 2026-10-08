@@ -186,14 +186,16 @@ def asset_file(root: Path, name: str, *, required: bool = True) -> Path | None:
 def extract_kernel_source(source_zip: Path, out_dir: Path) -> tuple[Path, str]:
     out_dir.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(source_zip) as archive:
-        entries = [
-            name for name in archive.namelist()
-            if Path(name).name == "Kernel.tar.gz" and "Kernel" in Path(name).parts
-        ]
+        names = archive.namelist()
+        # Samsung source packages vary in whether Kernel.tar.gz sits at the root or
+        # below a Kernel/ directory. Require a unique exact filename, not a fuzzy match.
+        entries = [name for name in names if Path(name).name == "Kernel.tar.gz"]
         if len(entries) != 1:
+            candidates = [name for name in names if "kernel" in name.lower() or name.endswith((".tar.gz", ".tar.xz", ".zip"))]
             raise RuntimeError(
                 "expected exactly one Kernel.tar.gz within the Samsung opensource zip; "
-                f"found {len(entries)}"
+                f"found {len(entries)}. Candidate archive members (up to 20): "
+                + ", ".join(candidates[:20])
             )
         tar_path = out_dir / "Kernel.tar.gz"
         with archive.open(entries[0]) as src, tar_path.open("wb") as dst:
@@ -709,10 +711,20 @@ def main() -> int:
                         sections.append("## Kernel ELF selection\n\n- `kernel.elf` was incomplete; converted `kernel.raw` with `vmlinux-to-elf` and used the recovered ELF.\n")
                     else:
                         missing.append("converted kernel.raw ELF remains incomplete: " + "; ".join(recovered_problems))
+                        # An incomplete ELF can still supply *diagnostic* exact-name offsets.
+                        # Keep the missing-symbol blocker so it can never generate target.h.
+                        if recovered_nm and recovered_base is not None and "ELF machine is not AArch64" not in recovered_problems:
+                            selected_kernel = recovered
+                            nm_symbols, readelf_symbols, text_base = recovered_nm, recovered_re, recovered_base
+                            sections.append("## Kernel ELF selection\n\n- Converted `kernel.raw` for diagnostic-only ELF/kallsyms symbol auditing. Incomplete: **no production header**.\n")
                 else:
                     missing.append("vmlinux-to-elf conversion of kernel.raw failed: " + convert.stderr.strip())
             else:
                 missing.append("kernel.elf is incomplete and kernel.raw/vmlinux-to-elf is unavailable")
+            if selected_kernel is None and direct_nm and direct_base is not None and "ELF machine is not AArch64" not in direct_problems:
+                selected_kernel = asset_paths["kernel.elf"]
+                nm_symbols, readelf_symbols, text_base = direct_nm, direct_re, direct_base
+                sections.append("## Kernel ELF selection\n\n- Audited partial `kernel.elf` for diagnostics only. Incomplete: **no production header**.\n")
     if selected_kernel is None:
         missing.append("usable AArch64 kernel ELF with a symbol table")
 

@@ -276,15 +276,28 @@ jobs:
           copy_artifact pair-artifacts 'ksud-rsksu-a07-SM-A075F-kdp' kernelsu/ksud-rsksu-a07-SM-A075F-kdp
           copy_artifact pair-artifacts 'android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko' kernelsu/android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko
 
-          for module in kernelsu/android16-6.12_kernelsu*-a07-SM-A075F-kdp.ko; do
-            echo "=== $module ==="
-            modinfo "$module" | grep -E '^(name|vermagic):'
-            vermagic=$(modinfo -F vermagic "$module")
+          validate_pair() {
+            local flavor="$1" ref="$2" daemon="$3" module="$4"
+            local module_receipt="pair-artifacts/pair-module-${flavor}-a07-SM-A075F/module-version.txt"
+            local daemon_receipt="pair-artifacts/pair-ksud-${flavor}-a07-SM-A075F/daemon-version.txt"
+            python3 tools/verify_pair.py --module "kernelsu/$module" \
+              --daemon "kernelsu/$daemon" --release "$TARGET_RELEASE"
+            python3 tools/check_pair_version.py \
+              --module-receipt "$module_receipt" --daemon-receipt "$daemon_receipt" \
+              --daemon-binary "kernelsu/$daemon" --flavor "$flavor" --ref "$ref"
+            local vermagic
+            vermagic=$(modinfo -F vermagic "kernelsu/$module")
             case "$vermagic" in
               "$TARGET_RELEASE"\ *) ;;
-              *) echo "::error::module vermagic does not match $TARGET_RELEASE: $vermagic"; exit 1 ;;
+              *) echo "::error::module vermagic does not match $TARGET_RELEASE: $vermagic"; return 1 ;;
             esac
-          done
+          }
+          validate_pair kernelsu v3.3.0 ksud-a07-SM-A075F-kdp \
+            android16-6.12_kernelsu-a07-SM-A075F-kdp.ko
+          validate_pair kernelsu-next v3.4.0 ksud-next-a07-SM-A075F-kdp \
+            android16-6.12_kernelsu-next-a07-SM-A075F-kdp.ko
+          validate_pair resukisu v4.2.0-rc3 ksud-rsksu-a07-SM-A075F-kdp \
+            android16-6.12_kernelsu-rsksu-a07-SM-A075F-kdp.ko
 
           aapt="$ANDROID_SDK_ROOT/build-tools/37.0.0/aapt"
           verify_apk() {
@@ -312,7 +325,7 @@ jobs:
           cp kernelsu/ksud-a07-SM-A075F-kdp release-assets/
           cp kernelsu/ksud-next-a07-SM-A075F-kdp release-assets/
           cp kernelsu/ksud-rsksu-a07-SM-A075F-kdp release-assets/
-          cp kernelsu/*.ko release-assets/
+          cp kernelsu/android16-6.12_kernelsu*-a07-SM-A075F-kdp.ko release-assets/
 
       - name: Generate draft v3 feed entries only after payload and pair validation
         run: |
