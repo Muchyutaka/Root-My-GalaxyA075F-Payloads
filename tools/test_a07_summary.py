@@ -24,7 +24,9 @@ LAYOUTS = {
     "incompleteStructDiagnostics": {"file_operations": {"parsedMembers": ["owner", "llseek", "read"]}},
     "derivedMembers": {
         "STRUCT_SLAB_CACHE_OFF": {"status": "derived", "offset": 40, "root": "slab", "path": "slab_cache"},
-        "FAKE_WAITER_TREE_PRIO_OFF": {"status": "unresolved", "root": "rt_mutex_waiter", "path": "tree.prio"},
+        "FAKE_WAITER_TREE_PRIO_OFF": {"status": "unresolved", "root": "rt_mutex_waiter", "path": "tree.prio",
+                                     "evidence": "struct rt_waiter_node has no member `prio`",
+                                     "types": {"rt_waiter_node": ["node", "deadline"]}},
     },
 }
 SYMBOLS = {"kernelRelease": STATUS["kernelRelease"], "offsetMacros": {"INIT_TASK_OFF": "0x1234"}}
@@ -65,6 +67,11 @@ class SummaryTests(unittest.TestCase):
         text = "\n".join(notices(self.root))
         self.assertIn("STRUCT_SLAB_CACHE_OFF=derived@0x28 (slab.slab_cache)", text)
         self.assertIn("FAKE_WAITER_TREE_PRIO_OFF=unresolved (rt_mutex_waiter.tree.prio)", text)
+
+    def test_reports_unresolved_derivation_detail(self):
+        text = "\n".join(notices(self.root))
+        self.assertIn("Unresolved derivation FAKE_WAITER_TREE_PRIO_OFF", text)
+        self.assertIn("struct rt_waiter_node members: deadline, node", text)
 
     def test_survives_absent_results(self):
         empty = self.root / "empty"

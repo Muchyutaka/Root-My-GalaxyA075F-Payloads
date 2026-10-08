@@ -82,6 +82,18 @@ def notices(directory: Path) -> list[str]:
             + f" ({info.get('root')}.{info.get('path')})"
             for macro, info in sorted(derived.items())
         )))
+        for macro, info in sorted(derived.items()):
+            if info.get("status") == "derived":
+                continue
+            detail = info.get("evidence") or ""
+            if info.get("crossCheck"):
+                detail += f" | cross-check: {info['crossCheck']}; observed: {info.get('observed')}"
+            if info.get("spacingCheck"):
+                detail += f" | spacing: {info['spacingCheck']}"
+            types = info.get("types") or {}
+            for name in sorted(types):
+                detail += f" | struct {name} members: {', '.join(types[name]) or '(none)'}"
+            out.append(f"Unresolved derivation {macro} ({info.get('root')}.{info.get('path')}): " + clip(detail))
     waiter = layouts.get("rtMutexWaiterLayoutCandidate")
     if waiter:
         out.append(f"rt_mutex_waiter layout measured from A07 BTF: {clip(str(waiter))}")

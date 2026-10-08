@@ -982,6 +982,19 @@ def main() -> int:
             # kernel's own layout rather than this script's conclusions about it.
             raw_btf_fields = {name: dict(fields) for name, fields in btf_fields.items()}
 
+            def path_types(root: str, path: str) -> dict[str, list[str]]:
+                """Every struct a path walks through, with the members pahole really parsed."""
+                seen: dict[str, list[str]] = {}
+                current = root
+                for part in path.split("."):
+                    ensure_type(current)
+                    seen[current] = sorted(btf_fields.get(current, {}))
+                    nested = btf_types.get(current, {}).get(part)
+                    if not nested or nested[1]:
+                        break
+                    current = nested[0]
+                return seen
+
             derived_members: dict[str, Any] = {}
             for macro, (root, path, cross_check) in DERIVED_BTF_PATHS.items():
                 declared_type, declared_member = BTF_FIELD_MACROS[macro]
@@ -993,6 +1006,7 @@ def main() -> int:
                 record: dict[str, Any] = {"root": root, "path": path, "evidence": evidence}
                 if offset is None:
                     record["status"] = "unresolved"
+                    record["types"] = path_types(root, path)
                     derived_members[macro] = record
                     continue
                 if cross_check:
@@ -1030,6 +1044,7 @@ def main() -> int:
                             f"== sizeof(struct {embedded[0]}) (verified)"
                         )
                 if record.get("status") == "cross-check-failed":
+                    record["types"] = path_types(root, path)
                     derived_members[macro] = record
                     continue
                 record["status"] = "derived"
