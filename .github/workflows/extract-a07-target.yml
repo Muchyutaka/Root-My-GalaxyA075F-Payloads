@@ -11,6 +11,9 @@ on:
       - tools/extract_a07_offsets.py
       - tools/verify_a07_release.py
       - tools/summarize_a07_status.py
+      - tools/test_a07_pipeline.py
+      - tools/test_a07_release.py
+      - tools/test_a07_summary.py
       - src/targets/a07-SM-A075F/target-values.json
   workflow_dispatch:
 
