@@ -131,27 +131,40 @@ class A07ExtractionHelperTests(unittest.TestCase):
                                      "task": ("task_struct", True)}}
         sizes = {"rt_mutex_waiter": 0x40, "rt_waiter_node": 0x28}
         walk = extract_a07_offsets.resolve_btf_path
-        offset, evidence = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "pi_tree.prio")
+        offset, evidence, container = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "pi_tree.prio")
         self.assertEqual(0x30, offset)
         self.assertIn("pi_tree@0x18", evidence)
-        offset, reason = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "task.prio")
+        self.assertEqual("rt_waiter_node", container)
+        offset, reason, container = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "task.prio")
         self.assertIsNone(offset)
         self.assertIn("not an embedded", reason)
-        offset, reason = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "tree.absent")
+        self.assertEqual("rt_mutex_waiter", container)
+        offset, reason, container = walk(fields, types, sizes, lambda name: None, "rt_mutex_waiter", "tree.absent")
         self.assertIsNone(offset)
         self.assertIn("has no member `absent`", reason)
+        self.assertEqual("rt_waiter_node", container)
 
     def test_resolve_btf_path_refuses_out_of_range_offset(self) -> None:
         fields = {"slab": {"__page": 0x0, "slab_cache": 0x80}}
-        offset, reason = extract_a07_offsets.resolve_btf_path(
+        offset, reason, container = extract_a07_offsets.resolve_btf_path(
             fields, {}, {"slab": 0x40}, lambda name: None, "slab", "slab_cache"
         )
         self.assertIsNone(offset)
         self.assertIn("outside sizeof(struct slab)", reason)
+        self.assertEqual("slab", container)
 
     def test_slab_derivation_requires_page_at_zero(self) -> None:
-        self.assertEqual(("slab", "slab_cache", ("__page", 0)),
+        self.assertEqual(("slab", "slab_cache", ("__page", 0), None),
                          extract_a07_offsets.DERIVED_BTF_PATHS["STRUCT_SLAB_CACHE_OFF"])
+
+    def test_pi_tree_entry_requires_an_embedded_rb_node(self) -> None:
+        self.assertEqual(("rt_mutex_waiter", "pi_tree.entry", None, "rb_node"),
+                         extract_a07_offsets.DERIVED_BTF_PATHS["FAKE_WAITER_PI_TREE_ENTRY_OFF"])
+
+    def test_moved_macros_are_reported_not_substituted(self) -> None:
+        old_type, old_member, new_type, note = extract_a07_offsets.MOVED_BTF_MACROS["PWQ_MAX_ACTIVE_OFF"]
+        self.assertEqual(("pool_workqueue", "max_active", "workqueue_struct"), (old_type, old_member, new_type))
+        self.assertIn("source port", note)
 
     def test_pahole_non_member_lines(self) -> None:
         for declaration in ("        };", "        union {", "        struct {", "        int", "        unsigned long"):

@@ -468,15 +468,31 @@ def pahole_type(
 # Macros whose value moved inside a nested struct (or into a companion struct that embeds the
 # original one) in this kernel generation. Each entry is `(root type, dotted member path, optional
 # cross-check)`. A path is walked through A07's own BTF; anything absent is reported, never assumed.
-DERIVED_BTF_PATHS: dict[str, tuple[str, str, tuple[str, int] | None]] = {
-    "FAKE_WAITER_TREE_PRIO_OFF": ("rt_mutex_waiter", "tree.prio", None),
-    "FAKE_WAITER_TREE_DEADLINE_OFF": ("rt_mutex_waiter", "tree.deadline", None),
-    "FAKE_WAITER_PI_TREE_ENTRY_OFF": ("rt_mutex_waiter", "pi_tree.node", None),
-    "FAKE_WAITER_PI_TREE_PRIO_OFF": ("rt_mutex_waiter", "pi_tree.prio", None),
-    "FAKE_WAITER_PI_TREE_DEADLINE_OFF": ("rt_mutex_waiter", "pi_tree.deadline", None),
+DERIVED_BTF_PATHS: dict[str, tuple[str, str, tuple[str, int] | None, str | None]] = {
+    "FAKE_WAITER_TREE_PRIO_OFF": ("rt_mutex_waiter", "tree.prio", None, None),
+    "FAKE_WAITER_TREE_DEADLINE_OFF": ("rt_mutex_waiter", "tree.deadline", None, None),
+    # The payload writes this as an rb_node (parent/right/left at +0/+8/+0x10), so the leaf member
+    # has to *be* an embedded rb_node. The name comes from A07's BTF; the type is asserted, not
+    # assumed from the older flat `pi_tree_entry` member.
+    "FAKE_WAITER_PI_TREE_ENTRY_OFF": ("rt_mutex_waiter", "pi_tree.entry", None, "rb_node"),
+    "FAKE_WAITER_PI_TREE_PRIO_OFF": ("rt_mutex_waiter", "pi_tree.prio", None, None),
+    "FAKE_WAITER_PI_TREE_DEADLINE_OFF": ("rt_mutex_waiter", "pi_tree.deadline", None, None),
     # `struct slab` embeds `struct page __page` first, so a member offset inside it is also an
     # offset from the page address the payload already holds. That zero offset is asserted here.
-    "STRUCT_SLAB_CACHE_OFF": ("slab", "slab_cache", ("__page", 0)),
+    "STRUCT_SLAB_CACHE_OFF": ("slab", "slab_cache", ("__page", 0), None),
+}
+
+# Macros whose member genuinely moved off the struct the payload addresses in this kernel
+# generation. There is no fixed offset to substitute, so these are reported as source ports
+# rather than derived: `src/root.c` reads `pwq + PWQ_MAX_ACTIVE_OFF`, and on A07's 6.12.38 the
+# limit lives on the workqueue the pwq points at, not at any pwq-relative offset.
+MOVED_BTF_MACROS: dict[str, tuple[str, str, str, str]] = {
+    "PWQ_MAX_ACTIVE_OFF": (
+        "pool_workqueue", "max_active", "workqueue_struct",
+        "src/root.c:355 reads `pwq + PWQ_MAX_ACTIVE_OFF`; on this kernel max_active is a "
+        "workqueue_struct member reached through pwq->wq, so the payload needs a source port, "
+        "not a header value",
+    ),
 }
 
 # Two adjacent members of the same embedded type have to be exactly that type's size apart. This is
@@ -491,8 +507,13 @@ def resolve_btf_path(
     ensure,
     root: str,
     path: str,
-) -> tuple[int | None, str]:
-    """Walk a dotted member path through measured BTF layouts; return (offset, evidence)."""
+) -> tuple[int | None, str, str]:
+    """Walk a dotted member path through measured BTF layouts.
+
+    Returns `(offset, evidence, leaf_container_type)`; the offset is None when any step is absent,
+    and the container is the struct the final member actually lives in, so its declared type can be
+    asserted by the caller.
+    """
     parts = path.split(".")
     current = root
     offset = 0
@@ -504,7 +525,7 @@ def resolve_btf_path(
             return None, (
                 f"struct {current} has no member `{part}` in A07's BTF; parsed members: "
                 + (", ".join(sorted(fields)) or "(none)")
-            )
+            ), current
         offset += fields[part]
         trail.append(f"{part}@0x{fields[part]:x}")
         if index + 1 < len(parts):
@@ -513,12 +534,12 @@ def resolve_btf_path(
                 return None, (
                     f"struct {current}.{part} is not an embedded struct/union member, "
                     "so it has no nested layout to walk"
-                )
+                ), current
             current = nested[0]
     total = btf_sizes.get(root)
     if total is not None and offset >= total:
-        return None, f"derived offset 0x{offset:x} is outside sizeof(struct {root}) = 0x{total:x}"
-    return offset, " -> ".join(trail)
+        return None, f"derived offset 0x{offset:x} is outside sizeof(struct {root}) = 0x{total:x}", current
+    return offset, " -> ".join(trail), current
 
 
 def c_literal(value: Any) -> str:
@@ -996,11 +1017,11 @@ def main() -> int:
                 return seen
 
             derived_members: dict[str, Any] = {}
-            for macro, (root, path, cross_check) in DERIVED_BTF_PATHS.items():
+            for macro, (root, path, cross_check, leaf_type) in DERIVED_BTF_PATHS.items():
                 declared_type, declared_member = BTF_FIELD_MACROS[macro]
                 if declared_member in raw_btf_fields.get(declared_type, {}):
                     continue  # the flat member exists in this kernel; no derivation is needed
-                offset, evidence = resolve_btf_path(
+                offset, evidence, container = resolve_btf_path(
                     btf_fields, btf_types, btf_sizes, ensure_type, root, path
                 )
                 record: dict[str, Any] = {"root": root, "path": path, "evidence": evidence}
@@ -1009,6 +1030,21 @@ def main() -> int:
                     record["types"] = path_types(root, path)
                     derived_members[macro] = record
                     continue
+                if leaf_type:
+                    leaf_member = path.split(".")[-1]
+                    observed_type = btf_types.get(container, {}).get(leaf_member)
+                    if not observed_type or observed_type[1] or observed_type[0] != leaf_type:
+                        record["status"] = "cross-check-failed"
+                        record["crossCheck"] = (
+                            f"struct {container}.{leaf_member} must embed struct {leaf_type}"
+                        )
+                        record["observed"] = observed_type
+                        record["types"] = path_types(root, path)
+                        derived_members[macro] = record
+                        continue
+                    record["crossCheck"] = (
+                        f"struct {container}.{leaf_member} embeds struct {leaf_type} (verified)"
+                    )
                 if cross_check:
                     member, expected = cross_check
                     actual = btf_fields.get(root, {}).get(member)
@@ -1016,6 +1052,7 @@ def main() -> int:
                         record["status"] = "cross-check-failed"
                         record["crossCheck"] = f"struct {root}.{member} == 0x{expected:x}"
                         record["observed"] = actual
+                        record["types"] = path_types(root, path)
                         derived_members[macro] = record
                         continue
                     record["crossCheck"] = f"struct {root}.{member} == 0x{expected:x} (verified)"
@@ -1064,6 +1101,15 @@ def main() -> int:
                     incomplete_structs.add(type_name)
             if missing_btf:
                 missing.extend("BTF/pahole missing " + item for item in missing_btf)
+            for macro, (old_type, old_member, new_type, note) in MOVED_BTF_MACROS.items():
+                if old_member in raw_btf_fields.get(old_type, {}):
+                    continue
+                ensure_type(new_type)
+                relocated = btf_fields.get(new_type, {}).get(old_member)
+                missing.append(
+                    f"{old_type}.{old_member} -> {macro} has no {old_type}-relative offset in this "
+                    f"kernel (member {'is at 0x%x of struct %s' % (relocated, new_type) if relocated is not None else 'was not found in struct ' + new_type + ' either'}); {note}"
+                )
             # Ground truth for a reviewer: what pahole actually saw for the structs whose members
             # are absent. Reading the A07 layout is how LEGACY/COMPACT rt_mutex_waiter and the
             # file_operations set are decided; it is never inferred from another device's header.
