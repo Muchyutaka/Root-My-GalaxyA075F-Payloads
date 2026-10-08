@@ -66,6 +66,13 @@ def notices(directory: Path) -> list[str]:
     ]
     if offsets:
         out.append("Resolved cross-verified ELF offsets: " + clip(", ".join(f"{k}={v}" for k, v in sorted(offsets.items()))))
+    derived = layouts.get("layoutMacros") or {}
+    if derived:
+        out.append("Macros measured from A07's image/BTF (never hand-supplied): "
+                   + clip(", ".join(f"{k}={v}" for k, v in sorted(derived.items()))))
+    for macro, info in sorted((layouts.get("imageDerivedSlideChain") or {}).items()):
+        out.append(f"slide[{macro}]: {info.get('status')} - "
+                   + clip(str(info.get("evidence") or info.get("reason") or "")))
     for key, label in (
         ("symbols", "Missing kernel symbols (must exist in ELF and kallsyms; never substituted)"),
         ("structural", "Structural blockers"),

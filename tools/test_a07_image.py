@@ -32,6 +32,8 @@ FOPS = {
 }
 FOPS_SIZE = 0x70
 CTL_SIZE = 0x30
+RAWS = {"selinux_state": "struct selinux_state {\n\tbool enforcing; /* 8 1 */\n};\n"}
+
 LAYOUTS = {
     "nf_logger": {"list": 0x00, "name": 0x10, "me": 0x18},
     "ctl_table": {"procname": 0x00, "data": 0x08, "maxlen": 0x18, "mode": 0x1C},
@@ -40,7 +42,9 @@ LAYOUTS = {
     "page": {"flags": 0x00, "_refcount": 0x34, "page_type": 0x38, "compound_head": 0x08},
     "pool_workqueue": {"wq": 0x00, "refcnt": 0x10, "nr_active": 0x18},
     "workqueue_struct": {"max_active": 0xA4, "dfl_pwq": 0x20},
-    "__sizes__": {"ctl_table": CTL_SIZE, "file_operations": FOPS_SIZE, "slab": 0x38, "page": 0x40},
+    "selinux_state": {"enforcing": 0x08, "policycap": 0x10},
+    "__sizes__": {"ctl_table": CTL_SIZE, "file_operations": FOPS_SIZE, "slab": 0x38, "page": 0x40,
+                "selinux_state": 0x40},
 }
 
 SYMBOLS = (
@@ -51,6 +55,8 @@ SYMBOLS = (
     ("random_table", 0x2100, 0x90, 0, 1, 3),
     ("ashmem_fops", 0x2200, FOPS_SIZE, 0, 1, 3),
     ("selinux_enforcing_boot", 0x2400, 0x01, 1, 1, 4),
+    ("selinux_state", 0x2300, 0x40, 0, 1, 3),
+    ("selinux_state_ro", 0x2440, 0x40, 0, 1, 4),
 )
 
 
@@ -78,6 +84,8 @@ def build_image(path: Path, *, logger_string: str = "nfnetlink_log") -> None:
     put64(blob, 0x2200 + FOPS["read_iter"], BASE + 0x0020)
     put64(blob, 0x2200 + FOPS["compat_ioctl"], BASE + 0x0000)
     blob[0x2400] = 1  # selinux_enforcing_boot, read-only after init
+    blob[0x2308] = 1  # selinux_state.enforcing, runtime-writable .data
+    blob[0x2448] = 1  # same object shape, but placed in .data..ro_after_init
 
     data_start = 64 + 56
     strings = [b"\0"] + [name.encode() + b"\0" for name, *_ in SYMBOLS]
@@ -203,7 +211,10 @@ class ImageTests(unittest.TestCase):
             if name == "nfulnl_logger" else original(name)
         )
         slide = derive_slide_chain(image, LAYOUTS, BASE)
-        self.assertEqual("cross-check-failed", slide["SLIDE_NFULNL_LOGGER_OBJECT_OFF"]["status"])
+        # A read-only scratch object is not a failed cross-check, it is an unusable primitive.
+        self.assertEqual("incompatible-section", slide["SLIDE_NFULNL_LOGGER_OBJECT_OFF"]["status"])
+        self.assertIsNone(slide["SLIDE_NFULNL_LOGGER_OBJECT_OFF"]["value"])
+        self.assertEqual(".data..ro_after_init", slide["SLIDE_NFULNL_LOGGER_OBJECT_OFF"]["section"])
 
     def test_ashmem_census_and_fops_discovery(self):
         facts = derive_ashmem(self.image, LAYOUTS, BASE)
@@ -217,11 +228,35 @@ class ImageTests(unittest.TestCase):
         self.assertEqual(0x2200, candidates["ashmem_fops"]["imageOffset"])
 
     def test_selinux_readonly_after_init_is_not_writable(self):
-        facts = derive_selinux(self.image, BASE)
+        facts = derive_selinux(self.image, LAYOUTS, LAYOUTS["__sizes__"], RAWS, BASE)
         candidate = next(c for c in facts["candidates"] if c["name"] == "selinux_enforcing_boot")
         self.assertEqual(".data..ro_after_init", candidate["section"])
         self.assertFalse(candidate["writable"])
         self.assertEqual(0x2400, candidate["imageOffset"])
+
+    def test_selinux_enforcing_is_derived_from_selinux_state(self):
+        facts = derive_selinux(self.image, LAYOUTS, LAYOUTS["__sizes__"], RAWS, BASE)
+        derived = facts["derivedEnforcing"]
+        self.assertEqual("derived", derived["status"])
+        self.assertEqual(0x2308, derived["value"])
+        self.assertEqual(".data", derived["section"])
+        self.assertEqual(8, derived["enforcingMemberOffset"])
+        self.assertEqual(1, derived["byteInImage"])
+
+    def test_selinux_enforcing_needs_a_writable_object(self):
+        # Same member layout, but the global lives in read-only-after-init storage: the exploit
+        # cannot flip enforcing at runtime, so no value may be handed to the header.
+        moved = self.root / "readonly-selinux.elf"
+        build_image(moved)
+        ro = ElfImage(moved)
+        original = ro.symbol
+        ro.symbol = lambda name: (
+            type(original("selinux_state_ro"))("selinux_state", BASE + 0x2440, 0x40, 0, 1, 4)
+            if name == "selinux_state" else original(name)
+        )
+        derived = derive_selinux(ro, LAYOUTS, LAYOUTS["__sizes__"], RAWS, BASE)["derivedEnforcing"]
+        self.assertEqual("cross-check-failed", derived["status"])
+        self.assertIsNone(derived["value"])
 
     def test_slab_overlay_is_proven_member_by_member(self):
         result = derive_slab(LAYOUTS, LAYOUTS["__sizes__"])

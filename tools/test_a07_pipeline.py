@@ -48,12 +48,18 @@ class A07ExtractionHelperTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_a07_offsets.c_literal("0x10000ULL\n#error bad")
 
-    def test_profile_requires_one_verified_rt_mutex_waiter_layout(self) -> None:
+    def test_slide_chain_addresses_are_measured_not_profiled(self) -> None:
+        for macro in extract_a07_offsets.SLIDE_CHAIN_MACROS:
+            self.assertNotIn(macro, extract_a07_offsets.PROFILE_REQUIRED_MACROS)
+        self.assertEqual(4, len(extract_a07_offsets.SLIDE_CHAIN_MACROS))
+
+    def test_profile_no_longer_carries_layout_flags(self) -> None:
+        # The waiter layout is measured from A07's BTF, so a profile must not supply it by hand.
+        for name in ("LEGACY_RT_MUTEX_WAITER", "COMPACT_RT_MUTEX_WAITER", "NESTED_RT_MUTEX_WAITER"):
+            self.assertNotIn(name, extract_a07_offsets.PROFILE_REQUIRED_MACROS)
         with tempfile.TemporaryDirectory() as tmp:
             profile_path = Path(tmp) / "profile.json"
             values = {name: 1 for name in extract_a07_offsets.PROFILE_REQUIRED_MACROS}
-            values["LEGACY_RT_MUTEX_WAITER"] = 0
-            values["COMPACT_RT_MUTEX_WAITER"] = 0
             profile = {
                 "model": "SM-A075F",
                 "kernelVersion": "6.12.38",
@@ -61,17 +67,67 @@ class A07ExtractionHelperTests(unittest.TestCase):
                 "evidence": {name: "verified from local test fixture" for name in values},
             }
             profile_path.write_text(json.dumps(profile))
-
-            _, _, missing = extract_a07_offsets.profile_values(profile_path)
-            self.assertIn(
-                "select exactly one of LEGACY_RT_MUTEX_WAITER or COMPACT_RT_MUTEX_WAITER",
-                missing,
-            )
-
-            profile["macros"]["COMPACT_RT_MUTEX_WAITER"] = 1
-            profile_path.write_text(json.dumps(profile))
             _, _, missing = extract_a07_offsets.profile_values(profile_path)
             self.assertEqual(missing, [])
+
+    def test_waiter_layout_flags_select_exactly_one_layout(self) -> None:
+        a07 = {"lock", "pi_tree", "task", "tree", "wake_state", "ww_ctx"}
+        flags, evidence = extract_a07_offsets.waiter_layout_flags(a07)
+        self.assertEqual({"LEGACY_RT_MUTEX_WAITER": "0", "COMPACT_RT_MUTEX_WAITER": "0",
+                          "NESTED_RT_MUTEX_WAITER": "1"}, flags)
+        self.assertIn("tree", evidence)
+
+        legacy = {"tree_entry", "pi_tree_entry", "pi_tree_prio", "pi_tree_deadline", "task", "lock"}
+        self.assertEqual("1", extract_a07_offsets.waiter_layout_flags(legacy)[0]["LEGACY_RT_MUTEX_WAITER"])
+        compact = {"tree_entry", "pi_tree_entry", "task", "lock", "prio", "deadline"}
+        self.assertEqual("1", extract_a07_offsets.waiter_layout_flags(compact)[0]["COMPACT_RT_MUTEX_WAITER"])
+
+        ambiguous, reason = extract_a07_offsets.waiter_layout_flags(set())
+        self.assertEqual({}, ambiguous)
+        self.assertIn("undetermined", reason)
+        # A struct that matches two layouts at once must not be silently resolved either.
+        both, reason = extract_a07_offsets.waiter_layout_flags(
+            {"tree", "pi_tree", "pi_tree_entry", "pi_tree_prio", "pi_tree_deadline"}
+        )
+        self.assertEqual({}, both)
+        self.assertIn("undetermined", reason)
+
+    def test_workqueue_max_active_relocation_is_derived(self) -> None:
+        flags, evidence = extract_a07_offsets.workqueue_max_active_flags(
+            {"wq", "pool", "refcnt", "nr_active"}, {"max_active": 0xA4, "dfl_pwq": 0x20}, 0x08
+        )
+        self.assertEqual({"PWQ_MAX_ACTIVE_VIA_WQ": "1", "WQ_MAX_ACTIVE_OFF": "0xa4ULL"}, flags)
+        self.assertIn("pool_workqueue.wq", evidence)
+
+        kept, _ = extract_a07_offsets.workqueue_max_active_flags(
+            {"wq", "max_active"}, {"max_active": 0xA4}, 0x08
+        )
+        self.assertEqual({"PWQ_MAX_ACTIVE_VIA_WQ": "0"}, kept)
+
+        unresolved, reason = extract_a07_offsets.workqueue_max_active_flags({"pool"}, {}, None)
+        self.assertEqual({}, unresolved)
+        self.assertIn("undetermined", reason)
+
+    def test_layout_flags_reach_the_generated_header_and_cannot_be_overridden(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "target.h"
+            extract_a07_offsets.emit_header(
+                out, "6.12.38-test", 0xFFFFFFC008000000, {},
+                {"workqueue_struct": {"max_active": 0xA4}, "pool_workqueue": {"wq": 0x08}}, {},
+                {"macros": {}, "evidence": {}},
+                measured_macros={"NESTED_RT_MUTEX_WAITER": "1", "PWQ_MAX_ACTIVE_VIA_WQ": "1",
+                                 "WQ_MAX_ACTIVE_OFF": "0xa4ULL"},
+            )
+            text = out.read_text()
+            self.assertIn("#define NESTED_RT_MUTEX_WAITER 1", text)
+            self.assertIn("#define PWQ_MAX_ACTIVE_VIA_WQ 1", text)
+            self.assertIn("#define WQ_MAX_ACTIVE_OFF 0xa4ULL", text)
+            with self.assertRaisesRegex(ValueError, "override extracted macro"):
+                extract_a07_offsets.emit_header(
+                    out, "6.12.38-test", 0xFFFFFFC008000000, {}, {}, {},
+                    {"macros": {"NESTED_RT_MUTEX_WAITER": 0}, "evidence": {}},
+                    measured_macros={"NESTED_RT_MUTEX_WAITER": "1"},
+                )
 
     def test_profile_rejects_non_object_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

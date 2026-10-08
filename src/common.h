@@ -41,11 +41,18 @@
 #if !defined(SLIDE_FAKE_WAITER_PRIO) || !defined(SLIDE_WAITER_WAKE_STATE)
 #error "A07 target header is missing verified waiter priority/wake-state values"
 #endif
-#if !defined(LEGACY_RT_MUTEX_WAITER) || !defined(COMPACT_RT_MUTEX_WAITER)
+#if !defined(LEGACY_RT_MUTEX_WAITER) || !defined(COMPACT_RT_MUTEX_WAITER) || \
+    !defined(NESTED_RT_MUTEX_WAITER)
 #error "A07 target header must select its verified rt_mutex_waiter layout"
 #endif
-#if (LEGACY_RT_MUTEX_WAITER + COMPACT_RT_MUTEX_WAITER) != 1
+#if (LEGACY_RT_MUTEX_WAITER + COMPACT_RT_MUTEX_WAITER + NESTED_RT_MUTEX_WAITER) != 1
 #error "A07 target header must select exactly one rt_mutex_waiter layout"
+#endif
+#if !defined(PWQ_MAX_ACTIVE_VIA_WQ) || !defined(PWQ_WQ_OFF)
+#error "A07 target header must state how it reaches the workqueue max_active limit"
+#endif
+#if PWQ_MAX_ACTIVE_VIA_WQ && !defined(WQ_MAX_ACTIVE_OFF)
+#error "A07 target header must define WQ_MAX_ACTIVE_OFF when pool_workqueue has no max_active"
 #endif
 #if !defined(SLIDE_LOCK_OWNER_VALUE) || !defined(SLIDE_USE_FAKE_TASK) || \
     !defined(SLIDE_RB_PARENT_TYPE_RESTORE) || \
@@ -216,6 +223,32 @@
 #endif
 #if LEGACY_RT_MUTEX_WAITER && COMPACT_RT_MUTEX_WAITER
 #error "select only one rt_mutex_waiter layout"
+#endif
+/* Third layout: 6.12 nests each rb_node with its own prio/deadline pair in `struct rt_waiter_node`,
+ * so the waiter carries tree.prio/tree.deadline and pi_tree.prio/pi_tree.deadline instead of flat
+ * members. That is the shape the shared `#else` code paths below already write, and it is what every
+ * target that selects neither LEGACY nor COMPACT uses; A07 names it explicitly because its offsets
+ * were measured out of nested BTF members rather than flat ones. */
+#ifndef NESTED_RT_MUTEX_WAITER
+#define NESTED_RT_MUTEX_WAITER (!LEGACY_RT_MUTEX_WAITER && !COMPACT_RT_MUTEX_WAITER)
+#endif
+#if (LEGACY_RT_MUTEX_WAITER + COMPACT_RT_MUTEX_WAITER + NESTED_RT_MUTEX_WAITER) != 1
+#error "select exactly one rt_mutex_waiter layout"
+#endif
+/* 6.12 moved pool_workqueue.max_active into struct workqueue_struct, reached through pwq->wq.
+ * Targets whose pool_workqueue still owns the field define PWQ_MAX_ACTIVE_OFF and leave this at 0. */
+#ifndef PWQ_MAX_ACTIVE_VIA_WQ
+#define PWQ_MAX_ACTIVE_VIA_WQ 0
+#endif
+#if PWQ_MAX_ACTIVE_VIA_WQ
+#if !defined(WQ_MAX_ACTIVE_OFF)
+#error "selecting PWQ_MAX_ACTIVE_VIA_WQ requires WQ_MAX_ACTIVE_OFF"
+#endif
+#if !defined(PWQ_WQ_OFF)
+#error "selecting PWQ_MAX_ACTIVE_VIA_WQ requires PWQ_WQ_OFF"
+#endif
+#elif !defined(PWQ_MAX_ACTIVE_OFF)
+#error "define PWQ_MAX_ACTIVE_OFF, or select PWQ_MAX_ACTIVE_VIA_WQ with WQ_MAX_ACTIVE_OFF"
 #endif
 #ifndef FAKE_WAITER_LAYOUT_SIZE
 #define FAKE_WAITER_LAYOUT_SIZE (FAKE_WAITER_WW_CTX_OFF + sizeof(uint64_t))

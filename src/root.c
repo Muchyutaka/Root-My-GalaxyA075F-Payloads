@@ -351,11 +351,23 @@ static int install_workqueue_umh_root(int fd) {
   uint32_t max_active = 0;
   if (!root_read32(fd, pwq + PWQ_WORK_COLOR_OFF, &color) ||
       !root_read32(fd, pwq + PWQ_REFCNT_OFF, &refcnt) ||
-      !root_read32(fd, pwq + PWQ_NR_ACTIVE_OFF, &nr_active) ||
-      !root_read32(fd, pwq + PWQ_MAX_ACTIVE_OFF, &max_active)) {
+      !root_read32(fd, pwq + PWQ_NR_ACTIVE_OFF, &nr_active)) {
     pr_error("root umh pwq state read failed\n");
     goto cleanup;
   }
+#if PWQ_MAX_ACTIVE_VIA_WQ
+  /* 6.12: pool_workqueue no longer carries max_active. The limit lives in the workqueue_struct
+   * that pwq->wq points at, which was read and cross-checked against wq above. */
+  if (!root_read32(fd, pwq_wq + WQ_MAX_ACTIVE_OFF, &max_active)) {
+    pr_error("root umh wq max_active read failed pwq_wq=%016zx\n", pwq_wq);
+    goto cleanup;
+  }
+#else
+  if (!root_read32(fd, pwq + PWQ_MAX_ACTIVE_OFF, &max_active)) {
+    pr_error("root umh pwq max_active read failed pwq=%016zx\n", pwq);
+    goto cleanup;
+  }
+#endif
   if (color >= 16 || refcnt == 0 || nr_active >= max_active) {
     pr_error("root umh bad pwq state color=%u refcnt=%u active=%u/%u\n",
              color, refcnt, nr_active, max_active);
